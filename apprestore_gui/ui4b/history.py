@@ -145,10 +145,20 @@ def history_view(
     failed: bool = False,
     query: str = "",
     id_note: str = "",
+    catalog: list[dict[str, object]] | None = None,
 ) -> dict[str, object]:
     """The sheet. Unsigned: no rows from a previous account."""
 
     rows = _rows(items, query) if signed_in else []
+    purchase_count = len(rows)
+    standard_count = 0
+    if signed_in and catalog:
+        owned_ids = {str(item.get("trackId") or item.get("track_id") or "") for item in items}
+        standard = _rows([item for item in catalog if str(item.get("trackId")) not in owned_ids], query)
+        for row in standard:
+            row["developer"] = f"Стандартный список · ID {row['storeId']}"
+        standard_count = len(standard)
+        rows.extend(standard)
     if not signed_in:
         empty, empty_link = SIGNIN_TEXT, SIGNIN_LINK
     elif busy and not rows:
@@ -176,10 +186,20 @@ def history_view(
         lead = f"{count} {_purchase_word(count)} в истории"
     else:
         lead = ""
+    if signed_in and catalog:
+        if query.strip():
+            lead = f"Найдено {count}"
+        else:
+            lead = f"История: {purchase_count} · Стандартный список: {standard_count}"
+        if busy:
+            lead += " · История обновляется…"
+        elif failed:
+            lead += f" · {FAILED}"
+        lead += " · Доступность определяется вашим Apple ID."
     return {
         "title": TITLE,
         "close": CLOSE,
-        "placeholder": PLACEHOLDER,
+        "placeholder": "Название приложения или ID" if catalog else PLACEHOLDER,
         "signedIn": signed_in,
         "idPlaceholder": ID_PLACEHOLDER,
         "idAction": ID_ACTION,

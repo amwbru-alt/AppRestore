@@ -44,6 +44,7 @@ from apprestore_gui.ui4b.licenses import (
 )
 from apprestore_gui.ui4b.licenses import candidates as license_candidates
 from apprestore_gui.ui4b.home import STATE_APPLE_REJECTED, STATE_DONE, STATE_STORE_MISMATCH, HomeInput, PhoneApp, home_view, link_action
+from apprestore_gui.ui4b.standard_apps import standard_apps
 from apprestore_gui.ui4b.history import ID_BAD, history_view, name_for_store_id, parse_store_id
 from apprestore_gui.ui4b.journal import journal_view
 from apprestore_gui.ui4b.region import apply_statuses, load_classifier
@@ -1488,6 +1489,7 @@ class Restore4b(QObject):
             failed=failed,
             query=self._history_query,
             id_note=self._history_id_note,
+            catalog=standard_apps(),
         )
         view["open"] = self._history_open
         view["query"] = self._history_query
