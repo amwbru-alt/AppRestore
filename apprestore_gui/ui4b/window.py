@@ -34,7 +34,7 @@ def build(settings: QSettings) -> tuple[QQmlApplicationEngine | None, list[Any]]
     from apprestore_gui.popular_apps import ICON_SITES
     from apprestore_gui.quick_session import QuickSession
     from apprestore_gui.ui4b.qt_bridge import Restore4b, SessionSource
-    from apprestore_gui.ui4b.settings import ARCHIVE_DEFAULT, ARCHIVE_KEY
+    from apprestore_gui.ui4b.settings import ARCHIVE_KEY
 
     session = QuickSession()
     icon_book = IconBook()
@@ -42,7 +42,7 @@ def build(settings: QSettings) -> tuple[QQmlApplicationEngine | None, list[Any]]
     controller = Restore4b(
         source,
         onboarded=bool(settings.value(ONBOARDED_KEY, False, type=bool)),
-        archive_search=bool(settings.value(ARCHIVE_KEY, ARCHIVE_DEFAULT, type=bool)),
+        archive_search=False,
     )
 
     def remember_onboarding() -> None:
@@ -130,9 +130,13 @@ def main(*, diagnostic_targets: list[tuple[str, str]] | None = None, diagnostic_
     QQuickStyle.setStyle("Basic")
     # QApplication (not QGuiApplication): «Проверить обновления» reuses the old UpdateDialog
     app = QApplication([sys.argv[0]])
-    app.setApplicationName("AppRestore")
+    app.setApplicationName("ReVivo")
+    from apprestore_gui.theme import STYLESHEET, pin_dark_native_chrome
+    pin_dark_native_chrome(app)
+    app.setStyle("Fusion")
+    app.setStyleSheet(STYLESHEET)
     app.setWindowIcon(app_icon())
-    engine, keep = build(QSettings("AppRestore", "AppRestore"))
+    engine, keep = build(QSettings("ReVivo", "ReVivo"))
     if engine is None:
         return 1
     if diagnostic_targets and diagnostic_output is not None:

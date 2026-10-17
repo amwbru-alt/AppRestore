@@ -19,6 +19,12 @@ from apprestore_gui.service_adapter import GuiService
 from apprestore_gui.theme import load_fonts, STYLESHEET
 
 
+@pytest.fixture(autouse=True)
+def offline_artwork(monkeypatch):
+    # UI smoke tests must not wait for real App Store artwork.
+    monkeypatch.setattr(ArtworkCache, "_http_get", lambda self, url: b'{"results":[]}')
+
+
 @pytest.fixture(scope="module")
 def qapp():
     app = QApplication.instance() or QApplication([])

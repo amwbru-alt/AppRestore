@@ -164,7 +164,7 @@ def country_from_storefront(value: object) -> str:
 def account_country(payload: object) -> str:
     """Country code of the signed-in account from ``auth info --format json``.
 
-    AppRestore's ipatool build (Макс's patch over cde7d00) prints
+    ReVivo's ipatool build (Макс's patch over cde7d00) prints
     ``countryCode`` (ISO, e.g. ``US``) and the raw ``storeFront``
     (``143441-1,34``). ``countryCode`` wins; otherwise the storefront id is
     mapped here. Plain cde7d00 prints neither: ``""`` = country unknown, and

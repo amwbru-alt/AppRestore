@@ -1,4 +1,4 @@
-"""Headless diagnostics for a built bundle: ``AppRestore --self-test``.
+"""Headless diagnostics for a built bundle: ``ReVivo --self-test``.
 
 Prints one JSON document (and optionally writes it to a file) describing
 whether the frozen bundle can actually talk to an iPhone: package metadata,
@@ -105,7 +105,7 @@ def _ipatool() -> dict[str, str]:
     capabilities = tools.ipatool_capabilities()
     if capabilities is None or not capabilities.patched_build:
         raise RuntimeError(
-            "bundled ipatool lacks AppRestore patches 0002/0003; "
+            "bundled ipatool lacks ReVivo patches 0002/0003; "
             f"capabilities={capabilities!r}"
         )
     # Patch 0001 cannot be proven from ``auth info`` before a user signs in.
@@ -114,9 +114,9 @@ def _ipatool() -> dict[str, str]:
     marker = b"appstore.CountryCodeFromStoreFront"
     binary = Path(path).read_bytes()
     if marker not in binary:
-        raise RuntimeError("bundled ipatool lacks AppRestore patch 0001 (account country)")
+        raise RuntimeError("bundled ipatool lacks ReVivo patch 0001 (account country)")
     if b"catalog-independent redownload does not match the requested app" not in binary:
-        raise RuntimeError("bundled ipatool lacks AppRestore patch 0004 (delisted redownload)")
+        raise RuntimeError("bundled ipatool lacks ReVivo patch 0004 (delisted redownload)")
     return {
         "path": path,
         "detail": detail,

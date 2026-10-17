@@ -54,10 +54,10 @@ jobs:
           if-no-files-found: warn
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: AppRestore-GUI-Windows
+          name: ReVivo-GUI-Windows
           path: |
-            gui-dist/AppRestore-GUI-Windows.zip
-            gui-dist/AppRestore-GUI-Windows.zip.sha256
+            gui-dist/ReVivo-GUI-Windows.zip
+            gui-dist/ReVivo-GUI-Windows.zip.sha256
           if-no-files-found: error
 
   macos:
@@ -104,8 +104,8 @@ jobs:
           if-no-files-found: warn
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: AppRestore-GUI-macOS
+          name: ReVivo-GUI-macOS
           path: |
-            gui-dist/AppRestore-GUI-macOS.zip
-            gui-dist/AppRestore-GUI-macOS.zip.sha256
+            gui-dist/ReVivo-GUI-macOS.zip
+            gui-dist/ReVivo-GUI-macOS.zip.sha256
           if-no-files-found: error

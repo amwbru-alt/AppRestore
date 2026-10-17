@@ -74,7 +74,7 @@ def _active_device_name(rows: list[dict[str, object]]) -> str:
             return str(row.get("name") or "").strip()
     return ""
 from apprestore_core.license_gate import is_store_mismatch
-from apprestore_core.license_guard import DEFAULT_TOTAL_LIMIT
+from apprestore_core.license_guard import DEFAULT_TOTAL_LIMIT, unlimited_licenses_enabled
 from apprestore_gui.ui4b.queue import LIMIT_ERROR
 from apprestore_gui.ui4b.onboarding import illustration_tiles, scanning_count, scanning_tiles
 from apprestore_gui.ui4b.scan import ScanCounter
@@ -1189,7 +1189,7 @@ class Restore4b(QObject):
             return ("", False)
         if self._limit_note[0] is not queue:
             try:
-                total = self.source.license_counts()[1] >= DEFAULT_TOTAL_LIMIT
+                total = not unlimited_licenses_enabled() and self.source.license_counts()[1] >= DEFAULT_TOTAL_LIMIT
                 text = "" if total else self.source.limit_slot_text()
             except Exception:  # noqa: BLE001
                 total, text = False, ""
@@ -1875,7 +1875,7 @@ def signin_view(
         "hint": CODE_HINT if (code or wrong_code) else "",
         "codePlaceholder": "Код из 6 цифр",  # Windows: one plain field instead of cells
         "fine": (
-            "Пароль связки передаётся ipatool через закрытый stdin-канал и хранится только в памяти до закрытия AppRestore."
+            "Пароль связки передаётся ipatool через закрытый stdin-канал и хранится только в памяти до закрытия ReVivo."
             if keychain else
             "Пароль уходит только в Apple. Программа его не хранит; вход остаётся на этом компьютере, в связке ключей."
         ),

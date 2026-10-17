@@ -186,7 +186,7 @@ Item {
                         text: root.v.empty || ""
                     }
                     T {
-                        visible: (root.v.emptyLink || "") !== ""
+                        visible: false // External archive is disabled in ReVivo
                         anchors.horizontalCenter: parent.horizontalCenter
                         token: "toolLink"
                         color: Theme.ink2

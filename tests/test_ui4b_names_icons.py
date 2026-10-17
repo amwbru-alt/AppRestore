@@ -249,7 +249,7 @@ def test_placeholder_is_theme_token_no_dash_no_letter() -> None:
     icon = (root / "components" / "AppIcon.qml").read_text(encoding="utf-8")
     assert "Theme.iconPlaceholder" in icon and "DashLine" not in icon and "#" not in icon.split("Item {", 1)[1]
     theme = (root / "theme" / "Theme.qml").read_text(encoding="utf-8")
-    assert re.search(r"iconPlaceholder:\s*\"#E2E0DA\"", theme, re.I)
+    assert re.search(r"iconPlaceholder:\s*\"#344255\"", theme, re.I)
     for f in (root / "components").glob("*.qml"):
         t = f.read_text(encoding="utf-8")
         assert "modelData.mark" not in t and ".mark\b" not in t, f

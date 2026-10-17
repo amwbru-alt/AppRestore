@@ -92,7 +92,7 @@ class HomeInput:
     limit_total: bool = False
     #: «Подробнее» pressed: the technical text instead of the quiet line.
     component_details: str = ""
-    #: ipatool without AppRestore's patches: no new licenses (needs-component).
+    #: ipatool without ReVivo's patches: no new licenses (needs-component).
     component: bool = False
 
 
@@ -334,7 +334,7 @@ def home_view(inp: HomeInput) -> dict[str, object]:
             if inp.limit_total:
                 lead = (lead + " " if lead else "") + f"Для {names} лицензий больше нет."
                 view["fine"] = (
-                    "На этом компьютере AppRestore уже взял 15 лицензий — это общий предел, "
+                    "На этом компьютере ReVivo уже взял 15 лицензий — это общий предел, "
                     "новых он больше не берёт. Приложения, которые уже есть на вашем Apple ID, "
                     "и сгруженные возвращаются как обычно."
                 )

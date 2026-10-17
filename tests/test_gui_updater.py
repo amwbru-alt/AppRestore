@@ -14,17 +14,17 @@ import pytest
 
 from apprestore_gui import updater
 
-DL = "https://github.com/J3ckJ/AppRestore/releases/download/v0.3.0/"
+DL = "https://github.com/amwbru-alt/AppRestore/releases/download/v0.3.0/"
 
 
 def _release(tag="v0.3.0", assets=None, body="* Новое окно"):
     if assets is None:
         assets = [
-            {"name": "AppRestore-GUI-Windows.zip", "browser_download_url": DL + "AppRestore-GUI-Windows.zip", "size": 10},
-            {"name": "AppRestore-GUI-macOS.zip", "browser_download_url": DL + "AppRestore-GUI-macOS.zip", "size": 11},
+            {"name": "ReVivo-GUI-Windows.zip", "browser_download_url": DL + "ReVivo-GUI-Windows.zip", "size": 10},
+            {"name": "ReVivo-GUI-macOS.zip", "browser_download_url": DL + "ReVivo-GUI-macOS.zip", "size": 11},
             {"name": "SHA256SUMS.txt", "browser_download_url": DL + "SHA256SUMS.txt", "size": 1},
         ]
-    return {"tag_name": tag, "body": body, "html_url": "https://github.com/J3ckJ/AppRestore/releases/tag/" + tag,
+    return {"tag_name": tag, "body": body, "html_url": "https://github.com/amwbru-alt/AppRestore/releases/tag/" + tag,
             "draft": False, "prerelease": False, "assets": assets}
 
 
@@ -47,7 +47,7 @@ def test_parse_version_and_compare():
         updater.parse_version("latest")
 
 
-@pytest.mark.parametrize("platform,name", [("win32", "AppRestore-GUI-Windows.zip"), ("darwin", "AppRestore-GUI-macOS.zip")])
+@pytest.mark.parametrize("platform,name", [("win32", "ReVivo-GUI-Windows.zip"), ("darwin", "ReVivo-GUI-macOS.zip")])
 def test_check_finds_newer_release_for_platform(platform, name):
     fetch = _fetcher(_release())
     info = updater.check_for_update("0.2.4", fetch=fetch, platform=platform)
@@ -76,7 +76,7 @@ def test_newer_release_without_gui_asset_is_not_installable():
 
 def test_foreign_download_urls_are_ignored():
     assets = [
-        {"name": "AppRestore-GUI-Windows.zip", "browser_download_url": "https://evil.example/AppRestore-GUI-Windows.zip"},
+        {"name": "ReVivo-GUI-Windows.zip", "browser_download_url": "https://evil.example/ReVivo-GUI-Windows.zip"},
         {"name": "SHA256SUMS.txt", "browser_download_url": DL + "SHA256SUMS.txt"},
     ]
     info = updater.check_for_update("0.2.4", fetch=_fetcher(_release(assets=assets)), platform="win32")
@@ -93,8 +93,8 @@ def test_network_error_is_user_facing():
 
 def test_parse_checksums_formats():
     a, b = "a" * 64, "B" * 64
-    sums = updater.parse_checksums(f"{a}  AppRestore-GUI-Windows.zip\n{b} *AppRestore-GUI-macOS.zip\njunk\n")
-    assert sums == {"AppRestore-GUI-Windows.zip": a, "AppRestore-GUI-macOS.zip": b.lower()}
+    sums = updater.parse_checksums(f"{a}  ReVivo-GUI-Windows.zip\n{b} *ReVivo-GUI-macOS.zip\njunk\n")
+    assert sums == {"ReVivo-GUI-Windows.zip": a, "ReVivo-GUI-macOS.zip": b.lower()}
 
 
 def _info_for(data: bytes, platform="win32", digest=None):
@@ -142,36 +142,36 @@ def _zip(path: Path, files: dict[str, bytes]) -> Path:
 def _frozen_layout(tmp_path: Path, platform: str):
     root = tmp_path / "Apps"
     if platform == "win32":
-        app = root / "AppRestore"
+        app = root / "ReVivo"
         (app).mkdir(parents=True)
-        (app / "AppRestore.exe").write_text("old")
-        exe = app / "AppRestore.exe"
+        (app / "ReVivo.exe").write_text("old")
+        exe = app / "ReVivo.exe"
     else:
-        app = root / "AppRestore.app"
+        app = root / "ReVivo.app"
         (app / "Contents" / "MacOS").mkdir(parents=True)
-        exe = app / "Contents" / "MacOS" / "AppRestore"
+        exe = app / "Contents" / "MacOS" / "ReVivo"
         exe.write_text("old")
     return app, exe
 
 
 def test_stage_update_windows_layout(tmp_path):
     app, exe = _frozen_layout(tmp_path, "win32")
-    archive = _zip(tmp_path / "u.zip", {"AppRestore/AppRestore.exe": b"new", "AppRestore/_internal/x.dll": b"x"})
+    archive = _zip(tmp_path / "u.zip", {"ReVivo/ReVivo.exe": b"new", "ReVivo/_internal/x.dll": b"x"})
     info = updater.check_for_update("0.2.4", fetch=_fetcher(_release()), platform="win32")
     staged = updater.stage_update(archive, info, platform="win32", executable=str(exe))
     assert staged.target_app == app
     assert staged.staging_dir.parent == app.parent
-    assert (staged.new_app / "AppRestore.exe").read_bytes() == b"new"
+    assert (staged.new_app / "ReVivo.exe").read_bytes() == b"new"
 
 
 def test_stage_update_rejects_zip_slip(tmp_path):
     _, exe = _frozen_layout(tmp_path, "win32")
-    archive = _zip(tmp_path / "u.zip", {"../evil.txt": b"x", "AppRestore/AppRestore.exe": b"new"})
+    archive = _zip(tmp_path / "u.zip", {"../evil.txt": b"x", "ReVivo/ReVivo.exe": b"new"})
     info = updater.check_for_update("0.2.4", fetch=_fetcher(_release()), platform="win32")
     with pytest.raises(updater.UpdateError, match="небезопасный"):
         updater.stage_update(archive, info, platform="win32", executable=str(exe))
     assert not (tmp_path / "evil.txt").exists()
-    assert not list((tmp_path / "Apps").glob(".AppRestore-update-*"))
+    assert not list((tmp_path / "Apps").glob(".ReVivo-update-*"))
 
 
 def test_stage_update_rejects_wrong_layout(tmp_path):
@@ -184,8 +184,8 @@ def test_stage_update_rejects_wrong_layout(tmp_path):
 
 def test_installed_app_path_requires_app_bundle_on_macos(tmp_path):
     with pytest.raises(updater.UpdateError):
-        updater.installed_app_path("darwin", str(tmp_path / "bin" / "x" / "AppRestore"))
-    assert updater.installed_app_path("win32", r"C:\Apps\AppRestore\AppRestore.exe".replace("\\", os.sep)).name == "AppRestore"
+        updater.installed_app_path("darwin", str(tmp_path / "bin" / "x" / "ReVivo"))
+    assert updater.installed_app_path("win32", r"C:\Apps\ReVivo\ReVivo.exe".replace("\\", os.sep)).name == "ReVivo"
 
 
 def test_windows_script_waits_checks_health_and_rolls_back():
@@ -193,7 +193,7 @@ def test_windows_script_waits_checks_health_and_rolls_back():
     assert "swap script start" in script
     assert script.index("swap script start") < script.index("Stop-Process")
     assert "old process still running, stopping it" in script
-    assert 'ProcessName -ne "AppRestore"' in script
+    assert 'ProcessName -ne "ReVivo"' in script
     assert "--update-health-check" in script
     assert "rolling back" in script
     assert script.index("Rename-Item -LiteralPath $Target") < script.index("Move-Item -LiteralPath $New")
@@ -203,9 +203,9 @@ def test_windows_script_waits_checks_health_and_rolls_back():
 
 def test_windows_launch_command_is_hidden_without_detaching_powershell(tmp_path, monkeypatch):
     app, exe = _frozen_layout(tmp_path, "win32")
-    staging = tmp_path / "Apps" / ".AppRestore-update-x"
-    (staging / "AppRestore").mkdir(parents=True)
-    staged = updater.StagedUpdate(info=None, staging_dir=staging, new_app=staging / "AppRestore", target_app=app)
+    staging = tmp_path / "Apps" / ".ReVivo-update-x"
+    (staging / "ReVivo").mkdir(parents=True)
+    staged = updater.StagedUpdate(info=None, staging_dir=staging, new_app=staging / "ReVivo", target_app=app)
     monkeypatch.setattr("apprestore_core.paths.resolve_windows_system_tool", lambda name: r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe")
     monkeypatch.setattr(updater, "update_log_path", lambda: tmp_path / "update.log")
     calls = []
@@ -257,20 +257,20 @@ posix_only = pytest.mark.skipif(os.name == "nt", reason="POSIX swap script")
 
 
 def _bundle(path: Path, health_rc: int, marker: str) -> None:
-    binary = path / "Contents" / "MacOS" / "AppRestore"
+    binary = path / "Contents" / "MacOS" / "ReVivo"
     binary.parent.mkdir(parents=True)
     binary.write_text(f"#!/bin/sh\necho {marker}\nexit {health_rc}\n")
     binary.chmod(0o755)
 
 
 def _run_swap(tmp_path: Path, health_rc: int):
-    target = tmp_path / "AppRestore.app"
+    target = tmp_path / "ReVivo.app"
     _bundle(target, 0, "old")
-    staging = tmp_path / ".AppRestore-update-test"
-    _bundle(staging / "AppRestore.app", health_rc, "new")
+    staging = tmp_path / ".ReVivo-update-test"
+    _bundle(staging / "ReVivo.app", health_rc, "new")
     log = tmp_path / "update.log"
     sleeper = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(0.6)"])
-    staged = updater.StagedUpdate(info=None, staging_dir=staging, new_app=staging / "AppRestore.app", target_app=target)
+    staged = updater.StagedUpdate(info=None, staging_dir=staging, new_app=staging / "ReVivo.app", target_app=target)
     relaunched = tmp_path / "relaunched"
     procs = []
 
@@ -294,18 +294,18 @@ def _run_swap(tmp_path: Path, health_rc: int):
 @posix_only
 def test_posix_swap_replaces_app_after_exit(tmp_path):
     target, staging, relaunched = _run_swap(tmp_path, health_rc=0)
-    assert "new" in (target / "Contents" / "MacOS" / "AppRestore").read_text()
+    assert "new" in (target / "Contents" / "MacOS" / "ReVivo").read_text()
     assert not staging.exists()
-    assert not list(tmp_path.glob("AppRestore.app.old-*"))
+    assert not list(tmp_path.glob("ReVivo.app.old-*"))
     assert relaunched.exists()
 
 
 @posix_only
 def test_posix_swap_rolls_back_when_new_version_is_broken(tmp_path):
     target, staging, relaunched = _run_swap(tmp_path, health_rc=3)
-    assert "old" in (target / "Contents" / "MacOS" / "AppRestore").read_text()
+    assert "old" in (target / "Contents" / "MacOS" / "ReVivo").read_text()
     assert not staging.exists()
-    assert not list(tmp_path.glob("AppRestore.app.old-*"))
+    assert not list(tmp_path.glob("ReVivo.app.old-*"))
     assert relaunched.exists()
 
 

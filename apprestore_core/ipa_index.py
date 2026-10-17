@@ -209,7 +209,7 @@ class IpaIndex:
 
     A fresh SQLite connection is used for every operation.  That keeps one
     :class:`IpaIndex` safe to call from multiple threads and lets independent
-    AppRestore processes share the same WAL-backed database.
+    ReVivo processes share the same WAL-backed database.
     """
 
     def __init__(

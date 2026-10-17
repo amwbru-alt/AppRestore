@@ -1,4 +1,4 @@
-"""Typed layer over the ipatool CLI for AppRestore (M-3).
+"""Typed layer over the ipatool CLI for ReVivo (M-3).
 
 Everything goes through ``ipatool ... --format json --non-interactive``.
 ipatool prints one JSON object per line: results at info level on stdout and
@@ -123,7 +123,7 @@ class ErrorCode(str, enum.Enum):
     # Local / tool
     INVALID_ARGUMENT = "invalid_argument"
     FLAG_UNSUPPORTED = "flag_unsupported"
-    #: The binary is not AppRestore's patched build (0001-0003): taking a
+    #: The binary is not ReVivo's patched build (0001-0003): taking a
     #: license is refused BEFORE ``purchase`` (no journal entry, no limit used).
     NEEDS_PATCHED_BUILD = "needs_patched_build"
     BINARY_MISSING = "binary_missing"
@@ -161,9 +161,9 @@ MESSAGES_RU: Mapping[ErrorCode, str] = {
     ErrorCode.NETWORK: "Нет связи с Apple. Проверьте подключение к интернету и попробуйте ещё раз.",
     ErrorCode.TIMEOUT: "Apple не ответила вовремя. Проверьте интернет и повторите.",
     ErrorCode.INVALID_ARGUMENT: "Неверный параметр запроса к ipatool.",
-    ErrorCode.FLAG_UNSUPPORTED: "Эта сборка ipatool не поддерживает нужную функцию. Обновите AppRestore.",
+    ErrorCode.FLAG_UNSUPPORTED: "Эта сборка ipatool не поддерживает нужную функцию. Обновите ReVivo.",
     ErrorCode.NEEDS_PATCHED_BUILD: "Для возврата приложений нужна сборка ipatool с патчами",
-    ErrorCode.BINARY_MISSING: "Не найден ipatool. Переустановите AppRestore.",
+    ErrorCode.BINARY_MISSING: "Не найден ipatool. Переустановите ReVivo.",
     ErrorCode.BAD_OUTPUT: "ipatool ответил в неожиданном формате.",
     ErrorCode.UNKNOWN: "Неизвестная ошибка ipatool. Повторите позже.",
 }
@@ -537,7 +537,7 @@ class AccountInfo:
 
 @dataclass(frozen=True)
 class Capabilities:
-    """What this ipatool binary supports (AppRestore patches 0001-0003).
+    """What this ipatool binary supports (ReVivo patches 0001-0003).
 
     ``list_purchases_all`` (0002) and ``passphrase_stdin`` (0003) come from
     offline probes that touch neither the keychain nor the network.
@@ -553,7 +553,7 @@ class Capabilities:
 
     @property
     def patched_build(self) -> bool:
-        """True for AppRestore's patched build: 0002 and 0003 present (0001 is never seen missing)."""
+        """True for ReVivo's patched build: 0002 and 0003 present (0001 is never seen missing)."""
 
         return self.list_purchases_all and self.passphrase_stdin and self.auth_info_country is not False
 
@@ -612,7 +612,7 @@ Runner = Callable[..., RunResult]
 #:            /proc/<pid>/environ). Only ever chosen when asked explicitly.
 PassphraseVia = str  # "auto" | "env" | "flag"
 
-#: The stdin passphrase flag; present in ``ipatool --help`` only with AppRestore's
+#: The stdin passphrase flag; present in ``ipatool --help`` only with ReVivo's
 #: patch 0003.  Its presence is how "auto" detects a patched binary.
 PASSPHRASE_STDIN_FLAG = "--keychain-passphrase-stdin"
 #: Back-compat alias (patch 0003 named it this).
@@ -734,7 +734,7 @@ class IpatoolClient:
         )
 
     def can_acquire_license(self) -> bool:
-        """True only for AppRestore's patched build (see :class:`Capabilities`)."""
+        """True only for ReVivo's patched build (see :class:`Capabilities`)."""
 
         return self.capabilities().patched_build
 
@@ -758,7 +758,7 @@ class IpatoolClient:
             missing = [name for name, ok in (("0002 list-purchases --all", caps.list_purchases_all),
                                              ("0003 --keychain-passphrase-stdin", caps.passphrase_stdin)) if not ok]
             raise IpatoolError(ErrorCode.NEEDS_PATCHED_BUILD,
-                               "ipatool без патчей AppRestore: " + ", ".join(missing))
+                               "ipatool без патчей ReVivo: " + ", ".join(missing))
 
     def passphrase_method(self) -> str:
         """How the passphrase will be delivered: 'stdin' | 'flag' | 'env' | 'none'.
@@ -909,7 +909,7 @@ class IpatoolClient:
     def all_purchases(self, *, timeout: float = 120.0, platform: Optional[str] = None) -> PurchasesPage:
         """Whole history in one call: ``ipatool list-purchases --all``.
 
-        Needs AppRestore's ipatool patch 0002; an unpatched ipatool raises
+        Needs ReVivo's ipatool patch 0002; an unpatched ipatool raises
         IpatoolError(FLAG_UNSUPPORTED).
         """
 
@@ -958,7 +958,7 @@ class IpatoolClient:
         """Yield purchase-history pages (newest purchase first).
 
         With ``prefer_all`` (default) and ``start_page == 1`` the first call is
-        ``list-purchases --all`` (AppRestore's ipatool patch 0002): the whole
+        ``list-purchases --all`` (ReVivo's ipatool patch 0002): the whole
         history arrives as ONE page (~10 s for 2.8k purchases instead of
         ~4.5 min).  An ipatool without the patch answers "unknown flag", and
         the generator silently falls back to pages of ``page_size``.

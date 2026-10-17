@@ -42,7 +42,7 @@ def test_tools_account_country_uses_auth_info_json() -> None:
         assert tools.account_country() == "ru"
 
 
-# Exact lines from AppRestore's ipatool build (cde7d00 + packaging/patches/
+# Exact lines from ReVivo's ipatool build (cde7d00 + packaging/patches/
 # ipatool-auth-info-country.patch), `auth info --format json`.
 _PATCHED_AUTH_INFO = (
     '{"level":"info","name":"A","email":"a@b.c","storeFront":"143441-1,34",'

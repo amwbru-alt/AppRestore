@@ -1,4 +1,4 @@
-"""New AppRestore window on the Qt Quick scene graph.
+"""New ReVivo window on the Qt Quick scene graph.
 
 Opened with ``--ui quick``. The packaged exe uses this window.
 The list on the home screen is the phone's offloaded apps.
@@ -21,13 +21,13 @@ from apprestore_gui.ui_icons import app_icon
 
 
 def qml_path() -> Path:
-    return Path(__file__).resolve().parent / "qml" / "AppRestore.qml"
+    return Path(__file__).resolve().parent / "qml" / "ReVivo.qml"
 
 
 def main() -> int:
     QQuickStyle.setStyle("Basic")
     app = QGuiApplication([sys.argv[0]])
-    app.setApplicationName("AppRestore")
+    app.setApplicationName("ReVivo")
     app.setWindowIcon(app_icon())
     session = QuickSession()
     icon_book = IconBook()

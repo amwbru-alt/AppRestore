@@ -161,7 +161,7 @@ class PlaceholderParsingTests(unittest.TestCase):
                 )
 
         with mock.patch(
-            "urllib.request.urlopen",
+            "apprestore_core.catalog.policy_urlopen",
             return_value=FakeResponse(),
         ):
             self.assertEqual(

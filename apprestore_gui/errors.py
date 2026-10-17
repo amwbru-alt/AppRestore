@@ -70,7 +70,7 @@ def explain_store_operation_error(message: str, *, phase: str, country: str = ""
 
 NOT_OWNED_TEXT = (
     "Этого приложения нет на вашем Apple ID (нет лицензии). "
-    "Бесплатное AppRestore добавит само, платное без оплаты не ставится."
+    "Бесплатное ReVivo добавит само, платное без оплаты не ставится."
 )
 
 

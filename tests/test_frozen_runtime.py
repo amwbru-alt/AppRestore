@@ -1,7 +1,7 @@
 """Frozen (PyInstaller) runtime: device discovery must not spawn ``sys.executable -m``.
 
-In a frozen bundle ``sys.executable`` is AppRestore.exe.  The old code ran
-``AppRestore.exe -I -m pymobiledevice3 usbmux list``: the GUI's argparse
+In a frozen bundle ``sys.executable`` is ReVivo.exe.  The old code ran
+``ReVivo.exe -I -m pymobiledevice3 usbmux list``: the GUI's argparse
 rejected ``-I`` and the GUI reported "no iPhone" although the phone was
 connected.
 """
@@ -20,7 +20,7 @@ from apprestore_core.command import windows_creationflags
 from apprestore_core.models import CommandResult
 from apprestore_core.tools import AppRestoreTools
 
-FAKE_EXE = r"C:\Users\someone\Downloads\AppRestore-windows\AppRestore.exe"
+FAKE_EXE = r"C:\Users\someone\Downloads\ReVivo-windows\ReVivo.exe"
 
 
 @dataclass
@@ -189,7 +189,7 @@ def test_parse_dispatch(argv, expected) -> None:
 
 
 def test_dispatch_runs_pymobiledevice3_main(fake_pmd3, monkeypatch) -> None:
-    monkeypatch.setattr(sys, "argv", ["AppRestore.exe"])
+    monkeypatch.setattr(sys, "argv", ["ReVivo.exe"])
     code = frozen.maybe_dispatch([frozen.RUN_MODULE_FLAG, "pymobiledevice3", "usbmux", "list"])
     assert code == 0
     assert fake_pmd3["main_argv"] == [["pymobiledevice3", "usbmux", "list"]]
@@ -205,7 +205,7 @@ def test_dispatch_refuses_arbitrary_modules(capsys) -> None:
 def test_gui_entry_dispatches_before_qt(fake_pmd3, monkeypatch) -> None:
     from apprestore_gui import app
 
-    monkeypatch.setattr(sys, "argv", ["AppRestore.exe"])
+    monkeypatch.setattr(sys, "argv", ["ReVivo.exe"])
     assert app.main(["-I", "-m", "pymobiledevice3", "version"]) == 0
     assert fake_pmd3["main_argv"] == [["pymobiledevice3", "version"]]
 
@@ -254,7 +254,7 @@ def test_bundle_ipatool_pins_match_installers() -> None:
 
 
 def test_windowed_app_without_console_gets_null_streams(monkeypatch):
-    """Double-clicked AppRestore.exe has sys.stdout=None; imports must not crash."""
+    """Double-clicked ReVivo.exe has sys.stdout=None; imports must not crash."""
 
     from apprestore_core import frozen
 

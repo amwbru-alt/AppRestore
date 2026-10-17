@@ -62,7 +62,7 @@ def main(argv: list[str] | None = None) -> int:
         choices=("widgets", "quick", "quick-legacy"),
         # The packaged exe opens the new window. From source, widgets stays
         # the default so the old shell is still one flag away.
-        default="quick" if is_frozen() else "widgets",
+        default="quick",
         help=(
             "widgets is the current window; quick is the Qt Quick window in "
             "design 4b; quick-legacy is the previous Qt Quick window"
@@ -146,7 +146,7 @@ def main(argv: list[str] | None = None) -> int:
 
     app = QApplication(sys.argv)
     pin_light_native_chrome(app)
-    app.setApplicationName("AppRestore")
+    app.setApplicationName("ReVivo")
     app.setWindowIcon(app_icon())
     family = load_fonts()
     app.setStyle("Fusion")

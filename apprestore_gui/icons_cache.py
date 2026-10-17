@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from apprestore_core.network_policy import urlopen as policy_urlopen
+
 import hashlib
 import json
 import re
@@ -16,7 +18,7 @@ from typing import Any
 from PySide6.QtCore import Property, QByteArray, QObject, QSize, QUrl, Qt, Signal, Slot
 from PySide6.QtGui import QColor, QImage, QPainter, QPainterPath, QPixmap
 
-USER_AGENT = "AppRestoreGUI/0.3 (+https://github.com/J3ckJ/AppRestore)"
+USER_AGENT = "ReVivoGUI/0.3 (+https://github.com/amwbru-alt/AppRestore)"
 LOOKUP = "https://itunes.apple.com/lookup"
 
 
@@ -58,7 +60,7 @@ class ArtworkCache:
 
     def _http_get(self, url: str) -> bytes:
         req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-        with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+        with policy_urlopen(req, timeout=self.timeout) as resp:
             return resp.read()
 
     def lookup(

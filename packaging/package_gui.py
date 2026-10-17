@@ -5,7 +5,7 @@ Used by both .github/workflows/gui-build.yml (branch builds) and
 zip that the in-app updater will later download.
 
 Steps: bundle pinned ipatool -> (macOS) ad-hoc re-sign -> run --self-test ->
-check version -> zip as AppRestore-GUI-Windows.zip / AppRestore-GUI-macOS.zip
+check version -> zip as ReVivo-GUI-Windows.zip / ReVivo-GUI-macOS.zip
 -> unpack the zip with the updater's own code and run --update-health-check
 on the unpacked copy.
 
@@ -67,12 +67,12 @@ def main() -> int:
         return 2
 
     if sys.platform == "win32":
-        app = dist / "AppRestore"
-        binary_rel = Path("AppRestore") / "AppRestore.exe"
+        app = dist / "ReVivo"
+        binary_rel = Path("ReVivo") / "ReVivo.exe"
         tool_dir = app
     else:
-        app = dist / "AppRestore.app"
-        binary_rel = Path("AppRestore.app") / "Contents" / "MacOS" / "AppRestore"
+        app = dist / "ReVivo.app"
+        binary_rel = Path("ReVivo.app") / "Contents" / "MacOS" / "ReVivo"
         tool_dir = app / "Contents" / "MacOS"
     binary = dist / binary_rel
     if not binary.is_file():
@@ -91,13 +91,13 @@ def main() -> int:
         # Apple's own tool must accept the generated .icns.
         with tempfile.TemporaryDirectory() as tmp:
             run(
-                ["iconutil", "-c", "iconset", str(ROOT / "packaging" / "icons" / "AppRestore.icns"),
-                 "-o", str(Path(tmp) / "AppRestore.iconset")],
+                ["iconutil", "-c", "iconset", str(ROOT / "packaging" / "icons" / "ReVivo.icns"),
+                 "-o", str(Path(tmp) / "ReVivo.iconset")],
                 check=True,
             )
-            print("iconset:", sorted(p.name for p in (Path(tmp) / "AppRestore.iconset").iterdir()))
-        if not (app / "Contents" / "Resources" / "AppRestore.icns").is_file():
-            print("AppRestore.icns is missing from the bundle", file=sys.stderr)
+            print("iconset:", sorted(p.name for p in (Path(tmp) / "ReVivo.iconset").iterdir()))
+        if not (app / "Contents" / "Resources" / "ReVivo.icns").is_file():
+            print("ReVivo.icns is missing from the bundle", file=sys.stderr)
             return 1
         # Adding ipatool invalidates PyInstaller's ad-hoc signature.
         run(["codesign", "--force", "--deep", "--sign", "-", str(app)], check=True)

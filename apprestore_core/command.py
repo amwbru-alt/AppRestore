@@ -16,7 +16,7 @@ from .models import CommandResult
 
 _CAPTURE_LIMIT_BYTES = 4 * 1024 * 1024
 _READ_CHUNK_BYTES = 64 * 1024
-_TRUNCATION_NOTICE = b"\n...[output truncated by AppRestore]...\n"
+_TRUNCATION_NOTICE = b"\n...[output truncated by ReVivo]...\n"
 _PROCESS_TREE_GRACE_SECONDS = 1.0
 _READER_SHUTDOWN_SECONDS = 5.0
 

@@ -6,11 +6,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 ICONS = ROOT / "packaging" / "icons"
 RELEASE = ROOT / ".github" / "workflows" / "release.yml"
-GUI_NAMES = ("AppRestore-GUI-Windows.zip", "AppRestore-GUI-macOS.zip")
+GUI_NAMES = ("ReVivo-GUI-Windows.zip", "ReVivo-GUI-macOS.zip")
 
 
 def test_windows_ico_has_all_sizes_16_to_256():
-    data = (ICONS / "AppRestore.ico").read_bytes()
+    data = (ICONS / "ReVivo.ico").read_bytes()
     reserved, kind, count = struct.unpack_from("<HHH", data)
     assert (reserved, kind) == (0, 1)
     sizes = set()
@@ -23,7 +23,7 @@ def test_windows_ico_has_all_sizes_16_to_256():
 
 
 def test_macos_icns_has_all_retina_sizes():
-    data = (ICONS / "AppRestore.icns").read_bytes()
+    data = (ICONS / "ReVivo.icns").read_bytes()
     assert data[:4] == b"icns"
     assert struct.unpack_from(">I", data, 4)[0] == len(data)
     types, pos = set(), 8
@@ -36,13 +36,13 @@ def test_macos_icns_has_all_retina_sizes():
 
 
 def test_preview_png_is_1024():
-    head = (ICONS / "AppRestore-1024.png").read_bytes()[:24]
+    head = (ICONS / "ReVivo-1024.png").read_bytes()[:24]
     assert struct.unpack(">II", head[16:24]) == (1024, 1024)
 
 
 def test_spec_uses_icons_and_window_icon_is_bundled():
     spec = (ROOT / "packaging" / "apprestore-gui.spec").read_text(encoding="utf-8")
-    assert '"AppRestore.ico"' in spec and '"AppRestore.icns"' in spec
+    assert '"ReVivo.ico"' in spec and '"ReVivo.icns"' in spec
     assert "icon=None" not in spec
     assert (ROOT / "apprestore_gui" / "resources" / "icons" / "app-icon-256.png").is_file()
     app = (ROOT / "apprestore_gui" / "app.py").read_text(encoding="utf-8")
@@ -62,8 +62,8 @@ def test_release_builds_both_gui_apps_and_publishes_them_with_checksums():
     assert workflow.count("python packaging/package_gui.py --out gui-dist --expect-version") == 2
     publish = workflow.split("  publish:\n", 1)[1]
     assert "      - gui-windows\n" in publish and "      - gui-macos\n" in publish
-    assert 'gui_windows="AppRestore-GUI-Windows.zip"' in publish
-    assert 'gui_macos="AppRestore-GUI-macOS.zip"' in publish
+    assert 'gui_windows="ReVivo-GUI-Windows.zip"' in publish
+    assert 'gui_macos="ReVivo-GUI-macOS.zip"' in publish
     assert '== 6 ]]' in publish
     assert 'sha256sum "$gui_windows" "$gui_macos" >> SHA256SUMS.txt' in publish
     assert "sha256sum -c SHA256SUMS.txt" in publish
@@ -84,9 +84,10 @@ def test_gui_release_jobs_use_locked_runtime():
         assert "python scripts/build-release.py" not in section
 
 
-def test_readme_offers_both_install_paths():
+def test_readme_links_current_build_guide():
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    assert "Графическая версия" in readme
-    assert "Терминальная версия" in readme
+    assert "docs/REVIVO-GUIDE-RU.md" in readme
+    guide = (ROOT / "docs/REVIVO-GUIDE-RU.md").read_text(encoding="utf-8")
+    assert "python -m apprestore_gui" in guide
     for name in GUI_NAMES:
-        assert name in readme
+        assert name in guide

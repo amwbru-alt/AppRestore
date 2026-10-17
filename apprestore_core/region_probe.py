@@ -33,6 +33,8 @@
 """
 from __future__ import annotations
 
+from apprestore_core.network_policy import urlopen as policy_urlopen
+
 import enum
 import json
 import logging
@@ -60,7 +62,7 @@ TIMEOUT_S = 10.0
 POSITIVE_TTL_S = 24 * 3600      # «есть в витрине» — кэш на сутки
 NEGATIVE_TTL_S = 6 * 3600       # «нет в витрине» — кэш на 6 часов
 MAX_IDS_PER_CALL = 2000         # защита от использования как обхода каталога
-USER_AGENT = "AppRestore-region-probe/1"
+USER_AGENT = "ReVivo-region-probe/1"
 HEADERS: Mapping[str, str] = {"User-Agent": USER_AGENT, "Accept": "application/json"}
 
 _ISO2 = re.compile(r"^[A-Z]{2}$")
@@ -139,11 +141,9 @@ Fetcher = Callable[[str, Mapping[str, str], float], bytes]
 
 def _default_fetcher(url: str, headers: Mapping[str, str], timeout: float) -> bytes:
     # Собственный opener: без HTTPCookieProcessor, без auth-хендлеров.
-    opener = urllib.request.build_opener()
-    opener.addheaders = []  # убрать дефолтный Python-urllib UA, ставим свои
     req = urllib.request.Request(url, headers=dict(headers), method="GET")
     try:
-        with opener.open(req, timeout=timeout) as resp:
+        with policy_urlopen(req, timeout=timeout) as resp:
             if resp.status != 200:
                 raise LookupError_(f"HTTP {resp.status}")
             return resp.read()

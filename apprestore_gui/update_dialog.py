@@ -49,7 +49,7 @@ class _DownloadWorker(QObject):
 def prepare_update(info: updater.UpdateInfo, progress: updater.Progress | None = None) -> updater.StagedUpdate:
     """Download + verify + unpack next to the app. Nothing is replaced yet."""
 
-    workdir = Path(tempfile.mkdtemp(prefix="AppRestore-download-"))
+    workdir = Path(tempfile.mkdtemp(prefix="ReVivo-download-"))
     try:
         archive = updater.download_update(info, workdir, progress=progress)
         return updater.stage_update(archive, info)
@@ -82,7 +82,7 @@ class UpdateDialog(QDialog):
         self._quit = quit_app or QApplication.quit
         self._thread: QThread | None = None
         self._worker: _DownloadWorker | None = None
-        self.setWindowTitle("Обновление AppRestore")
+        self.setWindowTitle("Обновление ReVivo")
         self.setMinimumSize(520, 420)
 
         layout = QVBoxLayout(self)
@@ -225,7 +225,7 @@ class UpdateDialog(QDialog):
 def _ask_yes_no(parent: QWidget, text: str) -> bool:
     answer = QMessageBox.question(
         parent,
-        "Обновление AppRestore",
+        "Обновление ReVivo",
         text,
         QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         QMessageBox.StandardButton.No,

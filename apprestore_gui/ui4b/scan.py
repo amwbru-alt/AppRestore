@@ -1,6 +1,6 @@
 """«Проверено 218 из 640» on onboarding step 4 (the check counter).
 
-Reading of the concept: while AppRestore compares the Apple ID purchase
+Reading of the concept: while ReVivo compares the Apple ID purchase
 history with what is on the phone, it counts the purchases already checked
 out of the total and what it found so far (offloaded, removed from the App
 Store). ``total`` may be unknown (old ipatool without ``--all`` pages): then

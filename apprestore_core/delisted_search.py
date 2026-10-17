@@ -45,6 +45,8 @@
 """
 from __future__ import annotations
 
+from apprestore_core.network_policy import urlopen as policy_urlopen
+
 import difflib
 import enum
 import gzip
@@ -80,7 +82,7 @@ CDX_NEGATIVE_TTL_S = 6 * 3600
 SNAPSHOT_TTL_S = 7 * 24 * 3600  # снимок неизменен, кэшируем надолго
 BUILTIN_ENOUGH_CONFIDENCE = 0.85  # есть такой встроенный результат → в сеть не идём
 MIN_CONFIDENCE = 0.6
-USER_AGENT = "AppRestore-delisted-search/1"
+USER_AGENT = "ReVivo-delisted-search/1"
 HEADERS: Mapping[str, str] = {"User-Agent": USER_AGENT, "Accept": "application/json, text/html"}
 # True (LEGAL.md §1.13) — только уровень A: ссылка банка прослеживается до track_id
 # (link_verified) и есть архивная копия поста (archive_url) с датой проверки.
@@ -519,11 +521,9 @@ Fetcher = Callable[[str, Mapping[str, str], float], bytes]
 
 
 def _default_fetcher(url: str, headers: Mapping[str, str], timeout: float) -> bytes:
-    opener = urllib.request.build_opener()     # без HTTPCookieProcessor и auth
-    opener.addheaders = []
     req = urllib.request.Request(url, headers=dict(headers), method="GET")
     try:
-        with opener.open(req, timeout=timeout) as resp:
+        with policy_urlopen(req, timeout=timeout) as resp:
             return resp.read()
     except urllib.error.HTTPError as exc:
         raise WaybackError(f"HTTP {exc.code}", exc.code) from None

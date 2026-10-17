@@ -47,7 +47,7 @@ def test_offloaded_redownload_prompt_matches_cli_fallback() -> None:
     )
 
 
-def test_pin_light_native_chrome_requests_a_light_menu() -> None:
+def test_native_chrome_requests_a_dark_menu() -> None:
     class _Hints:
         def __init__(self) -> None:
             self.scheme = None
@@ -64,7 +64,7 @@ def test_pin_light_native_chrome_requests_a_light_menu() -> None:
 
     app = _App()
     pin_light_native_chrome(app)  # type: ignore[arg-type]
-    assert app.hints.scheme == Qt.ColorScheme.Light
+    assert app.hints.scheme == Qt.ColorScheme.Dark
 
 
 def test_context_menu_stylesheet_pairs_background_with_text() -> None:

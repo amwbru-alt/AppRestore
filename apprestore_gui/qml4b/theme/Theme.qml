@@ -1,10 +1,9 @@
-// Theme.qml — токены AppRestore 4b. Синглтон: в qmldir — "singleton Theme 1.0 Theme.qml".
+// Theme.qml — токены ReVivo 4b. Синглтон: в qmldir — "singleton Theme 1.0 Theme.qml".
 // Источник: design/spec/tokens.json (из CSS концептов 4b). Значения — логические px.
 //
 // Правила (часть 1, §1.5):
 //  * В компонентах НЕТ hex: только Theme.<семантическое имя>. Палитра — объект `palette`,
-//    v1 всегда `light` (приложение принудительно светлое). Тёмная тема — после v1: добавить
-//    `dark` с теми же ключами и переключать `palette`, компоненты не трогаем.
+//    ReVivo использует единую тёмную палитру.
 //  * Шрифты: таблица `typeMac` / `typeWin`, выбор по Qt.platform.os. Компоненты берут
 //    Theme.type.<стиль> и применяют через Theme.applyFont(item.font, style) или напрямую поля.
 pragma Singleton
@@ -18,50 +17,50 @@ QtObject {
     // Segoe UI Variable есть только в Windows 11; на Windows 10 — статический Segoe UI (веса 400/600/700).
     readonly property bool winVariable: isWin && Qt.fontFamilies().indexOf("Segoe UI Variable Text") >= 0
 
-    // ── Палитра (семантические ключи; v1 = light)
-    readonly property var light: ({
-        bg: "#EBEAE6",
-        card: "#FFFFFF",
-        surfaceSoft: "#F3F2EE",
-        ink: "#121212",
-        ink2: "#61605C",
-        ink3: "#97958F",
-        ink3Text: "#77756F",
-        line: "#D6D4CE",
-        lineSoft: "#ECEBE6",
-        track: "#D3D1CA",
+    // ── ReVivo dark palette
+    readonly property var dark: ({
+        bg: "#10151D",
+        card: "#19222E",
+        surfaceSoft: "#202C3B",
+        ink: "#F1F5FA",
+        ink2: "#BBC7D8",
+        ink3: "#91A1B7",
+        ink3Text: "#A7B4C6",
+        line: "#344255",
+        lineSoft: "#293649",
+        track: "#344255",
         accent: "#B35128",
-        accentHover: "#A34A24",
-        accentPressed: "#934221",
-        accentDisabled: "#D9D7D1",
-        accentTint: "#F6EBE4",
-        ok: "#2F9E55",
-        okText: "#217A40",
-        off: "#A3A29D",
-        iosNew: "#0A84FF",
-        wall: "#DDD8CC",
-        screenOff: "#1F1F21",
+        accentHover: "#C36236",
+        accentPressed: "#9E4623",
+        accentDisabled: "#344255",
+        accentTint: "#3A2821",
+        ok: "#75D69D",
+        okText: "#75D69D",
+        off: "#91A1B7",
+        iosNew: "#67B4FF",
+        wall: "#263B4A",
+        screenOff: "#151A23",
         phoneFrame: "#1B1B1D",
-        phoneFrameEdge: "#38383B",
+        phoneFrameEdge: "#536173",
         phoneBezel: "#0B0B0B",
-        slotDash: Qt.rgba(0, 0, 0, 0.32),
+        sheet: "#19222E",
+        rowOn: "#2C2726",
+        mark: "#3A2821",
+        capTrack: "#344255",
+        checkBorder: "#8393A9",
+        checkDisabledBorder: "#344255",
+        stepTodoBorder: "#536173",
+        stepOkBg: "#344255",
+        stepLine: "#536173",
+        iconPlaceholder: "#344255",
+        errorText: "#F29B91",
+        iosAlert: "#202C3B",
+        iosAlertBlue: "#67B4FF",
+        slotDash: Qt.rgba(1, 1, 1, 0.32),
         veil: Qt.rgba(0, 0, 0, 0.45),
-        backdrop: Qt.rgba(20/255, 20/255, 18/255, 0.34),
-        sheet: "#FFFFFF",
-        rowOn: "#FBF6F2",
-        mark: "#F6EBE4",
-        capTrack: "#E2E0DA",
-        checkBorder: "#B8B6AE",
-        checkDisabledBorder: "#DCDAD3",
-        stepTodoBorder: "#C3C1BA",
-        stepOkBg: "#DCDAD3",
-        stepLine: "#CFCDC6",
-        iconPlaceholder: "#E2E0DA",
-        errorText: "#A04824",
-        iosAlert: "#F4F4F2",
-        iosAlertBlue: "#0A6FE0",
+        backdrop: Qt.rgba(0, 0, 0, 0.65),
     })
-    property var palette: light          // v1: не переключается; системная тёмная тема игнорируется
+    readonly property var palette: dark
     readonly property color bg: palette.bg
     readonly property color card: palette.card
     readonly property color surfaceSoft: palette.surfaceSoft
@@ -361,7 +360,7 @@ QtObject {
 
     readonly property color inkOnAccent: "#FFFFFF"          // текст/галочка на тёмном и accent
     readonly property color focusRingInner: "#FFFFFF"       // tokens.json
-    readonly property color secondaryPressed: "#E6E4DE"     // спека §1.1 [предл.]
+    readonly property color secondaryPressed: "#2B3B50"     // спека §1.1 [предл.]
     readonly property color iconHairline: Qt.rgba(0, 0, 0, 0.1)
     readonly property color sheetHairline: Qt.rgba(0, 0, 0, 0.08)
     readonly property color progressInk: "#FFFFFF"          // кольцо и сектор поверх вуали
@@ -371,9 +370,9 @@ QtObject {
     readonly property color pageDotOff: Qt.rgba(0, 0, 0, 0.22)
     readonly property color iosDim: Qt.rgba(0, 0, 0, 0.3)
     readonly property color iosAlertBg: iosAlert
-    readonly property color iosAlertInk: "#111111"
-    readonly property color iosAlertText: "#333333"
-    readonly property color iosAlertLine: "#D3D3D0"
+    readonly property color iosAlertInk: ink
+    readonly property color iosAlertText: ink2
+    readonly property color iosAlertLine: line
     readonly property color iosAlertButton: iosAlertBlue
     readonly property color phoneScreenOn: wall             // шаг 1 онбординга: экран не тёмный
 

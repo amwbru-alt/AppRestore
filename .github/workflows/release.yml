@@ -43,7 +43,7 @@ jobs:
           }
           version="$(python apprestore.py --version)"
           [[ "$tag" == "v${version}" ]] || {
-            echo "Tag $tag does not match AppRestore $version" >&2
+            echo "Tag $tag does not match ReVivo $version" >&2
             exit 1
           }
           python scripts/build-release.py
@@ -206,7 +206,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Set up pinned Go toolchain for AppRestore ipatool
+      - name: Set up pinned Go toolchain for ReVivo ipatool
         uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
         with:
           go-version: "1.25.0"
@@ -239,7 +239,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: apprestore-gui-windows-${{ needs.validate-tag.outputs.version }}
-          path: gui-dist/AppRestore-GUI-Windows.zip
+          path: gui-dist/ReVivo-GUI-Windows.zip
           if-no-files-found: error
           retention-days: 7
 
@@ -266,7 +266,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Set up pinned Go toolchain for AppRestore ipatool
+      - name: Set up pinned Go toolchain for ReVivo ipatool
         uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
         with:
           go-version: "1.25.0"
@@ -302,7 +302,7 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: apprestore-gui-macos-${{ needs.validate-tag.outputs.version }}
-          path: gui-dist/AppRestore-GUI-macOS.zip
+          path: gui-dist/ReVivo-GUI-macOS.zip
           if-no-files-found: error
           retention-days: 7
 
@@ -331,7 +331,7 @@ jobs:
         run: |
           set -euo pipefail
           version="${{ needs.validate-tag.outputs.version }}"
-          archive="AppRestore-${version}-source.zip"
+          archive="ReVivo-${version}-source.zip"
           snapshot="${RUNNER_TEMP}/apprestore-first-build"
           mkdir -p "$snapshot"
 
@@ -353,7 +353,7 @@ jobs:
           source_rebuild="${RUNNER_TEMP}/apprestore-source-rebuild"
           mkdir -p "$source_rebuild"
           unzip -q "dist/$archive" -d "$source_rebuild"
-          source_root="$source_rebuild/AppRestore-${version}"
+          source_root="$source_rebuild/ReVivo-${version}"
           test -d "$source_root"
           test ! -e "$source_root/.git"
           (cd "$source_root" && python scripts/build-release.py)
@@ -366,7 +366,7 @@ jobs:
         with:
           name: apprestore-release-${{ needs.validate-tag.outputs.version }}
           path: |
-            dist/AppRestore-${{ needs.validate-tag.outputs.version }}-source.zip
+            dist/ReVivo-${{ needs.validate-tag.outputs.version }}-source.zip
             dist/install.ps1
             dist/install.sh
             dist/SHA256SUMS.txt
@@ -418,9 +418,9 @@ jobs:
         run: |
           set -euo pipefail
           tag="v${VERSION}"
-          archive="AppRestore-${VERSION}-source.zip"
-          gui_windows="AppRestore-GUI-Windows.zip"
-          gui_macos="AppRestore-GUI-macOS.zip"
+          archive="ReVivo-${VERSION}-source.zip"
+          gui_windows="ReVivo-GUI-Windows.zip"
+          gui_macos="ReVivo-GUI-macOS.zip"
           for asset in "$archive" install.ps1 install.sh SHA256SUMS.txt "$gui_windows" "$gui_macos"; do
             test -f "${ASSET_DIR}/${asset}"
           done
@@ -517,7 +517,7 @@ jobs:
             --verify-tag \
             --draft \
             --notes-file "$notes_file" \
-            --title "AppRestore ${VERSION}"
+            --title "ReVivo ${VERSION}"
           created_draft=true
           gh release upload "$tag" \
             "${ASSET_DIR}/${archive}" \

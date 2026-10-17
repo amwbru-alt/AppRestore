@@ -6,14 +6,14 @@
 # 301 makes login fail before the password is checked. This audited build stays
 # pinned while newer upstream releases are evaluated separately.
 #
-# On top of that commit AppRestore applies its own patches from
+# On top of that commit ReVivo applies its own patches from
 # packaging/patches/ (each pinned by SHA-256 below):
 #   0001-ipatool-auth-info-country.patch - `auth info` also prints the
 #   signed-in account's raw storeFront and its ISO countryCode. Read-only.
 #   0002-ipatool-list-purchases-all.patch - `list-purchases --all` returns the
 #   whole purchase history in one call; without the flag nothing changes.
 #   0003-ipatool-keychain-passphrase-env-stdin.patch - keychain passphrase via
-#   --keychain-passphrase-stdin (AppRestore uses only this; never argv/env).
+#   --keychain-passphrase-stdin (ReVivo uses only this; never argv/env).
 #   0004-ipatool-delisted-redownload.patch - licensed iOS redownload remains
 #   possible without a public catalog card; verify the returned app identity.
 #   0005-ipatool-readonly-download-probe.patch - compare download channels
@@ -34,7 +34,7 @@
 # patches = same SHA-256. The Go toolchain is pinned below (go1.25.0, the same
 # version build-ipatool.yml installs); override with IPATOOL_GOTOOLCHAIN.
 #
-# linux-amd64 is only for local checks; AppRestore does not ship it.
+# linux-amd64 is only for local checks; ReVivo does not ship it.
 #
 # Usage: packaging/build-ipatool.sh windows-amd64|macos-arm64|macos-amd64|linux-amd64
 set -euo pipefail

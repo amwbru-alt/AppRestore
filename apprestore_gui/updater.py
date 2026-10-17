@@ -1,7 +1,7 @@
 """Check GitHub releases and update the frozen GUI in one click.
 
 Flow (nothing is installed without the user's click):
-1. ``check_for_update()`` reads ``releases/latest`` of J3ckJ/AppRestore
+1. ``check_for_update()`` reads ``releases/latest`` of amwbru-alt/AppRestore
    (public API, no token) and compares the tag with the running version.
 2. ``download_update()`` downloads the GUI asset for this OS and verifies its
    SHA-256 against ``SHA256SUMS.txt`` from the same release.
@@ -14,6 +14,8 @@ Flow (nothing is installed without the user's click):
 """
 
 from __future__ import annotations
+
+from apprestore_core.network_policy import urlopen as policy_urlopen
 
 import hashlib
 import json
@@ -31,16 +33,16 @@ from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
 from typing import Any, Callable
 
-REPO = "J3ckJ/AppRestore"
+REPO = "amwbru-alt/AppRestore"
 LATEST_URL = f"https://api.github.com/repos/{REPO}/releases/latest"
 DOWNLOAD_PREFIX = f"https://github.com/{REPO}/releases/download/"
 CHECKSUMS_NAME = "SHA256SUMS.txt"
-USER_AGENT = "AppRestoreGUI-updater (+https://github.com/J3ckJ/AppRestore)"
+USER_AGENT = "ReVivoGUI-updater (+https://github.com/amwbru-alt/AppRestore)"
 HEALTH_FLAG = "--update-health-check"
 MAX_ASSET_BYTES = 1024 * 1024 * 1024
 ASSET_BY_PLATFORM = {
-    "win32": "AppRestore-GUI-Windows.zip",
-    "darwin": "AppRestore-GUI-macOS.zip",
+    "win32": "ReVivo-GUI-Windows.zip",
+    "darwin": "ReVivo-GUI-macOS.zip",
 }
 
 Fetch = Callable[[str], bytes]
@@ -93,7 +95,7 @@ def _http_get(url: str, timeout: float = 30.0) -> bytes:
         url,
         headers={"User-Agent": USER_AGENT, "Accept": "application/vnd.github+json"},
     )
-    with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310
+    with policy_urlopen(request, timeout=timeout, updates=True) as response:  # noqa: S310
         return response.read()
 
 
@@ -191,8 +193,8 @@ def download_update(
     total = info.asset_size
     done = 0
     open_url = opener or (
-        lambda url: urllib.request.urlopen(  # noqa: S310
-            urllib.request.Request(url, headers={"User-Agent": USER_AGENT}), timeout=60
+        lambda url: policy_urlopen(  # noqa: S310
+            urllib.request.Request(url, headers={"User-Agent": USER_AGENT}), timeout=60, updates=True
         )
     )
     try:
@@ -235,7 +237,7 @@ def installed_app_path(platform: str | None = None, executable: str | None = Non
     if platform == "darwin":
         bundle = exe.parent.parent.parent
         if bundle.suffix != ".app":
-            raise UpdateError("программа запущена не из AppRestore.app")
+            raise UpdateError("программа запущена не из ReVivo.app")
         return bundle
     raise UpdateError("обновление в один клик есть только на Windows и macOS")
 
@@ -280,20 +282,20 @@ def stage_update(
     parent = target.parent
     if not os.access(parent, os.W_OK):
         raise UpdateError(
-            f"нет прав на запись в {parent}. Переместите AppRestore в свою папку "
+            f"нет прав на запись в {parent}. Переместите ReVivo в свою папку "
             "или обновите вручную со страницы релиза."
         )
-    staging = Path(tempfile.mkdtemp(prefix=".AppRestore-update-", dir=parent))
+    staging = Path(tempfile.mkdtemp(prefix=".ReVivo-update-", dir=parent))
     try:
         extract_zip(zip_path, staging, platform)
         if platform == "win32":
-            new_app = staging / "AppRestore"
-            binary = new_app / "AppRestore.exe"
+            new_app = staging / "ReVivo"
+            binary = new_app / "ReVivo.exe"
         else:
-            new_app = staging / "AppRestore.app"
-            binary = new_app / "Contents" / "MacOS" / "AppRestore"
+            new_app = staging / "ReVivo.app"
+            binary = new_app / "Contents" / "MacOS" / "ReVivo"
         if not binary.is_file():
-            raise UpdateError("в архиве обновления нет программы AppRestore")
+            raise UpdateError("в архиве обновления нет программы ReVivo")
         if platform != "win32":
             binary.chmod(binary.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
     except Exception:
@@ -303,7 +305,7 @@ def stage_update(
 
 
 POSIX_SWAP_SCRIPT = r"""#!/bin/sh
-# AppRestore updater: swap the .app after the old process exits, roll back on failure.
+# ReVivo updater: swap the .app after the old process exits, roll back on failure.
 PID="$1"; TARGET="$2"; NEW="$3"; STAGING="$4"; LOG="$5"; RELAUNCH="$6"
 BACKUP="$TARGET.old-$$"
 log() { echo "$(date '+%Y-%m-%d %H:%M:%S') $*" >> "$LOG"; }
@@ -317,8 +319,8 @@ if ! mv "$TARGET" "$BACKUP"; then log "cannot move old app aside"; rm -rf "$STAG
 if ! mv "$NEW" "$TARGET"; then
   log "cannot move new app in; rolling back"; mv "$BACKUP" "$TARGET"; rm -rf "$STAGING"; exit 1
 fi
-BIN="$TARGET/Contents/MacOS/AppRestore"
-[ -x "$BIN" ] || BIN="$TARGET/AppRestore"
+BIN="$TARGET/Contents/MacOS/ReVivo"
+[ -x "$BIN" ] || BIN="$TARGET/ReVivo"
 if ! "$BIN" __HEALTH__ >> "$LOG" 2>&1; then
   log "health check failed; rolling back"
   rm -rf "$TARGET"; mv "$BACKUP" "$TARGET"; rm -rf "$STAGING"
@@ -351,7 +353,7 @@ while ((Get-Date) -lt $deadline) {
 }
 $alive = Get-Process -Id $ProcessId -ErrorAction SilentlyContinue
 if ($alive) {
-  if ($alive.ProcessName -ne "AppRestore") {
+  if ($alive.ProcessName -ne "ReVivo") {
     Log "refusing to stop process $ProcessId ($($alive.ProcessName))"
     exit 1
   }
@@ -373,23 +375,23 @@ for ($i = 0; $i -lt 20 -and -not $moved; $i++) {
 }
 if (-not $moved) {
   Log "cannot move old app aside (files still in use)"
-  Start-Process -FilePath (Join-Path $Target "AppRestore.exe")
+  Start-Process -FilePath (Join-Path $Target "ReVivo.exe")
   exit 1
 }
 try {
   Move-Item -LiteralPath $New -Destination $Target
-  $Exe = Join-Path $Target "AppRestore.exe"
+  $Exe = Join-Path $Target "ReVivo.exe"
   $Health = Start-Process -FilePath $Exe -ArgumentList "__HEALTH__" -Wait -PassThru -WindowStyle Hidden
   if ($Health.ExitCode -ne 0) { throw "health check exit code $($Health.ExitCode)" }
 } catch {
   Log "update failed, rolling back: $_"
   if (Test-Path -LiteralPath $Target) { Remove-Item -LiteralPath $Target -Recurse -Force -ErrorAction SilentlyContinue }
   Rename-Item -LiteralPath $Backup -NewName (Split-Path $Target -Leaf)
-  Start-Process -FilePath (Join-Path $Target "AppRestore.exe")
+  Start-Process -FilePath (Join-Path $Target "ReVivo.exe")
   exit 1
 }
 Log "swap done"
-Start-Process -FilePath (Join-Path $Target "AppRestore.exe")
+Start-Process -FilePath (Join-Path $Target "ReVivo.exe")
 Remove-Item -LiteralPath $Backup -Recurse -Force -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $Staging -Recurse -Force -ErrorAction SilentlyContinue
 exit 0

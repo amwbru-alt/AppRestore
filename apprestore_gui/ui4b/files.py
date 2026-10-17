@@ -78,7 +78,7 @@ def export_rows(apps: Iterable[Mapping[str, object]], chosen: set[str]) -> list[
 def _root_label(index: int, root: Path, imazing: set[str], downloads: str, itunes: str) -> str:
     key = os.path.normcase(os.path.abspath(root))
     if index == 0:
-        return "AppRestore"
+        return "ReVivo"
     if key in imazing:
         return "iMazing"
     if key == downloads:
@@ -90,7 +90,7 @@ def _root_label(index: int, root: Path, imazing: set[str], downloads: str, itune
 
 def labelled_roots(roots: list[Path]) -> list[tuple[str, Path]]:
     """paths.ipa_search_roots(library) → (label, folder): the folders the scan really uses
-    (AppRestore's library first, iMazing, Downloads, iTunes «Mobile Applications», extra)."""
+    (ReVivo's library first, iMazing, Downloads, iTunes «Mobile Applications», extra)."""
 
     from apprestore_core.paths import imazing_apps_dirs
 

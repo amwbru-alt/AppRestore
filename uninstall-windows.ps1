@@ -8,7 +8,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $ManagedInstallMarkerName = ".apprestore-managed"
-$ManagedInstallMarkerValue = "AppRestore managed installation v1"
+$ManagedInstallMarkerValue = "ReVivo managed installation v1"
 $KnownLocalAppData = [Environment]::GetFolderPath(
     [Environment+SpecialFolder]::LocalApplicationData
 )
@@ -17,7 +17,7 @@ if ([string]::IsNullOrWhiteSpace($KnownLocalAppData)) {
 }
 $KnownLocalAppData = [System.IO.Path]::GetFullPath($KnownLocalAppData)
 $InstallRoot = [System.IO.Path]::GetFullPath(
-    (Join-Path $KnownLocalAppData "Programs\AppRestore")
+    (Join-Path $KnownLocalAppData "Programs\ReVivo")
 )
 
 function Assert-PlainDirectoryTree {
@@ -96,7 +96,7 @@ function Assert-ManagedAppRestoreInstall {
     foreach ($LegacyRelativePath in $LegacyV013Hashes.Keys) {
         $LegacyFile = Join-Path $Path $LegacyRelativePath
         if (-not (Test-Path -LiteralPath $LegacyFile -PathType Leaf)) {
-            throw "Отказ: $Path не является известной установкой AppRestore v0.1.3."
+            throw "Отказ: $Path не является известной установкой ReVivo v0.1.3."
         }
         $LegacyHash = & $GetSha256 -FilePath $LegacyFile
         if (-not [string]::Equals(
@@ -104,7 +104,7 @@ function Assert-ManagedAppRestoreInstall {
             $LegacyV013Hashes[$LegacyRelativePath],
             [System.StringComparison]::Ordinal
         )) {
-            throw "Отказ: fingerprint AppRestore v0.1.3 не совпал: $LegacyRelativePath"
+            throw "Отказ: fingerprint ReVivo v0.1.3 не совпал: $LegacyRelativePath"
         }
     }
 
@@ -126,7 +126,7 @@ exit /b %ERRORLEVEL%
             [System.StringComparison]::Ordinal
         )
     ) {
-        throw "Отказ: launcher AppRestore v0.1.3 не совпал."
+        throw "Отказ: launcher ReVivo v0.1.3 не совпал."
     }
     foreach ($LegacyRuntimeFile in @(
         (Join-Path $Path ".venv\Scripts\python.exe"),
@@ -134,7 +134,7 @@ exit /b %ERRORLEVEL%
         (Join-Path $Path "bin\ipatool.exe")
     )) {
         if (-not (Test-Path -LiteralPath $LegacyRuntimeFile -PathType Leaf)) {
-            throw "Отказ: runtime fingerprint AppRestore v0.1.3 неполон."
+            throw "Отказ: runtime fingerprint ReVivo v0.1.3 неполон."
         }
     }
 }
@@ -147,7 +147,7 @@ if ($ProgramExists) {
 $RemoveProgram = $false
 $UpdatePath = $false
 if ($ProgramExists) {
-    $RemoveProgram = $PSCmdlet.ShouldProcess($InstallRoot, "удалить AppRestore")
+    $RemoveProgram = $PSCmdlet.ShouldProcess($InstallRoot, "удалить ReVivo")
     $UpdatePath = $RemoveProgram
 }
 else {
@@ -155,7 +155,7 @@ else {
     $RemoveProgram = $true
     $UpdatePath = $PSCmdlet.ShouldProcess(
         "пользовательский PATH",
-        "убрать оставшийся каталог AppRestore\bin"
+        "убрать оставшийся каталог ReVivo\bin"
     )
 }
 
@@ -201,21 +201,21 @@ if ($UpdatePath -and $null -ne $UserPath) {
 
 if ($ProgramExists -and $RemoveProgram) {
     Remove-Item -LiteralPath $InstallRoot -Recurse -Force
-    Write-Host "AppRestore удалён. Откройте новый терминал, чтобы обновился PATH."
+    Write-Host "ReVivo удалён. Откройте новый терминал, чтобы обновился PATH."
 }
 elseif ($ProgramExists) {
-    Write-Host "Удаление AppRestore отменено; запись PATH сохранена."
+    Write-Host "Удаление ReVivo отменено; запись PATH сохранена."
 }
 else {
-    Write-Host "AppRestore не установлен в $InstallRoot."
+    Write-Host "ReVivo не установлен в $InstallRoot."
 }
 
 if ($PurgeUserData) {
     $DefaultIpaLibrary = [System.IO.Path]::GetFullPath(
-        (Join-Path $HOME "AppRestore\ipas")
+        (Join-Path $HOME "ReVivo\ipas")
     )
     $DefaultCache = [System.IO.Path]::GetFullPath(
-        (Join-Path $KnownLocalAppData "AppRestore")
+        (Join-Path $KnownLocalAppData "ReVivo")
     )
     # ipatool 2.4+ кэширует здесь SAP-рантайм авторизации (Unicorn).
     $IpaToolCache = [System.IO.Path]::GetFullPath(
@@ -227,7 +227,7 @@ if ($PurgeUserData) {
             (Test-Path -LiteralPath $UserDataTarget) -and
             $PSCmdlet.ShouldProcess(
                 $UserDataTarget,
-                "безвозвратно удалить пользовательские данные AppRestore"
+                "безвозвратно удалить пользовательские данные ReVivo"
             )
         ) {
             Remove-Item -LiteralPath $UserDataTarget -Recurse -Force
@@ -236,6 +236,6 @@ if ($PurgeUserData) {
     Write-Warning "Каталоги из APPRESTORE_IPA_DIR/APPRESTORE_CACHE_DIR автоматически не удаляются."
 }
 else {
-    Write-Host "IPA, кэш AppRestore, SAP-рантайм и авторизация ipatool сохранены."
+    Write-Host "IPA, кэш ReVivo, SAP-рантайм и авторизация ipatool сохранены."
     Write-Host "Для их явного удаления используйте -PurgeUserData."
 }

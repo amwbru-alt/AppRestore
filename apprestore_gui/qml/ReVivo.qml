@@ -9,8 +9,8 @@ ApplicationWindow {
     minimumWidth: 920
     minimumHeight: 640
     visible: true
-    title: "AppRestore"
-    color: "#E8E8ED"
+    title: "ReVivo"
+    color: "#10151D"
 
     font.family: onest.name
     font.pixelSize: 15
@@ -20,11 +20,11 @@ ApplicationWindow {
         source: Qt.resolvedUrl("../resources/fonts/Onest-Variable.ttf")
     }
 
-    property color ink: "#1C1C1E"
-    property color muted: "#6C6C70"
-    property color line: "#D8D8DC"
-    property color accent: "#C45C2A"
-    property color accentHover: "#A84C22"
+    property color ink: "#F1F5FA"
+    property color muted: "#A7B4C6"
+    property color line: "#344255"
+    property color accent: "#B35128"
+    property color accentHover: "#C36236"
     property bool motion: false
     property string deviceForm: "iphone-island"
     property string deviceNoun: "iPhone"
@@ -408,7 +408,7 @@ ApplicationWindow {
 
     header: Rectangle {
         height: 72
-        color: "#E8E8ED"
+        color: "#10151D"
 
         RowLayout {
             anchors.fill: parent
@@ -425,7 +425,7 @@ ApplicationWindow {
                 mipmap: true
             }
             Text {
-                text: "AppRestore"
+                text: "ReVivo"
                 color: win.ink
                 font.pixelSize: 20
                 font.weight: 650
@@ -567,7 +567,7 @@ ApplicationWindow {
                 anchors.topMargin: 1
                 height: 1
                 radius: 1
-                color: "#FFFFFF"
+                color: "#19222E"
                 opacity: pill.labelColor == "white" ? 0.45 : 0
             }
         }
@@ -586,8 +586,8 @@ ApplicationWindow {
         property string storeId: ""
         property string bundleId: ""
         property string mark: ""
-        property color fill: "#1C1C1E"
-        property color ink: "#FFFFFF"
+        property color fill: "#F1F5FA"
+        property color ink: "#19222E"
         property int corner: 13
         property bool faded: false
         property string iconSource: {
@@ -794,7 +794,7 @@ ApplicationWindow {
                         return "Вернуть"
                     }
                     enabled: win.catalogReady && win.phoneOn && home.missing > 0 && !win.returning
-                    fill: (!win.catalogReady || !win.phoneOn || home.missing === 0) ? "#FFFFFF" : win.accent
+                    fill: (!win.catalogReady || !win.phoneOn || home.missing === 0) ? "#19222E" : win.accent
                     labelColor: (!win.catalogReady || !win.phoneOn || home.missing === 0) ? win.ink : "white"
                     onClicked: {
                         if (home.missing > win.faceSlots && win.chosenCount() === 0)
@@ -857,7 +857,7 @@ ApplicationWindow {
                         width: (phone.pad ? 210 : 150) + index * (phone.pad ? 34 : 42)
                         height: (phone.pad ? 140 : 190) + index * (phone.pad ? 26 : 46)
                         radius: width / 2
-                        color: "#C45C2A"
+                        color: "#B35128"
                         opacity: (0.055 - index * 0.008) * (0.35 + home.bloom * 0.9)
                     }
                 }
@@ -896,7 +896,7 @@ ApplicationWindow {
                         radius: Math.max(18, phone.radius - 8)
                         clip: true
                         gradient: Gradient {
-                            GradientStop { position: 0.0; color: "#FFFFFF" }
+                            GradientStop { position: 0.0; color: "#19222E" }
                             GradientStop { position: 0.22; color: "#F7F7F8" }
                             GradientStop { position: 1.0; color: "#F3F3F5" }
                         }
@@ -958,7 +958,7 @@ ApplicationWindow {
                             width: phone.pad ? 88 : 70
                             height: 4
                             radius: 2
-                            color: "#1C1C1E"
+                            color: "#F1F5FA"
                             opacity: 0.16
                             anchors.horizontalCenter: parent.horizontalCenter
                             anchors.bottom: parent.bottom
@@ -1139,8 +1139,8 @@ ApplicationWindow {
                         name: "Номер " + pasted,
                         detail: "из ссылки или номера",
                         mark: "№",
-                        color: "#1C1C1E",
-                        ink: "#FFFFFF"
+                        color: "#F1F5FA",
+                        ink: "#19222E"
                     })
                 }
             }
@@ -1346,7 +1346,7 @@ ApplicationWindow {
             anchors.right: parent.right
             anchors.bottom: parent.bottom
             height: 100
-            color: "#E8E8ED"
+            color: "#10151D"
 
             Rectangle {
                 anchors.fill: parent
@@ -2440,7 +2440,7 @@ ApplicationWindow {
             anchors.right: parent.right
             anchors.bottom: parent.bottom
             height: 92
-            color: "#E8E8ED"
+            color: "#10151D"
 
             Rectangle {
                 anchors.fill: parent
@@ -2516,7 +2516,7 @@ ApplicationWindow {
                 }
                 Text {
                     width: parent.width
-                    text: "Это не пароль Apple ID. ipatool спрашивает его у каждого своего запуска. Введите его один раз — дальше AppRestore подставит его сам."
+                    text: "Это не пароль Apple ID. ipatool спрашивает его у каждого своего запуска. Введите его один раз — дальше ReVivo подставит его сам."
                     color: win.muted
                     font.pixelSize: 14
                     wrapMode: Text.WordWrap

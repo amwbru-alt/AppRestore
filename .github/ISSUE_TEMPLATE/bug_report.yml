@@ -1,5 +1,5 @@
 name: Сообщить об ошибке
-description: Воспроизводимая ошибка AppRestore без чувствительных данных
+description: Воспроизводимая ошибка ReVivo без чувствительных данных
 title: "[Bug]: "
 body:
   - type: markdown
@@ -22,7 +22,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: Версия AppRestore
+      label: Версия ReVivo
       description: Вывод `apprestore --version`.
       placeholder: "0.2.0"
     validations:

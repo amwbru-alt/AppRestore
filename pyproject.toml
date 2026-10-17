@@ -17,6 +17,8 @@ dependencies = [
 [project.scripts]
 apprestore = "apprestore_core.cli:main"
 apprestore-gui = "apprestore_gui.app:main"
+revivo = "apprestore_core.cli:main"
+revivo-gui = "apprestore_gui.app:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
@@ -34,7 +36,7 @@ apprestore_gui = ["resources/**/*", "ui4b/data/*.json", "qml/**/*.qml", "qml4b/*
 
 [tool.pytest.ini_options]
 # pymobiledevice3 currently brings in xonsh, whose third-party pytest plugin
-# tries to create an interactive Windows console during collection.  AppRestore
+# tries to create an interactive Windows console during collection.  ReVivo
 # does not use that plugin; disabling it keeps `python -m pytest` reliable in
 # GUI terminals and CI while leaving the project's own plugins available.
 addopts = "-p no:xonsh"

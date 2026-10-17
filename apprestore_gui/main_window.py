@@ -167,7 +167,7 @@ class ActionTile(QFrame):
             }}
             QFrame:hover {{
               border-color: #C4C4C8;
-              background: #FAFAFB;
+              background: #202C3B;
             }}
             QLabel {{ border: none; background: transparent; }}
             """
@@ -234,8 +234,8 @@ class Sidebar(QFrame):
         titles = QVBoxLayout()
         titles.setContentsMargins(0, 0, 0, 0)
         titles.setSpacing(0)
-        name = QLabel("AppRestore")
-        name.setStyleSheet("color:#FFFFFF;font-size:13px;font-weight:700;border:none;")
+        name = QLabel("ReVivo")
+        name.setStyleSheet("color:#F1F5FA;font-size:13px;font-weight:700;border:none;")
         tag = QLabel("возврат приложений")
         tag.setStyleSheet(f"color:{SIDE_MUTED};font-size:11px;font-weight:400;border:none;")
         titles.addWidget(name)
@@ -309,7 +309,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.service = service
         self.artwork = artwork
-        self.setWindowTitle("AppRestore")
+        self.setWindowTitle("ReVivo")
         self.resize(1200, 760)
         self._device_udid: str | None = None
         self._device = None
@@ -520,13 +520,13 @@ class MainWindow(QMainWindow):
         if saved_account:
             explanation = (
                 "Это не пароль Apple ID. ipatool спрашивает его у каждого своего запуска. "
-                "Введите его здесь один раз — дальше AppRestore подставит его сам, без чёрного окна."
+                "Введите его здесь один раз — дальше ReVivo подставит его сам, без чёрного окна."
             )
         else:
             explanation = (
                 "Сохранённого входа нет: он удалён при выходе. Это не пароль Apple ID. "
                 "ipatool зашифрует этим паролем новый вход. Введите его один раз — "
-                "дальше AppRestore подставит его сам, без чёрного окна."
+                "дальше ReVivo подставит его сам, без чёрного окна."
             )
         text = QLabel(explanation)
         text.setWordWrap(True)
@@ -890,7 +890,7 @@ class MainWindow(QMainWindow):
             }}
             QTableWidget::item {{ padding: 4px; }}
             QHeaderView::section {{
-              background: #F7F7F9;
+              background: #202C3B;
               color: {MUTED};
               border: none;
               border-bottom: 1px solid {LINE};
@@ -1146,7 +1146,7 @@ class MainWindow(QMainWindow):
             return
         apps = self._selected_apps(table)
         if not apps:
-            QMessageBox.information(self, "AppRestore", "Выберите хотя бы одно приложение.")
+            QMessageBox.information(self, "ReVivo", "Выберите хотя бы одно приложение.")
             return
         self._start_offloaded_restore(apps, try_device_redownload=True)
 
@@ -1239,7 +1239,7 @@ class MainWindow(QMainWindow):
         session_open = self._apple_session == "in" or self._apple_signed_in
         box = QMessageBox(self)
         box.setIcon(QMessageBox.Icon.Warning)
-        box.setWindowTitle("AppRestore")
+        box.setWindowTitle("ReVivo")
         box.setText("Загрузка на iPhone не подтвердилась")
         locked = self._apple_session == "locked" and not session_open
         if session_open:
@@ -1467,7 +1467,7 @@ class MainWindow(QMainWindow):
             return
         apps = self._selected_apps(table)
         if not apps:
-            QMessageBox.information(self, "AppRestore", "Выберите приложение.")
+            QMessageBox.information(self, "ReVivo", "Выберите приложение.")
             return
         acquire = self.acquire.isChecked()
         udid = self._device_udid
@@ -1868,7 +1868,7 @@ class MainWindow(QMainWindow):
             self._mark_auth_field("auth_email")
             return
         if not password:
-            self._set_auth_status("Введите пароль. AppRestore его не сохраняет.", WARN)
+            self._set_auth_status("Введите пароль. ReVivo его не сохраняет.", WARN)
             self._mark_auth_field("auth_password")
             return
 
@@ -2088,10 +2088,10 @@ class MainWindow(QMainWindow):
         page, layout, meta = self._page_shell("Настройки")
         meta.setText(f"Версия {APP_VERSION}")
         layout.addWidget(_muted_label("Папка с файлами IPA", 12))
-        ipa = QLineEdit(str(Path.home() / "AppRestore" / "ipa"))
+        ipa = QLineEdit(str(Path.home() / "ReVivo" / "ipa"))
         layout.addWidget(ipa)
         layout.addWidget(_muted_label("Кэш", 12))
-        cache = QLineEdit(str(Path.home() / "AppRestore" / "cache"))
+        cache = QLineEdit(str(Path.home() / "ReVivo" / "cache"))
         layout.addWidget(cache)
         layout.addWidget(_muted_label("Обновления", 12))
         updates = QComboBox()

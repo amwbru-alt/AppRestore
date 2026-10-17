@@ -1,5 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
-# PyInstaller spec for AppRestore GUI (Windows/macOS CI).
+# PyInstaller spec for ReVivo GUI (Windows/macOS CI).
 
 import importlib.util
 import sys
@@ -32,7 +32,7 @@ hidden = [
     *collect_submodules("apprestore_gui"),
 ]
 
-# importlib.metadata is used by the doctor (AppRestore runtime) and by
+# importlib.metadata is used by the doctor (ReVivo runtime) and by
 # pymobiledevice3 and its dependencies at import time.  PyInstaller does not
 # ship *.dist-info unless asked, which produced "package metadata missing".
 def _metadata_tree(*roots):
@@ -118,13 +118,13 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name="AppRestore",
+    name="ReVivo",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=False,
     console=False,
-    icon=str(root / "packaging" / "icons" / ("AppRestore.icns" if sys.platform == "darwin" else "AppRestore.ico")),
+    icon=str(root / "packaging" / "icons" / ("ReVivo.icns" if sys.platform == "darwin" else "ReVivo.ico")),
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
@@ -140,19 +140,19 @@ coll = COLLECT(
     strip=False,
     upx=False,
     upx_exclude=[],
-    name="AppRestore",
+    name="ReVivo",
 )
 
 if sys.platform == "darwin":
     app = BUNDLE(
         coll,
-        name="AppRestore.app",
-        icon=str(root / "packaging" / "icons" / "AppRestore.icns"),
-        bundle_identifier="ru.j3ckj.apprestore",
+        name="ReVivo.app",
+        icon=str(root / "packaging" / "icons" / "ReVivo.icns"),
+        bundle_identifier="io.github.amwbru_alt.revivo",
         version=_app_version(),
         info_plist={
             "NSHighResolutionCapable": True,
-            "CFBundleDisplayName": "AppRestore",
+            "CFBundleDisplayName": "ReVivo",
             "CFBundleShortVersionString": _app_version(),
             "CFBundleVersion": _app_version(),
         },

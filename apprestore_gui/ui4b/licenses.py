@@ -9,7 +9,7 @@ Apple ID are counted once:
 * «цена 0» — price 0 in iTunes lookup in the account's country (user texts never say «бесплатно»).
 
 K = apps that are both. Paid apps that are not on the account never enter the
-run (AppRestore does not take paid ones). K = 0 → no sheet.
+run (ReVivo does not take paid ones). K = 0 → no sheet.
 
 The remaining limit on the sheet comes from ``license_guard.read_counts`` —
 the journal the gate itself reads — and is read again every time the sheet is
@@ -25,7 +25,7 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from apprestore_core.license_guard import DEFAULT_DAILY_LIMIT, DEFAULT_TOTAL_LIMIT
+from apprestore_core.license_guard import DEFAULT_DAILY_LIMIT, DEFAULT_TOTAL_LIMIT, unlimited_licenses_enabled
 
 from .catalog import ACTION_STORE, RestoreItem
 from .formatting import join_names, plural
@@ -122,6 +122,8 @@ def consent_view(
     left_today = max(0, daily_limit - used_today)
     left_total = max(0, total_limit - used_total)
     k = plan.k
+    if unlimited_licenses_enabled():
+        left_today = left_total = max(k, 1)
     fits = min(left_today, left_total)
     flagged = any(i.store_status for i in plan.need)
     # Ника 02 §5.2: K inside the sentence (genitive plural), never «бесплатную» (Лена)
@@ -151,7 +153,7 @@ def consent_view(
         "k": k,
         "lead": lead,
         "names": join_names([i.label for i in plan.need], limit=6),
-        "limit": f"Осталось сегодня — {left_today} из {daily_limit} · Осталось всего — {left_total} из {total_limit}",
+        "limit": "Локальный лимит отключён владельцем" if unlimited_licenses_enabled() else f"Осталось сегодня — {left_today} из {daily_limit} · Осталось всего — {left_total} из {total_limit}",
         "leftToday": left_today,
         "leftTotal": left_total,
         "usedToday": used_today,
@@ -182,7 +184,7 @@ def slot_text(
 
     from apprestore_core.license_guard import NEVER
 
-    if used_total >= total_limit:
+    if not unlimited_licenses_enabled() and used_total >= total_limit:
         return f"Общий лимит {total_limit} исчерпан"
     if when is None:
         return "Место уже освободилось"  # Ника §5.4 [предл.]; the queue still does not restart

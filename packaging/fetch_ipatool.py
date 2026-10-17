@@ -2,7 +2,7 @@
 
 Official ipatool 2.6.0 follows only HTTP 302 during Apple ID login. Apple
 sometimes answers 301, and that login fails before the password is checked.
-These archives are AppRestore's build of majd/ipatool commit
+These archives are ReVivo's build of majd/ipatool commit
 ``IPATOOL_SOURCE_COMMIT``, which follows 301, 302, 307 and 308. The reported
 version stays 2.6.0. The SHA-256 values match the installers
 (install-windows.ps1 / install-macos.sh); tests/test_frozen_runtime.py keeps
@@ -26,7 +26,7 @@ from pathlib import Path
 IPATOOL_VERSION = "2.6.0"
 # majd/ipatool commit that follows authentication redirects. Not a GitHub release.
 IPATOOL_SOURCE_COMMIT = "cde7d00355e152714377b953ec57438626d3cb5a"
-ARCHIVE_BASE = "https://github.com/J3ckJ/AppRestore/releases/download/ipatool-2.6.0-redirect"
+ARCHIVE_BASE = "https://github.com/amwbru-alt/AppRestore/releases/download/ipatool-2.6.0-redirect"
 ARCHIVE_SHA256 = {
     "windows-amd64": "639d9cd7f22cea2975fd8263b0a8cbd7a36e7ee742e4c3e3a910b85f05b4df14",
     "macos-arm64": "faf98ef8067f1ef4783123d00561b4ece10dc7419631eb9555d88a1da2f61f3f",

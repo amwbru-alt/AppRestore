@@ -463,7 +463,7 @@ def test_default_fetcher_has_no_cookie_or_auth_handlers(monkeypatch):
         opener.open = fake_open
         return opener
     monkeypatch.setattr(urllib.request, "build_opener", spy)
-    ds._default_fetcher("https://web.archive.org/cdx/search/cdx?url=x", ds.HEADERS, 5)
+    ds._default_fetcher("https://itunes.apple.com/lookup?id=1", ds.HEADERS, 5)
     assert not any("Cookie" in h or "Auth" in h for h in seen["handlers"])
     assert set(k.lower() for k in seen["headers"]) == {"user-agent", "accept"}
 

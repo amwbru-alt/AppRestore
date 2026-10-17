@@ -11,10 +11,10 @@ $ProgressPreference = "SilentlyContinue"
 
 $AppRestoreVersion = "0.4.0"
 $ManagedInstallMarkerName = ".apprestore-managed"
-$ManagedInstallMarkerValue = "AppRestore managed installation v1"
+$ManagedInstallMarkerValue = "ReVivo managed installation v1"
 $IpaToolVersion = "2.6.0"
 $IpaToolSha256 = "639d9cd7f22cea2975fd8263b0a8cbd7a36e7ee742e4c3e3a910b85f05b4df14"
-$IpaToolUrl = "https://github.com/J3ckJ/AppRestore/releases/download/ipatool-2.6.0-redirect/ipatool-$IpaToolVersion-windows-amd64.tar.gz"
+$IpaToolUrl = "https://github.com/amwbru-alt/AppRestore/releases/download/ipatool-2.6.0-redirect/ipatool-$IpaToolVersion-windows-amd64.tar.gz"
 $PythonInstallerVersion = "3.12.10"
 $PythonInstallerSha256 = "67b5635e80ea51072b87941312d00ec8927c4db9ba18938f7ad2d27b328b95fb"
 $PythonInstallerUrl = "https://www.python.org/ftp/python/$PythonInstallerVersion/python-$PythonInstallerVersion-amd64.exe"
@@ -27,7 +27,7 @@ if ([string]::IsNullOrWhiteSpace($KnownLocalAppData)) {
 }
 $KnownLocalAppData = [System.IO.Path]::GetFullPath($KnownLocalAppData)
 $InstallRoot = [System.IO.Path]::GetFullPath(
-    (Join-Path $KnownLocalAppData "Programs\AppRestore")
+    (Join-Path $KnownLocalAppData "Programs\ReVivo")
 )
 $ProgramsRoot = [System.IO.Path]::GetDirectoryName($InstallRoot)
 
@@ -141,7 +141,7 @@ function Assert-AppRestoreManagedInstall {
         [string]$ManagedMarkerValue
     )
 
-    Assert-AppRestorePlainTree -Path $Path -Label "Установка AppRestore"
+    Assert-AppRestorePlainTree -Path $Path -Label "Установка ReVivo"
     $MarkerPath = Join-Path $Path $ManagedMarkerName
     $HasExactMarker = (
         (Test-Path -LiteralPath $MarkerPath -PathType Leaf) -and
@@ -182,7 +182,7 @@ function Assert-AppRestoreManagedInstall {
     foreach ($LegacyRelativePath in $LegacyV013Hashes.Keys) {
         $LegacyFile = Join-Path $Path $LegacyRelativePath
         if (-not (Test-Path -LiteralPath $LegacyFile -PathType Leaf)) {
-            throw "Отказ: $Path не является известной установкой AppRestore v0.1.3."
+            throw "Отказ: $Path не является известной установкой ReVivo v0.1.3."
         }
         $LegacyHash = & $GetSha256 -FilePath $LegacyFile
         if (-not [string]::Equals(
@@ -190,7 +190,7 @@ function Assert-AppRestoreManagedInstall {
             $LegacyV013Hashes[$LegacyRelativePath],
             [System.StringComparison]::Ordinal
         )) {
-            throw "Отказ: fingerprint AppRestore v0.1.3 не совпал: $LegacyRelativePath"
+            throw "Отказ: fingerprint ReVivo v0.1.3 не совпал: $LegacyRelativePath"
         }
     }
 
@@ -212,7 +212,7 @@ exit /b %ERRORLEVEL%
             [System.StringComparison]::Ordinal
         )
     ) {
-        throw "Отказ: launcher AppRestore v0.1.3 не совпал."
+        throw "Отказ: launcher ReVivo v0.1.3 не совпал."
     }
     foreach ($LegacyRuntimeFile in @(
         (Join-Path $Path ".venv\Scripts\python.exe"),
@@ -220,7 +220,7 @@ exit /b %ERRORLEVEL%
         (Join-Path $Path "bin\ipatool.exe")
     )) {
         if (-not (Test-Path -LiteralPath $LegacyRuntimeFile -PathType Leaf)) {
-            throw "Отказ: runtime fingerprint AppRestore v0.1.3 неполон."
+            throw "Отказ: runtime fingerprint ReVivo v0.1.3 неполон."
         }
     }
 }
@@ -274,10 +274,10 @@ function Invoke-AppRestoreBackupRecovery {
     $InstallLeaf = [System.IO.Path]::GetFileName($ResolvedInstall)
     if (-not [string]::Equals(
         $InstallLeaf,
-        "AppRestore",
+        "ReVivo",
         [System.StringComparison]::OrdinalIgnoreCase
     )) {
-        throw "Некорректное имя live-каталога AppRestore."
+        throw "Некорректное имя live-каталога ReVivo."
     }
     $ProgramsItem = Get-Item -LiteralPath $ResolvedPrograms -Force
     if (
@@ -285,7 +285,7 @@ function Invoke-AppRestoreBackupRecovery {
         ($ProgramsItem.Attributes -band
             [System.IO.FileAttributes]::ReparsePoint) -ne 0
     ) {
-        throw "Каталог программ AppRestore небезопасен: $ResolvedPrograms"
+        throw "Каталог программ ReVivo небезопасен: $ResolvedPrograms"
     }
 
     $ExistingBackups = @(
@@ -295,7 +295,7 @@ function Invoke-AppRestoreBackupRecovery {
             -ErrorAction Stop |
             Where-Object {
                 $_.Name.StartsWith(
-                    "AppRestore.backup-",
+                    "ReVivo.backup-",
                     [System.StringComparison]::Ordinal
                 )
             }
@@ -334,7 +334,7 @@ function Invoke-AppRestoreBackupRecovery {
     try {
         Assert-AppRestoreRecoverableInstall `
             -Path $RecoveryCandidate `
-            -Label "Backup AppRestore" `
+            -Label "Backup ReVivo" `
             -ManagedMarkerName $ManagedMarkerName `
             -ManagedMarkerValue $ManagedMarkerValue
     }
@@ -353,13 +353,13 @@ function Invoke-AppRestoreBackupRecovery {
         -Label "Восстановленная установка" `
         -ManagedMarkerName $ManagedMarkerName `
         -ManagedMarkerValue $ManagedMarkerValue
-    Write-Host "Восстановлена прерванная установка AppRestore: $ResolvedInstall"
+    Write-Host "Восстановлена прерванная установка ReVivo: $ResolvedInstall"
 }
 
 function Find-TrustedWinget {
     # winget is security-sensitive here because it downloads and launches
     # installers.  Never resolve it through PATH: the current directory or an
-    # AppRestore bin directory could otherwise shadow the genuine executable.
+    # ReVivo bin directory could otherwise shadow the genuine executable.
     $RegistryBase = $null
     $CurrentVersionKey = $null
     try {
@@ -645,7 +645,7 @@ function Install-CompatiblePython {
 
     $PythonTempRoot = Join-Path (
         [System.IO.Path]::GetTempPath()
-    ) ("AppRestore-python-" + [guid]::NewGuid().ToString("N"))
+    ) ("ReVivo-python-" + [guid]::NewGuid().ToString("N"))
     $PythonInstaller = Join-Path $PythonTempRoot (
         "python-$PythonInstallerVersion-amd64.exe"
     )
@@ -720,7 +720,7 @@ function Install-CompatiblePython {
                     [System.StringComparison]::OrdinalIgnoreCase
                 ) -and
                 $PythonTempLeaf.StartsWith(
-                    "AppRestore-python-",
+                    "ReVivo-python-",
                     [System.StringComparison]::Ordinal
                 )
             ) {
@@ -735,7 +735,7 @@ $InstallerUserSid = $InstallerIdentity.User
 if ($null -eq $InstallerUserSid) {
     throw "Не удалось определить SID текущего пользователя."
 }
-$InstallerMutexName = "Local\AppRestore.Install." + $InstallerUserSid.Value
+$InstallerMutexName = "Local\ReVivo.Install." + $InstallerUserSid.Value
 $InstallerMutex = [System.Threading.Mutex]::new($false, $InstallerMutexName)
 $InstallerMutexAcquired = $false
 try {
@@ -750,7 +750,7 @@ try {
         $InstallerMutexAcquired = $true
     }
     if (-not $InstallerMutexAcquired) {
-        throw "Другая установка AppRestore не завершилась за 15 минут."
+        throw "Другая установка ReVivo не завершилась за 15 минут."
     }
 
 Assert-PlainDirectory `
@@ -762,7 +762,7 @@ Ensure-PlainDirectory `
 if (Test-Path -LiteralPath $InstallRoot) {
     Assert-PlainDirectory `
         -Path $InstallRoot `
-        -Label "Каталог установки AppRestore"
+        -Label "Каталог установки ReVivo"
 }
 
 Invoke-AppRestoreBackupRecovery `
@@ -899,7 +899,7 @@ function Ensure-AppleBridge {
     if ($WingetCode -notin @(0, -1978335189, -1978334964)) {
         Write-Warning (
             "Не удалось поставить Apple.AppleMobileDeviceSupport автоматически " +
-            "без повышения прав (код $WingetCode). AppRestore уже установлен; " +
+            "без повышения прав (код $WingetCode). ReVivo уже установлен; " +
             "после установки Apple Devices/iTunes выполните: apprestore setup"
         )
         return
@@ -949,10 +949,10 @@ function Invoke-AppRestoreInstallTransaction {
 
     if (-not [string]::Equals(
         $InstallLeaf,
-        "AppRestore",
+        "ReVivo",
         [System.StringComparison]::OrdinalIgnoreCase
     )) {
-        throw "Некорректное имя live-каталога AppRestore."
+        throw "Некорректное имя live-каталога ReVivo."
     }
     foreach ($Candidate in @($ResolvedStaging, $ResolvedBackup)) {
         if (-not [string]::Equals(
@@ -965,20 +965,20 @@ function Invoke-AppRestoreInstallTransaction {
     }
     if (
         -not $StagingLeaf.StartsWith(
-            "AppRestore.staging-",
+            "ReVivo.staging-",
             [System.StringComparison]::Ordinal
         ) -or
         -not $BackupLeaf.StartsWith(
-            "AppRestore.backup-",
+            "ReVivo.backup-",
             [System.StringComparison]::Ordinal
         )
     ) {
-        throw "Некорректные имена staging/backup AppRestore."
+        throw "Некорректные имена staging/backup ReVivo."
     }
     if ($BackupRecoveryAlreadyPerformed -and -not $InstallMutexAlreadyHeld) {
         throw (
             "Пропустить backup recovery можно только при уже захваченном " +
-            "mutex установки AppRestore."
+            "mutex установки ReVivo."
         )
     }
 
@@ -991,7 +991,7 @@ function Invoke-AppRestoreInstallTransaction {
             throw "Не удалось определить SID текущего пользователя."
         }
         $TransactionMutexName = (
-            "Local\AppRestore.Install." + $CurrentUserSid.Value
+            "Local\ReVivo.Install." + $CurrentUserSid.Value
         )
         $TransactionMutex = [System.Threading.Mutex]::new(
             $false,
@@ -1010,7 +1010,7 @@ function Invoke-AppRestoreInstallTransaction {
             }
             if (-not $TransactionMutexAcquired) {
                 throw (
-                    "Другая установка AppRestore не завершилась за " +
+                    "Другая установка ReVivo не завершилась за " +
                     "$MutexTimeoutSeconds секунд."
                 )
             }
@@ -1024,7 +1024,7 @@ function Invoke-AppRestoreInstallTransaction {
 
     try {
     if (-not (Test-Path -LiteralPath $ResolvedStaging -PathType Container)) {
-        throw "Не найден подготовленный staging-каталог AppRestore."
+        throw "Не найден подготовленный staging-каталог ReVivo."
     }
 
     $RemovePlainTree = {
@@ -1052,11 +1052,11 @@ function Invoke-AppRestoreInstallTransaction {
         }
         Assert-AppRestorePlainTree `
             -Path $ResolvedStaging `
-            -Label "Staging AppRestore"
+            -Label "Staging ReVivo"
         & $PrepareStaging $ResolvedStaging
         Assert-AppRestorePlainTree `
             -Path $ResolvedStaging `
-            -Label "Staging AppRestore"
+            -Label "Staging ReVivo"
         & $VerifyStaging $ResolvedStaging
 
         if (Test-Path -LiteralPath $ResolvedInstall) {
@@ -1066,7 +1066,7 @@ function Invoke-AppRestoreInstallTransaction {
                 -ManagedMarkerName $ManagedMarkerName `
                 -ManagedMarkerValue $ManagedMarkerValue
             if (Test-Path -LiteralPath $ResolvedBackup) {
-                throw "Backup-каталог AppRestore уже существует: $ResolvedBackup"
+                throw "Backup-каталог ReVivo уже существует: $ResolvedBackup"
             }
             Move-Item -LiteralPath $ResolvedInstall -Destination $ResolvedBackup
             $BackupCreated = $true
@@ -1101,7 +1101,7 @@ function Invoke-AppRestoreInstallTransaction {
     }
     finally {
         if (Test-Path -LiteralPath $ResolvedStaging) {
-            & $RemovePlainTree -Path $ResolvedStaging -Label "Staging AppRestore"
+            & $RemovePlainTree -Path $ResolvedStaging -Label "Staging ReVivo"
         }
         if (
             $Success -and
@@ -1109,12 +1109,12 @@ function Invoke-AppRestoreInstallTransaction {
             (Test-Path -LiteralPath $ResolvedBackup)
         ) {
             try {
-                & $RemovePlainTree -Path $ResolvedBackup -Label "Backup AppRestore"
+                & $RemovePlainTree -Path $ResolvedBackup -Label "Backup ReVivo"
                 $BackupCreated = $false
             }
             catch {
                 Write-Warning (
-                    "Новая версия AppRestore установлена и проверена, но " +
+                    "Новая версия ReVivo установлена и проверена, но " +
                     "предыдущий backup не удалось удалить: $ResolvedBackup. " +
                     $_.Exception.Message
                 )
@@ -1135,12 +1135,12 @@ function Invoke-AppRestoreInstallTransaction {
 
 $TempRoot = Join-Path (
     [System.IO.Path]::GetTempPath()
-) ("AppRestore-install-" + [guid]::NewGuid().ToString("N"))
+) ("ReVivo-install-" + [guid]::NewGuid().ToString("N"))
 $ArchivePath = Join-Path $TempRoot "ipatool.tar.gz"
 $ExtractPath = Join-Path $TempRoot "ipatool"
 $TransactionId = [guid]::NewGuid().ToString("N")
-$StagingRoot = Join-Path $ProgramsRoot "AppRestore.staging-$TransactionId"
-$BackupRoot = Join-Path $ProgramsRoot "AppRestore.backup-$TransactionId"
+$StagingRoot = Join-Path $ProgramsRoot "ReVivo.staging-$TransactionId"
+$BackupRoot = Join-Path $ProgramsRoot "ReVivo.backup-$TransactionId"
 
 try {
     New-Item -ItemType Directory -Path $ExtractPath -Force | Out-Null
@@ -1328,7 +1328,7 @@ with tarfile.open(archive_path, mode='r:gz') as archive:
             --force-reinstall `
             $PreparedSource
         if ($LASTEXITCODE -ne 0) {
-            throw "Не удалось установить локальный AppRestore."
+            throw "Не удалось установить локальный ReVivo."
         }
 
         $CommandWrapper = @'
@@ -1391,7 +1391,7 @@ exit /b %ERRORLEVEL%
             $ManagedInstallMarkerValue,
             [System.StringComparison]::Ordinal
         )) {
-            throw "Проверка staging: marker AppRestore повреждён."
+            throw "Проверка staging: marker ReVivo повреждён."
         }
 
         $PreparedIpaToolSha256 = (
@@ -1442,7 +1442,7 @@ exit /b %ERRORLEVEL%
             $ManagedInstallMarkerValue,
             [System.StringComparison]::Ordinal
         )) {
-            throw "Проверка live-установки: marker AppRestore повреждён."
+            throw "Проверка live-установки: marker ReVivo повреждён."
         }
 
         $LiveVersionOutput = @(& $LiveCommand --version 2>&1)
@@ -1527,14 +1527,14 @@ exit /b %ERRORLEVEL%
         }
         catch {
             Write-Warning (
-                "AppRestore установлен, но Apple USB-мост не удалось настроить: " +
+                "ReVivo установлен, но Apple USB-мост не удалось настроить: " +
                 "$($_.Exception.Message) Выполните позже: apprestore setup"
             )
         }
     }
 
     Write-Host ""
-    Write-Host "AppRestore $AppRestoreVersion установлен в:"
+    Write-Host "ReVivo $AppRestoreVersion установлен в:"
     Write-Host "  $InstallRoot"
     if ($NoPathUpdate) {
         Write-Host "Запуск меню:"
@@ -1583,7 +1583,7 @@ finally {
                 [System.StringComparison]::OrdinalIgnoreCase
             ) -and
             $StagingLeaf.StartsWith(
-                "AppRestore.staging-",
+                "ReVivo.staging-",
                 [System.StringComparison]::Ordinal
             )
         ) {
@@ -1600,7 +1600,7 @@ finally {
         ).TrimEnd("\")
         $TempParent = [System.IO.Path]::GetDirectoryName($ResolvedTempRoot)
         $TempLeaf = [System.IO.Path]::GetFileName($ResolvedTempRoot)
-        $ExpectedTempPrefix = "AppRestore-install-"
+        $ExpectedTempPrefix = "ReVivo-install-"
         $TempSuffix = ""
         if ($TempLeaf.StartsWith(
             $ExpectedTempPrefix,
@@ -1650,7 +1650,7 @@ finally {
         }
         catch {
             Write-Warning (
-                "Temp-каталог AppRestore не удалён после ошибки безопасной " +
+                "Temp-каталог ReVivo не удалён после ошибки безопасной " +
                 "проверки: $ResolvedTempRoot. $($_.Exception.Message)"
             )
         }

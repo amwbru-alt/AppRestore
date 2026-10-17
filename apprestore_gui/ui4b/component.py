@@ -1,4 +1,4 @@
-"""4b on an ipatool without AppRestore's patches 0001/0003 (Ника's texts).
+"""4b on an ipatool without ReVivo's patches 0001/0003 (Ника's texts).
 
 Free licenses are not taken then (the gate's preflight refuses anyway): removed
 apps that are not on the account are marked «Нужен дополнительный компонент»
@@ -34,7 +34,7 @@ def details_text(missing: Iterable[str]) -> str:
     }
     parts = [what[name] for name in missing if name in what] or ["без нужных дополнений"]
     return (
-        "Для удалённых из App Store AppRestore использует ipatool со своими дополнениями. "
+        "Для удалённых из App Store ReVivo использует ipatool со своими дополнениями. "
         "Сейчас установлен ipatool " + " и ".join(parts) + ". Поэтому новые лицензии "
         "не берутся. Сгруженные и уже купленные приложения это не затрагивает."
     )
