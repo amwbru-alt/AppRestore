@@ -76,3 +76,24 @@ def test_bundled_endpoint_is_configured_for_both_platforms(tmp_path, monkeypatch
     monkeypatch.setattr(Path, 'home', lambda: tmp_path)
     monkeypatch.delenv('APPREVIVE_API_URL', raising=False)
     assert api_base_url() == 'http://185.173.93.200:3000'
+
+
+def test_frozen_layout_contains_usable_api_settings(tmp_path, monkeypatch):
+    from apprevive_core import api_config
+    from apprevive_gui import selftest
+    package = tmp_path / "_internal" / "apprevive_core"
+    package.mkdir(parents=True)
+    monkeypatch.setattr(api_config, "__file__", str(package / "api_config.py"))
+    monkeypatch.setattr(Path, "home", lambda: tmp_path / "user")
+    monkeypatch.delenv("APPREVIVE_API_URL", raising=False)
+    (package / "api_settings.json").write_text('{"base_url":"http://185.173.93.200:3000"}')
+    assert api_config.api_base_url() == "http://185.173.93.200:3000"
+    assert selftest._api_settings()["base_url"] == "http://185.173.93.200:3000"
+    (package / "api_settings.json").unlink()
+    with pytest.raises(FileNotFoundError): selftest._api_settings()
+
+
+def test_pyinstaller_explicitly_bundles_public_settings():
+    root = Path(__file__).resolve().parents[1]
+    spec = (root / "packaging/apprevive-gui.spec").read_text()
+    assert '(str(root / "apprevive_core" / "api_settings.json"), "apprevive_core")' in spec

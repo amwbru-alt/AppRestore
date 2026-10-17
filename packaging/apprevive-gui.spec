@@ -10,6 +10,7 @@ from PyInstaller.utils.hooks import collect_all, collect_data_files, collect_sub
 block_cipher = None
 root = Path(SPECPATH).resolve().parent
 datas = [
+    (str(root / "apprevive_core" / "api_settings.json"), "apprevive_core"),
     (str(root / "apprevive_gui" / "resources"), "apprevive_gui/resources"),
     (str(root / "apprevive_gui" / "qml"), "apprevive_gui/qml"),
     (str(root / "apprevive_gui" / "qml4b"), "apprevive_gui/qml4b"),

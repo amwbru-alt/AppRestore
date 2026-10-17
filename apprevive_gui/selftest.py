@@ -40,6 +40,23 @@ def _metadata_version() -> dict[str, str]:
     return {"apprevive": installed}
 
 
+def _api_settings() -> dict[str, str]:
+    # Validate the bundled file, not an optional per-user override. No network.
+    import urllib.parse
+    from apprevive_core import api_config
+
+    path = Path(api_config.__file__).with_name("api_settings.json")
+    data = json.loads(path.read_text(encoding="utf-8-sig"))
+    value = data.get("base_url", "") if isinstance(data, dict) else ""
+    if not isinstance(value, str):
+        raise ValueError("invalid bundled API settings")
+    parsed = urllib.parse.urlsplit(value)
+    if parsed.scheme not in ("http", "https") or not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment:
+        raise ValueError("invalid bundled API URL")
+    parsed.port  # Reject an invalid port too.
+    return {"base_url": value}
+
+
 def _pmd3_imports() -> dict[str, str]:
     import pymobiledevice3.lockdown  # noqa: F401
     import pymobiledevice3.services.afc  # noqa: F401
@@ -233,6 +250,7 @@ def run_self_test(output: Path | None = None) -> int:
 
     checks = [
         _check("metadata", _metadata_version),
+        _check("bundled API settings", _api_settings),
         _check("pymobiledevice3 import", _pmd3_imports),
         _check("usbmux client", _usbmux_client),
         _check("pymobiledevice3 subprocess dispatch", _dispatcher),
