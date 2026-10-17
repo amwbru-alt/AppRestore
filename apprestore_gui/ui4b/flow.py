@@ -33,7 +33,7 @@ from typing import Protocol
 from apprestore_core.ipatool_api import MESSAGES_RU, SESSION_CODES, ErrorCode, classify_error
 from apprestore_core.license_gate import is_limit_refusal, is_needs_patched, is_store_mismatch, is_store_refusal
 
-from apprestore_gui.ui4b.catalog import ACTION_IPA, ACTION_OFFLOADED, ACTION_STORE, RestoreItem
+from apprestore_gui.ui4b.catalog import ACTION_IPA, ACTION_OFFLOADED, ACTION_OWNED, ACTION_STORE, RestoreItem
 from apprestore_gui.ui4b.queue import CURRENT, LIMIT_ERROR, WAIT, RestoreQueue
 from apprestore_gui.ui4b.component import COMPONENT_NOTE
 from apprestore_gui.ui4b.space import DeviceSpace, SpacePlan, plan_space
@@ -78,6 +78,8 @@ class Backend(Protocol):
     def restore_offloaded(self, keys: list[str]) -> None: ...
 
     def install_store(self, store_id: str) -> None: ...
+
+    def restore_purchase(self, store_id: str) -> None: ...
 
     def install_ipa(self, path: str) -> None: ...
 
@@ -147,6 +149,9 @@ class RestoreFlow:
             self._batch = set(keys)
             self._started.update(keys)
             self.backend.restore_offloaded(keys)
+        elif item.action == ACTION_OWNED:
+            self._started.add(item.key)
+            self.backend.restore_purchase(item.store_id)
         elif item.action == ACTION_STORE:
             self._started.add(item.key)
             self.backend.install_store(item.store_id)

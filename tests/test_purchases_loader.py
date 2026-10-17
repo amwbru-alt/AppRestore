@@ -190,7 +190,7 @@ def test_progress_without_total_is_just_a_count(tmp_path: Path) -> None:
     assert views[-1].progress == "107"
 
 
-def test_cached_list_shows_first_then_refresh_replaces_it(tmp_path: Path) -> None:
+def test_successful_refresh_retains_missing_delisted_purchases(tmp_path: Path) -> None:
     cache = PurchasesCache(tmp_path)
     cache.save(cache.account_key(EMAIL), [CachedPurchase(999, "com.example.old", "Old", "")], total=1)
     runner = Runner({"all": api.RunResult(0, _line(totalCount=2, apps=_apps(1, 2)), "")})
@@ -200,8 +200,10 @@ def test_cached_list_shows_first_then_refresh_replaces_it(tmp_path: Path) -> Non
     assert shown.from_cache and [r["trackId"] for r in shown.rows] == ["999"]
     loader.start()
     loader.join(5)
-    assert views[-1].rows and [r["trackId"] for r in views[-1].rows] == ["1", "2"]
-    assert not views[-1].from_cache
+    assert views[-1].rows and [r["trackId"] for r in views[-1].rows] == ["1", "2", "999"]
+    assert views[-1].from_cache
+    assert "сохранены" in views[-1].warning
+    assert [x.track_id for x in cache.load(cache.account_key(EMAIL)).items] == [1, 2, 999]
 
 
 def test_cancel_sets_event_and_stops_before_next_page(tmp_path: Path) -> None:
@@ -334,3 +336,25 @@ def test_ipatool_error_without_russian_text_is_not_quoted() -> None:
     text = explain_ipatool_error(error)
     assert text == IPATOOL_FALLBACK_TEXT
     assert EMAIL not in text and "raw" not in text
+
+
+def test_archive_failure_keeps_apps_and_shows_incomplete_warning(tmp_path):
+    runner = Runner({"all": api.RunResult(0, _line(totalCount=1, apps=_apps(1, 1), historyComplete=False), "")})
+    loader, cache, views = _loader(tmp_path, runner)
+    loader.set_account(EMAIL)
+    loader.start()
+    loader.join(5)
+    assert views[-1].count == 1 and not views[-1].note
+    assert "неполным" in views[-1].warning
+
+
+def test_missing_public_metadata_keeps_previous_purchase_name(tmp_path):
+    cache = PurchasesCache(tmp_path)
+    cache.save(cache.account_key(EMAIL), [CachedPurchase(564177498, "com.vk.vkclient", "VK", "2020-01-01")])
+    runner = Runner({"all": api.RunResult(0, _line(totalCount=1, apps=[{"id":564177498}]), "")})
+    loader, _, views = _loader(tmp_path, runner)
+    loader.set_account(EMAIL)
+    loader.start()
+    loader.join(5)
+    assert views[-1].rows[0]["name"] == "VK"
+    assert views[-1].rows[0]["bundleId"] == "com.vk.vkclient"

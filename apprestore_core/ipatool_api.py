@@ -522,6 +522,7 @@ class PurchasesPage:
     pages: Optional[int]
     is_last: bool
     elapsed_s: float = 0.0
+    warning: str = ""
 
 
 @dataclass(frozen=True)
@@ -928,6 +929,7 @@ class IpatoolClient:
             pages=1,
             is_last=True,
             elapsed_s=page.elapsed_s,
+            warning=page.warning,
         )
 
     @staticmethod
@@ -943,7 +945,9 @@ class IpatoolClient:
             is_last = page * page_size >= total if total is not None else len(items) < page_size
         else:
             pages, is_last = 1, True
-        return PurchasesPage(page, page_size, items, total, pages, is_last, elapsed)
+        warning = ("Архивные и скрытые покупки Apple не удалось прочитать полностью. Список может быть неполным; используйте поиск по названию."
+                   if data.get("historyComplete") is False else "")
+        return PurchasesPage(page, page_size, items, total, pages, is_last, elapsed, warning)
 
     def iter_purchases(
         self,

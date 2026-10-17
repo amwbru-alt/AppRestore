@@ -9,8 +9,8 @@ only forwards the views to QML. Uses Макс's ``apprestore_core.ipatool_api``:
   signed out because of a bad line).
 * :class:`PurchasesLoader` shows the cached list first, then reads
   ``iter_purchases`` page by page, merging as pages arrive. ``cancel()`` sets
-  the cancel event (ipatool checks it before the next page). Only a complete
-  refresh replaces the cache. ``FETCH_ALL`` asks for ``list-purchases --all``
+  the cancel event (ipatool checks it before the next page). Successful refreshes retain the same account’s
+  earlier purchases when Apple omits them. ``FETCH_ALL`` asks for ``list-purchases --all``
   (one page with everything, including this account's own purchase locker);
   the loader never relies on the number of pages.
 """
@@ -23,7 +23,7 @@ import subprocess
 import sys
 import threading
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 from apprestore_core.ipatool_api import (
@@ -162,6 +162,7 @@ class PurchasesView:
     from_cache: bool = False
     #: The refresh failed because the session needs the user (offer sign-in).
     session_problem: bool = False
+    warning: str = ""
 
     @property
     def count(self) -> int:
@@ -285,6 +286,7 @@ class PurchasesLoader:
                 total=snapshot.total,
                 progress=progress_text(len(snapshot.items), snapshot.total),
                 from_cache=True,
+                warning="Сохранённая история может быть неполной; обновите покупки Apple ID." if not snapshot.complete else "",
             )
         self._publish(view, generation)
         return view
@@ -379,9 +381,12 @@ class PurchasesLoader:
             run.generation,
         )
         finished = False
+        warnings: list[str] = []
         try:
             client = self._factory()
             for page in self._pages_secure(client, run.cancel):
+                if getattr(page, "warning", ""):
+                    warnings.append(page.warning)
                 for purchase in page.items:
                     item = CachedPurchase.from_purchase(purchase)
                     if item.track_id in seen:
@@ -440,12 +445,26 @@ class PurchasesLoader:
             )
             return
 
-        final = dedupe(fresh)
+        # Apple can omit delisted/hidden apps in a later successful response.
+        # Keep the same account's earlier purchase evidence instead of erasing it.
+        previous = {item.track_id: item for item in cached}
+        enriched = []
+        for item in fresh:
+            old = previous.get(item.track_id)
+            enriched.append(replace(item, name=item.name or old.name,
+                                    bundle_id=item.bundle_id or old.bundle_id,
+                                    purchase_date=item.purchase_date or old.purchase_date) if old else item)
+        archive_complete = not bool(warnings)
+        retained = [item for item in cached if item.track_id not in seen]
+        final = dedupe(enriched + retained)
+        if retained:
+            warnings.append(f"В новом ответе Apple отсутствуют {len(retained)} ранее найденных покупок; они сохранены в истории.")
+        total = max(total, len(final)) if total is not None else None
         with self._lock:
             still_current = run.generation == self._generation and run.account == self._account
         if still_current:
             try:
-                self._cache.save(run.account, final, total=total, complete=True)
+                self._cache.save(run.account, final, total=total, complete=archive_complete)
                 note = ""
             except OSError:
                 note = "Список обновлён, но сохранить его на диск не получилось."
@@ -458,6 +477,8 @@ class PurchasesLoader:
                 total=total,
                 progress=progress_text(len(final), total),
                 note=note,
+                from_cache=bool(retained),
+                warning=" ".join(dict.fromkeys(warnings)),
             ),
         )
 

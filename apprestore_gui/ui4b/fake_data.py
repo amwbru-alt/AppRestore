@@ -277,6 +277,9 @@ class FakeSource(SourceBase):
     def install_store(self, store_id: str) -> None:
         self.calls.append(("install_store", store_id))
 
+    def restore_purchase(self, store_id: str) -> None:
+        self.calls.append(("restore_purchase", store_id))
+
     def install_ipa(self, path: str) -> None:
         self.calls.append(("install_ipa", path))
 

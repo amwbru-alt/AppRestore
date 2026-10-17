@@ -66,7 +66,7 @@ Item {
             width: parent.width - 2 * Theme.listPadX
             token: "status"; color: Theme.ink2
             wrapMode: Text.WordWrap
-            text: (root.h.scope || "") + ((root.h.deviceNote || "") !== "" ? "\n" + root.h.deviceNote : "")
+            text: (root.h.scope || "") + "\nНе нашли удалённое приложение? Введите название — например, VK или ВКонтакте." + ((root.h.deviceNote || "") !== "" ? "\n" + root.h.deviceNote : "")
         }
 
         Rectangle {
@@ -210,7 +210,7 @@ Item {
             wrapMode: Text.WordWrap
             token: "status"
             color: Theme.ink2
-            text: root.h.lead || ""
+            text: (root.h.lead || "") + ((root.h.warning || "") !== "" ? "\n" + root.h.warning : "")
         }
 
         ListView {

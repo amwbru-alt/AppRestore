@@ -45,6 +45,8 @@ from apprestore_gui.ui4b.licenses import (
 from apprestore_gui.ui4b.licenses import candidates as license_candidates
 from apprestore_gui.ui4b.home import STATE_APPLE_REJECTED, STATE_DONE, STATE_STORE_MISMATCH, HomeInput, PhoneApp, home_view, link_action
 from apprestore_gui.ui4b.history import ID_BAD, history_view, name_for_store_id, parse_store_id
+from apprestore_gui.ui4b.restore_catalog import search_candidates
+from apprestore_gui.ui4b.catalog import ACTION_OWNED
 from apprestore_gui.ui4b.journal import journal_view
 from apprestore_gui.ui4b.region import apply_statuses, load_classifier
 from apprestore_gui.ui4b.region import classify as classify_region_ids
@@ -304,6 +306,9 @@ class SourceBase(QObject):
 
     def install_ipa(self, path: str) -> None:
         raise NotImplementedError
+
+    def restore_purchase(self, store_id: str) -> None:
+        raise NotImplementedError("This backend cannot restore existing purchases")
 
     def start_scan(self) -> None:
         """Onboarding step 4 began: start reading the purchase history."""
@@ -726,6 +731,9 @@ class SessionSource(SourceBase):
     def install_store(self, store_id: str) -> None:
         # QuickSession.installStore → license_gate.run_with_free_license.
         self.session.installStore(store_id)
+
+    def restore_purchase(self, store_id: str) -> None:
+        self.session.restorePurchase(store_id)
 
     def install_ipa(self, path: str) -> None:
         self.session.installSaved(path)
@@ -1530,6 +1538,13 @@ class Restore4b(QObject):
             id_note=self._history_id_note,
             error_note=note,
         )
+        if self.source.signed_in and self._history_query.strip():
+            candidates = search_candidates(self._history_query, {str(r["storeId"]) for r in view["rows"]})
+            if candidates:
+                view["rows"].extend(candidates)
+                view["empty"] = ""
+                view["lead"] = "Найдены покупки и подсказки каталога. Для подсказок право на повторную загрузку проверит Apple."
+        view["warning"] = str(getattr(session, "purchasesWarning", "") or "")
         view["open"] = self._history_open
         view["query"] = self._history_query
         view["scope"] = "Покупки текущего Apple ID · " + str(self.source.account_email or "")
@@ -1579,7 +1594,8 @@ class Restore4b(QObject):
         self._history_open = False
         self._history_query = ""
         self._history_id_note = ""
-        self.installFound(store_id, name)
+        self._start([RestoreItem(key=f"store:{store_id}", name=name or store_id, group=GROUP_REMOVED,
+                                 action=ACTION_OWNED, store_id=store_id)])
 
     @Slot(str)
     def restoreByStoreId(self, text: str) -> None:

@@ -392,8 +392,12 @@ def test_store_mismatch_keeps_its_own_screen(qapp) -> None:
     item = next(i for i in c.selection.items if i.store_id == sid)
     c.toggle(item.key)
     c.restoreSelected()
-    for _ in range(5):
+    from PySide6.QtTest import QTest
+    for _ in range(300):
         qapp.processEvents()
+        if c.flow.running:
+            break
+        QTest.qWait(10)
     assert c.flow.running
     src.installSettled.emit(sid, False, MESSAGES_RU[ErrorCode.STORE_MISMATCH])
     assert c.home["state"] == STATE_STORE_MISMATCH and c.home.get("cta2") == "Войти заново"

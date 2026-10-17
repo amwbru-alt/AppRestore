@@ -220,3 +220,12 @@ def test_other_install_errors_do_not_offer_relogin(session) -> None:
     s, prompts, _ = session
     _failing_install(s, ToolUnavailable("failed to purchase item: something else"))
     assert not s.sessionRelogin and prompts == []
+
+
+def test_restore_purchase_uses_existing_license_only(session, monkeypatch):
+    from unittest.mock import Mock
+    s, _, _ = session
+    start = Mock()
+    monkeypatch.setattr(s, "_start_install", start)
+    s.restorePurchase("564177498")
+    start.assert_called_once_with("564177498", acquire=False)

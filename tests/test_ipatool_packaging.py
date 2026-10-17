@@ -116,6 +116,7 @@ def test_patch_pins_match_files_and_order() -> None:
         "0007-ipatool-purchase-evidence.patch",
         "0008-ipatool-unpinned-update.patch",
         "0009-ipatool-purchase-locker.patch",
+        "0010-ipatool-history-status-redirects.patch",
     ]
     patches = ROOT / "packaging" / "patches"
     for name, pinned in entries:

@@ -27,6 +27,8 @@
 #   0009-ipatool-purchase-locker.patch - `list-purchases --all` also merges
 #   this account's own iTunes purchase locker (visible and hidden) on the
 #   account storefront. A locker failure leaves the DAAP list unchanged.
+#   0010-ipatool-history-status-redirects.patch - preserve history POSTs across
+#   validated Apple redirects and report incomplete archive retrieval to the GUI.
 #
 # The archive is reproducible: packaging/pack_ipatool.py writes it with a fixed
 # mtime (SOURCE_DATE_EPOCH, else the commit time of $commit), uid/gid 0 and a
@@ -109,6 +111,7 @@ patches=(
   "0007-ipatool-purchase-evidence.patch:f7fb822c4897e31a9d8b57827e9fc56fd8521a99dddbf5174c59db2656c97afe"
   "0008-ipatool-unpinned-update.patch:a1274240a24aa0c4f8e376775168f6db5710086bc7eaaf0a06580fb05ba69a22"
   "0009-ipatool-purchase-locker.patch:e173d0729fc81a169cf519213e02b38087befe72fec621b7908da94c2bb124c4"
+  "0010-ipatool-history-status-redirects.patch:c9802b96b6e1b34f7e51f8faba274198573ef80f7eab9bcb27552c4c60d2ce9e"
 )
 for entry in "${patches[@]}"; do
   patch_name="${entry%%:*}"
@@ -178,7 +181,9 @@ for marker in \
   "invalid Apple product redirect" \
   "purchase response unconfirmed" \
   "catalog-independent update has no license material" \
-  "vt=lockerData"
+  "vt=lockerData" \
+  "historyComplete" \
+  "invalid Apple purchase history redirect"
 do
   if ! grep -a -F -q -e "$marker" "$stage/bin/$name"; then
     echo "built ipatool is missing an expected fix: $marker" >&2
