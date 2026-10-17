@@ -24,7 +24,7 @@ def test_config_contains_only_public_url(tmp_path, monkeypatch):
     assert api_base_url() == 'https://example.org/api'
 
 
-@pytest.mark.parametrize('url', ['', 'file:///etc/passwd', 'http://user:secret@192.0.2.1', 'http://192.0.2.1:wrong', 'http://192.0.2.1?secret=1'])
+@pytest.mark.parametrize('url', ['file:///etc/passwd', 'http://user:secret@192.0.2.1', 'http://192.0.2.1:wrong', 'http://192.0.2.1?secret=1'])
 def test_bad_endpoint_never_sends_request(monkeypatch, url):
     monkeypatch.setenv('APPREVIVE_API_URL', url)
     monkeypatch.setattr('urllib.request.urlopen', lambda *a, **kw: pytest.fail('must not send'))
@@ -70,3 +70,9 @@ def test_client_packages_have_no_mysql_access():
             assert 'import pymysql' not in text
             assert 'shuloquaticu.beget.app' not in text
     assert 'PyMySQL' not in (root / 'pyproject.toml').read_text()
+
+
+def test_bundled_endpoint_is_configured_for_both_platforms(tmp_path, monkeypatch):
+    monkeypatch.setattr(Path, 'home', lambda: tmp_path)
+    monkeypatch.delenv('APPREVIVE_API_URL', raising=False)
+    assert api_base_url() == 'http://185.173.93.200:3000'
