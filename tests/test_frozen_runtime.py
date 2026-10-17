@@ -282,3 +282,39 @@ def test_gui_entry_repairs_streams_before_dispatch(monkeypatch):
     monkeypatch.setattr("apprevive_core.frozen.maybe_dispatch", fake_dispatch)
     assert app.main(["--apprevive-run-module", "pymobiledevice3", "version"]) == 0
     assert seen["stdout"] is not None
+
+
+@pytest.mark.parametrize("returncode, output, expected_ok", [(0, "10.1.0\n", True), (1, "", False), (0, "unexpected", False)])
+def test_selftest_cli_runs_in_dispatched_child(monkeypatch, returncode, output, expected_ok):
+    from types import SimpleNamespace
+    from apprevive_gui import selftest
+    from apprevive_core import frozen
+    calls = []
+
+    def run(self, command, **kwargs):
+        calls.append(command)
+        return SimpleNamespace(returncode=returncode, stdout=output, stderr="child failure" if returncode else "")
+
+    monkeypatch.setattr(frozen, "is_frozen", lambda: True)
+    monkeypatch.setattr("apprevive_core.command.Runner.run", run)
+    monkeypatch.setattr(selftest.package_metadata, "version", lambda name: "10.1.0")
+    check = selftest._check("pymobiledevice3 subprocess dispatch", selftest._dispatcher)
+    assert check["ok"] is expected_ok
+    assert calls == [[sys.executable, frozen.RUN_MODULE_FLAG, "pymobiledevice3", "version"]]
+    if expected_ok:
+        assert check["detail"]["cli_import"] == "verified in subprocess"
+
+
+def test_selftest_never_imports_cli_in_windowed_parent(monkeypatch, tmp_path):
+    from apprevive_gui import selftest
+    names = []
+
+    def check(name, fn, **kwargs):
+        names.append(name)
+        return {"name": name, "ok": True, "required": True}
+
+    monkeypatch.setattr(selftest, "_check", check)
+    assert selftest.run_self_test(tmp_path / "selftest.json") == 0
+    assert "pymobiledevice3 subprocess dispatch" in names
+    assert "pymobiledevice3 import" in names
+    assert "pymobiledevice3 cli import" not in names

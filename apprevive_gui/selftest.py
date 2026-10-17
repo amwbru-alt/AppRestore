@@ -49,12 +49,6 @@ def _pmd3_imports() -> dict[str, str]:
     return {"pymobiledevice3": package_metadata.version("pymobiledevice3")}
 
 
-def _pmd3_cli_import() -> str:
-    from pymobiledevice3.__main__ import main  # noqa: F401
-
-    return "pymobiledevice3.__main__.main importable"
-
-
 def _usbmux_client() -> dict[str, Any]:
     """List devices in-process.  No usbmuxd / no device is fine, ImportError is not."""
 
@@ -88,7 +82,14 @@ def _dispatcher() -> dict[str, Any]:
         raise RuntimeError(
             f"exit {result.returncode}: {(result.stderr or result.stdout).strip()[:400]}"
         )
-    return {"command": command[1:], "stdout": result.stdout.strip()[:200]}
+    # Import and run CLI in its actual execution context. Importing it into
+    # a Windows GUI-subsystem process can fail in console initialization with
+    # WinError 6 even though the dispatched child works with captured handles.
+    expected = package_metadata.version("pymobiledevice3")
+    actual = result.stdout.strip()
+    if actual != expected:
+        raise RuntimeError(f"pymobiledevice3 version probe returned {actual[:200]!r}; expected {expected!r}")
+    return {"command": command[1:], "stdout": actual, "cli_import": "verified in subprocess"}
 
 
 def _ipatool() -> dict[str, str]:
@@ -233,7 +234,6 @@ def run_self_test(output: Path | None = None) -> int:
     checks = [
         _check("metadata", _metadata_version),
         _check("pymobiledevice3 import", _pmd3_imports),
-        _check("pymobiledevice3 cli import", _pmd3_cli_import),
         _check("usbmux client", _usbmux_client),
         _check("pymobiledevice3 subprocess dispatch", _dispatcher),
         _check("ipatool", _ipatool),
