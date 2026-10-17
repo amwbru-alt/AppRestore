@@ -27,6 +27,7 @@ def main():
     parser = argparse.ArgumentParser(prog='appverni')
     parser.add_argument('--database', default=os.environ.get('APPVERNI_DATABASE', 'data/appverni.sqlite3'))
     sub = parser.add_subparsers(dest='command', required=True)
+    sub.add_parser('desktop', help='открыть исходное Qt-приложение с аккаунтами и каталогом')
     serve = sub.add_parser('serve')
     serve.add_argument('--host', default='127.0.0.1')
     serve.add_argument('--port', type=int, default=8080)
@@ -51,6 +52,10 @@ def main():
     worker.add_argument('--once', action='store_true')
     args = parser.parse_args()
     try:
+        if args.command == 'desktop':
+            os.environ['APPVERNI_DATABASE'] = str(Path(args.database).resolve())
+            from apprestore_gui.app import main as gui_main
+            return gui_main(['--ui', 'widgets'])
         if args.command == 'worker':
             from .worker import run
             passphrase = getpass.getpass('Пароль локальной связки ключей ipatool (не пароль Apple ID, Enter если нет): ')

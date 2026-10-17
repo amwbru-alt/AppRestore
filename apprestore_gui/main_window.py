@@ -661,7 +661,7 @@ class MainWindow(QMainWindow):
             apps = demo.DEMO_HOME
             icons: list[tuple[QPixmap, bool]] = []
             for app in apps[:16]:
-                pix = self.artwork.pixmap_for_app(
+                pix = self.artwork.cached_pixmap(
                     bundle_id=app.bundle_id,
                     store_id=app.store_id,
                     name=app.name,
@@ -1552,7 +1552,7 @@ class MainWindow(QMainWindow):
         if self.service.demo_mode:
             for r, (fname, bundle, name) in enumerate(entries):
                 table.setItem(r, 0, QTableWidgetItem(fname))
-                pix = self.artwork.pixmap_for_app(bundle_id=bundle, name=name, size=36)
+                pix = self.artwork.cached_pixmap(bundle_id=bundle, name=name, size=36)
                 table.setCellWidget(r, 1, AppCell(pix, name, bundle))
                 table.setItem(r, 1, QTableWidgetItem(""))
                 link = QTableWidgetItem("Установить")
@@ -1567,7 +1567,7 @@ class MainWindow(QMainWindow):
             name = getattr(entry, "name", path.stem)
             bundle = getattr(entry, "bundle_id", "")
             table.setItem(r, 0, QTableWidgetItem(Path(path).name))
-            pix = self.artwork.pixmap_for_app(bundle_id=bundle, name=name, size=36)
+            pix = self.artwork.cached_pixmap(bundle_id=bundle, name=name, size=36)
             table.setCellWidget(r, 1, AppCell(pix, name, bundle or "IPA"))
             item = QTableWidgetItem("")
             item.setData(Qt.ItemDataRole.UserRole, str(path))

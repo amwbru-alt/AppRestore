@@ -175,7 +175,7 @@ else
   [[ -f "$archive" ]] || die "build did not produce $archive"
   ex="$(mktemp -d "$state/ex.XXXXXX")"
   tar -xzf "$archive" -C "$ex"
-  built="$ex/bin/ipatool-2.6.0-$asset$suffix"
+  built="$ex/bin/ipatool$suffix"
   [[ -f "$built" ]] || die "unexpected archive layout"
   mkdir -p "$target_dir"
   chmod 0755 "$built"

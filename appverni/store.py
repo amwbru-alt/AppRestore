@@ -46,6 +46,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS one_free_installation ON orders(user_id)
  WHERE price=0 AND state IN ('queued','running','succeeded','uncertain');
 CREATE UNIQUE INDEX IF NOT EXISTS one_active_installation ON orders(account_id,app_id)
  WHERE state IN ('awaiting_payment','queued','running','uncertain');
+CREATE TABLE IF NOT EXISTS desktop_inflight (
+ order_id TEXT PRIMARY KEY REFERENCES orders(id));
 CREATE TABLE IF NOT EXISTS auth_attempts (
  key TEXT PRIMARY KEY, count INTEGER NOT NULL, started INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS audit (
@@ -117,7 +119,7 @@ class Store:
         db.execute('INSERT INTO audit(actor,action,target,created) VALUES(?,?,?,?)',
                    (actor, action, str(target), int(time.time())))
 
-    def register(self, email, password, *, admin=False):
+    def register(self, email, password, *, admin=False, require_empty=False):
         email = email.strip().casefold()
         if not (3 <= len(email) <= 254 and '@' in email and '.' in email.rsplit('@', 1)[1]) or any(c.isspace() for c in email):
             raise Problem('Укажите корректный email.')
@@ -125,6 +127,8 @@ class Store:
             raise Problem('Пароль должен содержать от 12 до 128 символов.')
         hashed = hash_password(password)
         with self.transaction() as db:
+            if require_empty and db.execute('SELECT 1 FROM users').fetchone():
+                raise Problem('Первичная настройка уже выполнена. Войдите в существующий аккаунт.', 409)
             try:
                 user_id = db.execute('INSERT INTO users(email,password,admin,created) VALUES(?,?,?,?)',
                                      (email, hashed, int(admin), int(time.time()))).lastrowid
