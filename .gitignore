@@ -51,3 +51,7 @@ mysql.json
 
 # Temporary local test output
 pytest-of-root/
+
+# Node.js API server dependencies and environment
+node_modules/
+server/node/.env

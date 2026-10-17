@@ -19,9 +19,9 @@ import urllib.request
 import urllib.parse
 
 import certifi
-from .mysql_promo import activate_mysql_promo
+from .api_config import api_base_url
 
-PROMO_API_URL = "https://sv-bz.ru/apprevive/redeem.php"
+
 TELEGRAM_URL = "https://t.me/llifegoldll"
 _T = TypeVar("_T")
 
@@ -51,22 +51,25 @@ def _network_error(reason: object) -> str:
 
 
 def activate_promo(code: str, installation_token: str, request_id: str) -> None:
-    url = os.environ.get("APPREVIVE_PROMO_API_URL", PROMO_API_URL)
+    try:
+        url = api_base_url() + "/v1/redeem"
+    except ValueError as exc:
+        raise RestorationCodeError(str(exc)) from exc
     parsed = urllib.parse.urlsplit(url)
-    if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
-        raise RestorationCodeError("Для сервера активации нужен HTTPS-адрес API без логина и пароля.")
     body = json.dumps({"code": code, "installation_token": installation_token, "request_id": request_id}).encode("utf-8")
     request = urllib.request.Request(url, data=body, method="POST", headers={
         "User-Agent": "AppRevive/0.4", "Content-Type": "application/json", "Accept": "application/json", "Cache-Control": "no-store",
     })
     try:
-        with urllib.request.urlopen(request, timeout=15, context=promo_ssl_context()) as response:
+        with urllib.request.urlopen(request, timeout=15, context=promo_ssl_context() if parsed.scheme == "https" else None) as response:
             data = response.read(65537)
     except urllib.error.HTTPError as exc:
         if exc.code == 422:
             message = "Код не найден или уже использован."
+        elif exc.code == 429:
+            message = "Слишком много попыток. Подождите минуту и повторите проверку."
         elif exc.code == 404:
-            message = "API активации ещё не размещён на сервере (HTTP 404)."
+            message = "API активации не найден на сервере (HTTP 404). Проверьте адрес API."
         elif exc.code == 409:
             message = "Не удалось подтвердить запрос активации. Обратитесь за помощью в Telegram."
         else:
@@ -90,7 +93,7 @@ def activate_promo(code: str, installation_token: str, request_id: str) -> None:
 
 class RestorationCredits:
     """One initial local gift, persistent server receipts and safe retry IDs."""
-    def __init__(self, path: Path, activate: Callable[[str, str, str], None] = activate_mysql_promo) -> None:
+    def __init__(self, path: Path, activate: Callable[[str, str, str], None] = activate_promo) -> None:
         self.path = path
         self.activate = activate
         path.parent.mkdir(parents=True, exist_ok=True)

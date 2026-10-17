@@ -1,0 +1,14 @@
+{
+  "name": "apprevive-api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=24 <27" },
+  "scripts": {
+    "start": "node --env-file=.env src/index.mjs",
+    "test": "node --test test/*.test.mjs",
+    "sync-icons": "node --env-file=.env src/manage.mjs sync-icons",
+    "add-codes": "node --env-file=.env src/manage.mjs add-codes"
+  },
+  "dependencies": { "mysql2": "3.24.6" }
+}

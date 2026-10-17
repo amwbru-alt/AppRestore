@@ -8,6 +8,11 @@ from unittest.mock import Mock
 import pytest
 from apprevive_core.restoration_codes import RestorationAccess, RestorationCredits, RestorationCodeError, activate_promo
 
+@pytest.fixture(autouse=True)
+def public_api_url(monkeypatch):
+    monkeypatch.setenv('APPREVIVE_API_URL', 'https://example.org/apprevive')
+
+
 
 def allow(*codes):
     def activate(code, token, request_id):
@@ -111,7 +116,7 @@ def test_concurrent_installs_cannot_spend_one_gift_twice(tmp_path):
 def test_api_uses_https_post_and_validates_receipt(monkeypatch):
     import ssl
     def respond(request, **kwargs):
-        assert request.full_url == 'https://sv-bz.ru/apprevive/redeem.php'
+        assert request.full_url == 'https://example.org/apprevive/v1/redeem'
         assert request.get_method() == 'POST'
         assert kwargs['context'].check_hostname and kwargs['context'].verify_mode == ssl.CERT_REQUIRED
         assert kwargs['context'].cert_store_stats()['x509_ca'] > 0
@@ -141,17 +146,17 @@ def test_wrong_receipt_never_adds_credit(tmp_path,monkeypatch,field,value):
 def test_http_errors_do_not_add_credit(tmp_path,monkeypatch,status):
     import urllib.error
     def fail(*a,**kw):
-        raise urllib.error.HTTPError('https://sv-bz.ru/apprevive/redeem.php',status,'unavailable',{},None)
+        raise urllib.error.HTTPError('https://example.org/apprevive/v1/redeem',status,'unavailable',{},None)
     monkeypatch.setattr('urllib.request.urlopen',fail)
     store=RestorationCredits(tmp_path/'credits.sqlite3')
     with pytest.raises(RestorationCodeError):store.redeem('ONE')
     assert store.remaining == 1
 
 
-def test_insecure_api_url_is_rejected_before_sending_code(monkeypatch):
-    monkeypatch.setenv('APPREVIVE_PROMO_API_URL','http://example.invalid/redeem')
+def test_invalid_api_url_is_rejected_before_sending_code(monkeypatch):
+    monkeypatch.setenv('APPREVIVE_API_URL','ftp://example.invalid')
     monkeypatch.setattr('urllib.request.urlopen',lambda *a,**kw:pytest.fail('must not send'))
-    with pytest.raises(RestorationCodeError,match='HTTPS'):
+    with pytest.raises(RestorationCodeError,match='http://IP:3000'):
         activate_promo('ONE','a'*64,'b'*32)
 
 

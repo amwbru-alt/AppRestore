@@ -1,0 +1,47 @@
+name: Node API tests
+
+on:
+  push:
+    branches: [codex/apprevive-icons, main]
+    paths: ['server/node/**', 'server/promo/schema.sql', '.github/workflows/node-api.yml']
+  pull_request:
+    paths: ['server/node/**', 'server/promo/schema.sql', '.github/workflows/node-api.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  node-api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          # Disposable CI-only credentials, unrelated to the production database.
+          MYSQL_ROOT_PASSWORD: isolated-ci-root
+          MYSQL_DATABASE: apprevive_test
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pisolated-ci-root"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: server/node/package-lock.json
+      - run: npm ci --ignore-scripts
+        working-directory: server/node
+      - run: npm test
+        working-directory: server/node
+        env:
+          APPREVIVE_TEST_MYSQL: '1'
+          DB_HOST: 127.0.0.1
+          DB_USER: root
+          DB_NAME: apprevive_test
+          DB_PASSWORD: isolated-ci-root
