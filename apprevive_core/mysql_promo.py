@@ -10,7 +10,7 @@ import pymysql
 
 def mysql_settings():
     path = Path(os.environ.get("APPREVIVE_MYSQL_CONFIG", str(Path.home() / ".apprevive" / "mysql.json")))
-    settings = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+    settings = json.loads(path.read_text(encoding="utf-8-sig")) if path.exists() else {}
     if not isinstance(settings, dict):
         raise ValueError("Настройки MySQL должны быть JSON-объектом.")
     password = os.environ.get("APPREVIVE_MYSQL_PASSWORD", settings.get("password", ""))

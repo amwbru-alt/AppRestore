@@ -64,9 +64,10 @@ def test_default_uses_direct_mysql():
     assert RestorationCredits.__init__.__defaults__[0] is mysql_promo.activate_mysql_promo
 
 
-def test_local_config(tmp_path, monkeypatch):
+@pytest.mark.parametrize("encoding", ["utf-8", "utf-8-sig"])
+def test_local_config(tmp_path, monkeypatch, encoding):
     path = tmp_path / 'mysql.json'
-    path.write_text('{"password": "local-secret"}')
+    path.write_text('{"password": "local-secret"}', encoding=encoding)
     monkeypatch.setenv('APPREVIVE_MYSQL_CONFIG', str(path))
     monkeypatch.delenv('APPREVIVE_MYSQL_PASSWORD', raising=False)
     assert mysql_promo.mysql_settings()['password'] == 'local-secret'
