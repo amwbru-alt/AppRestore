@@ -131,7 +131,7 @@ def test_wrong_receipt_never_adds_credit(tmp_path,monkeypatch,field,value):
         receipt[field]=value
         return io.BytesIO(json.dumps(receipt).encode())
     monkeypatch.setattr('urllib.request.urlopen',respond)
-    store=RestorationCredits(tmp_path/'credits.sqlite3')
+    store=RestorationCredits(tmp_path/'credits.sqlite3', activate=activate_promo)
     with pytest.raises(RestorationCodeError,match='неверный ответ'):
         store.redeem('ONE')
     assert store.remaining == 1

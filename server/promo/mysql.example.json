@@ -1,0 +1,7 @@
+{
+  "host": "shuloquaticu.beget.app",
+  "port": 3306,
+  "user": "apple",
+  "database": "apple",
+  "password": "REPLACE_LOCALLY"
+}

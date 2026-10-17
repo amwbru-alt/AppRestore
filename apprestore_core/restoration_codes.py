@@ -19,6 +19,7 @@ import urllib.request
 import urllib.parse
 
 import certifi
+from .mysql_promo import activate_mysql_promo
 
 PROMO_API_URL = "https://sv-bz.ru/apprevive/redeem.php"
 TELEGRAM_URL = "https://t.me/llifegoldll"
@@ -89,7 +90,7 @@ def activate_promo(code: str, installation_token: str, request_id: str) -> None:
 
 class RestorationCredits:
     """One initial local gift, persistent server receipts and safe retry IDs."""
-    def __init__(self, path: Path, activate: Callable[[str, str, str], None] = activate_promo) -> None:
+    def __init__(self, path: Path, activate: Callable[[str, str, str], None] = activate_mysql_promo) -> None:
         self.path = path
         self.activate = activate
         path.parent.mkdir(parents=True, exist_ok=True)

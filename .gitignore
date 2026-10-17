@@ -45,3 +45,6 @@ screenshots/
 
 # Server-only database credentials
 server/promo/private/config.php
+
+# Local direct-MySQL credentials
+mysql.json
