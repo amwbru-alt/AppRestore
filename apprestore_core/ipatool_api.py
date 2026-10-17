@@ -33,6 +33,8 @@ Python 3.10+, standard library only.
 
 from __future__ import annotations
 
+from .paths import IPATOOL_MISSING_TEXT
+
 import enum
 import json
 import math
@@ -163,7 +165,7 @@ MESSAGES_RU: Mapping[ErrorCode, str] = {
     ErrorCode.INVALID_ARGUMENT: "Неверный параметр запроса к ipatool.",
     ErrorCode.FLAG_UNSUPPORTED: "Эта сборка ipatool не поддерживает нужную функцию. Обновите AppRestore.",
     ErrorCode.NEEDS_PATCHED_BUILD: "Для возврата приложений нужна сборка ipatool с патчами",
-    ErrorCode.BINARY_MISSING: "Не найден ipatool. Переустановите AppRestore.",
+    ErrorCode.BINARY_MISSING: IPATOOL_MISSING_TEXT,
     ErrorCode.BAD_OUTPUT: "ipatool ответил в неожиданном формате.",
     ErrorCode.UNKNOWN: "Неизвестная ошибка ipatool. Повторите позже.",
 }

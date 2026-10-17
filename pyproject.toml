@@ -15,12 +15,13 @@ dependencies = [
 ]
 
 [project.scripts]
+appverni = "appverni.__main__:main"
 apprestore = "apprestore_core.cli:main"
 apprestore-gui = "apprestore_gui.app:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["apprestore_core*", "apprestore_gui*"]
+include = ["apprestore_core*", "apprestore_gui*", "appverni*"]
 exclude = ["tests*"]
 
 [project.optional-dependencies]
@@ -30,6 +31,7 @@ gui = [
 ]
 
 [tool.setuptools.package-data]
+appverni = ["static/*"]
 apprestore_gui = ["resources/**/*", "ui4b/data/*.json", "qml/**/*.qml", "qml4b/**/*"]
 
 [tool.pytest.ini_options]
