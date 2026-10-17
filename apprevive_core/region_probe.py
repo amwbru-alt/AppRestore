@@ -43,6 +43,8 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import ssl
+import certifi
 from dataclasses import dataclass, field
 from typing import Callable, Iterable, Mapping, Optional
 
@@ -139,7 +141,9 @@ Fetcher = Callable[[str, Mapping[str, str], float], bytes]
 
 def _default_fetcher(url: str, headers: Mapping[str, str], timeout: float) -> bytes:
     # Собственный opener: без HTTPCookieProcessor, без auth-хендлеров.
-    opener = urllib.request.build_opener()
+    context = ssl.create_default_context()
+    context.load_verify_locations(cafile=certifi.where())
+    opener = urllib.request.build_opener(urllib.request.HTTPSHandler(context=context))
     opener.addheaders = []  # убрать дефолтный Python-urllib UA, ставим свои
     req = urllib.request.Request(url, headers=dict(headers), method="GET")
     try:

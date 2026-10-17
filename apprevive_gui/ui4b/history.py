@@ -1,18 +1,15 @@
-"""«Восстановить из истории»: the signed-in Apple ID's whole purchase list.
-
-The rows come from ``list-purchases --all`` (``purchases.py``). This module
-does not talk to Apple and does not buy anything. «Восстановить» is the usual
-restore of an app that is already on the account.
-"""
+"""Owned apps not found in checked App Store storefronts; catalog only supplies metadata."""
 
 from __future__ import annotations
 
 import re
+from .region import to_status
+from apprevive_core.region_probe import RegionStatus
 
-TITLE = "Восстановить из истории"
+TITLE = "Удалённые из App Store"
 CLOSE = "Закрыть"
 ACTION = "Восстановить"
-PLACEHOLDER = "Название в истории покупок"
+PLACEHOLDER = "Название приложения или ID"
 ID_PLACEHOLDER = "ID приложения, если его нет в списке"
 ID_ACTION = "Скачать"
 ID_BAD = "Нужен ID приложения — число из ссылки App Store"
@@ -147,71 +144,55 @@ def history_view(
     query: str = "",
     id_note: str = "",
     catalog: list[dict[str, object]] | None = None,
+    statuses: dict[str, object] | None = None,
+    checking: bool = False,
+    installed_ids: set[str] | None = None,
 ) -> dict[str, object]:
-    """The sheet. Unsigned: no rows from a previous account."""
-
-    rows = _rows(items, query) if signed_in else []
-    catalog_icons = {str(item.get("trackId")): str(item.get("iconUrl") or "") for item in (catalog or [])}
+    """Only owned, absent-from-store candidates; catalog is metadata, not proof."""
+    statuses = statuses or {}
+    installed_ids = installed_ids or set()
+    metadata = {str(item.get("trackId")): item for item in (catalog or [])}
+    eligible = []
+    if signed_in:
+        for item in items:
+            sid = str(item.get("trackId") or item.get("track_id") or "")
+            if sid not in installed_ids and to_status(statuses.get(sid)) is RegionStatus.DELISTED:
+                item = dict(item)
+                if not item.get("name") or str(item.get("name")).isdigit():
+                    item["name"] = metadata.get(sid, {}).get("name") or item.get("name")
+                eligible.append(item)
+    rows = _rows(eligible, query)
+    metadata = {str(item.get("trackId")): item for item in (catalog or [])}
     for row in rows:
-        if catalog_icons.get(row["storeId"]):
-            row["iconUrl"] = catalog_icons[row["storeId"]]
-    purchase_count = len(rows)
-    standard_count = 0
-    if signed_in and catalog:
-        owned_ids = {str(item.get("trackId") or item.get("track_id") or "") for item in items}
-        standard = _rows([item for item in catalog if str(item.get("trackId")) not in owned_ids], query)
-        for row in standard:
-            row["developer"] = f"Стандартный список · ID {row['storeId']}"
-        standard_count = len(standard)
-        rows.extend(standard)
+        info = metadata.get(row["storeId"], {})
+        if info.get("iconUrl"):
+            row["iconUrl"] = str(info["iconUrl"])
+        if row["name"] == "Приложение" and info.get("name"):
+            row["name"] = str(info["name"])
+        row["developer"] = "Есть в истории Apple ID · Не найдено в проверенных витринах"
+    unknown = sum(to_status(statuses.get(str(item.get("trackId") or item.get("track_id") or ""))) is RegionStatus.UNKNOWN for item in items) if signed_in else 0
     if not signed_in:
-        empty, empty_link = SIGNIN_TEXT, SIGNIN_LINK
-    elif busy and not rows:
-        empty, empty_link = "", ""
-    elif query.strip() and not rows:
-        empty, empty_link = NO_MATCH, ""
-    elif not rows:
-        empty, empty_link = EMPTY_TEXT, ""
+        empty, link, lead = SIGNIN_TEXT, SIGNIN_LINK, ""
     else:
-        empty, empty_link = "", ""
-    count = len(rows)
-    if not signed_in:
-        lead = ""
-    elif busy and count:
-        lead = f"Загружено {count}. История ещё обновляется."
-    elif busy:
-        lead = LOADING
-    elif failed and count:
-        lead = f"{FAILED} Показано сохранённое: {count}."
-    elif failed:
-        lead = FAILED
-    elif query.strip() and count:
-        lead = f"Найдено {count}"
-    elif count:
-        lead = f"{count} {_purchase_word(count)} в истории"
-    else:
-        lead = ""
-    if signed_in and catalog:
-        if query.strip():
-            lead = f"Найдено {count}"
-        else:
-            lead = f"История: {purchase_count} · Стандартный список: {standard_count}"
-        if busy:
-            lead += " · История обновляется…"
+        link = ""
+        if busy or checking:
+            lead = "Проверяем историю Apple ID и доступность приложений…"
+            empty = ""
         elif failed:
-            lead += f" · {FAILED}"
-        lead += " · Доступность определяется вашим Apple ID."
+            lead = FAILED
+            empty = "Нет подтверждённых результатов. Повторите проверку." if not rows else ""
+        elif unknown:
+            lead = f"Найдено: {len(rows)}. Не удалось проверить: {unknown}."
+            empty = "Проверка части приложений не завершена. Повторите позже." if not rows else ""
+        else:
+            lead = f"Найдено: {len(rows)}"
+            empty = "Совпадений нет." if query.strip() and not rows else "В истории Apple ID не найдено приложений, недоступных в проверенных витринах." if not rows else ""
+        lead += " Наличие в других странах и возможность загрузки могут отличаться."
     return {
-        "title": TITLE,
-        "close": CLOSE,
-        "placeholder": "Название приложения или ID" if catalog else PLACEHOLDER,
-        "signedIn": signed_in,
-        "idPlaceholder": ID_PLACEHOLDER,
-        "idAction": ID_ACTION,
+        "title": TITLE, "close": CLOSE, "placeholder": PLACEHOLDER,
+        "signedIn": signed_in, "allowManualId": False,
+        "idPlaceholder": ID_PLACEHOLDER, "idAction": ID_ACTION,
         "idNote": id_note if signed_in else "",
-        "lead": lead,
-        "spinner": LOADING if busy and rows else "",
-        "empty": empty,
-        "emptyLink": empty_link,
-        "rows": rows,
+        "lead": lead, "spinner": "Проверяем приложения…" if signed_in and (busy or checking) else "",
+        "empty": empty, "emptyLink": link, "rows": rows,
     }

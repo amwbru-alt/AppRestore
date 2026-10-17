@@ -236,7 +236,8 @@ def test_default_fetcher_no_cookie_handler(monkeypatch):
     monkeypatch.setattr(urllib.request, "build_opener", fake_build_opener)
     rp._default_fetcher("https://itunes.apple.com/lookup?id=1&country=us",
                         rp.HEADERS, 5)
-    assert captured["handlers"] == ()  # без HTTPCookieProcessor/auth
+    assert len(captured["handlers"]) == 1
+    assert isinstance(captured["handlers"][0], urllib.request.HTTPSHandler)  # no cookies or auth
     assert captured["addheaders"] == []
     req = captured["req"]
     assert req.get_method() == "GET"

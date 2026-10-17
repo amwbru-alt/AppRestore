@@ -184,7 +184,7 @@ def link_action(name: str) -> str:
         return "signin"
     if name == "Найти другое приложение":
         return "find"  # the search sheet, no longer a home link
-    if name == "Восстановить из истории":
+    if name in ("Восстановить из истории", "Удалённые из App Store"):
         return "history"
     if name == "Настройки":
         return "settings"  # Windows only, last after «Apple ID» (01 §2.2)
@@ -357,7 +357,7 @@ def home_view(inp: HomeInput) -> dict[str, object]:
             cta="Готово",
             ctaSecondary=True,
             queue=queue.rows(noun),
-            links=["Восстановить из истории", "Файлы IPA", "Apple ID"],
+            links=["Удалённые из App Store", "Файлы IPA", "Apple ID"],
         )
     elif inp.loading and not items:
         # a re-read after a run keeps the last count on screen (no flash of «Смотрю…»)
@@ -368,7 +368,7 @@ def home_view(inp: HomeInput) -> dict[str, object]:
         view.update(
             title="Всё\nна месте",
             lead="Сгруженных и удалённых из App Store приложений на этом телефоне нет.",
-            links=["Восстановить из истории", "Файлы IPA", "Apple ID"],
+            links=["Удалённые из App Store", "Файлы IPA", "Apple ID"],
         )
     elif removed and any(item.action == ACTION_STORE for item in removed) and not inp.signed_in and not offloaded:
         state = STATE_SIGNIN
@@ -416,7 +416,7 @@ def home_view(inp: HomeInput) -> dict[str, object]:
             cta2="" if m else HOWTO_LINK,
             hint="Сначала покажем список, отметите нужные." if m else "",
             fine=inp.component_details or QUIET_LINE,
-            links=["Восстановить из истории", DETAILS_LINK],
+            links=["Удалённые из App Store", DETAILS_LINK],
             pages=phone_pages(n_all),
         )
     elif region and len(selectable) <= RESTORE_ALL_MAX:
@@ -447,7 +447,7 @@ def home_view(inp: HomeInput) -> dict[str, object]:
         # variants open the picker: the home screen must never silently restore
         # every app merely because the list happens to be short.
         many = len(selectable) > RESTORE_ALL_MAX or plan.verdict == SPACE_OVER
-        links = ["Восстановить из истории", "Файлы IPA", "Apple ID"]
+        links = ["Удалённые из App Store", "Файлы IPA", "Apple ID"]
         if many:
             state = STATE_MANY
             parts = []
