@@ -1,7 +1,7 @@
-"""Durable local memory of App Store IDs discovered by AppRestore.
+"""Durable local memory of App Store IDs discovered by ReVivo.
 
 The file is deliberately a small, human-readable JSON document.  Writes are
-serialized across AppRestore processes and committed atomically so a search,
+serialized across ReVivo processes and committed atomically so a search,
 restore, and interactive session cannot lose one another's updates.
 """
 

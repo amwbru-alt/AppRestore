@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# AppRestore launcher for macOS.
+# ReVivo launcher for macOS.
 
 set -euo pipefail
 umask 077
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-APP_SUPPORT_DIR="$HOME/Library/Application Support/AppRestore"
+APP_SUPPORT_DIR="$HOME/Library/Application Support/ReVivo"
 VENV_DIR="$APP_SUPPORT_DIR/venv"
 export APPRESTORE_IPA_DIR="${APPRESTORE_IPA_DIR:-$APP_SUPPORT_DIR/ipas}"
-export APPRESTORE_CACHE_DIR="${APPRESTORE_CACHE_DIR:-$HOME/Library/Caches/AppRestore}"
+export APPRESTORE_CACHE_DIR="${APPRESTORE_CACHE_DIR:-$HOME/Library/Caches/ReVivo}"
 unset PYTHONPATH PYTHONHOME PYTHONSTARTUP
 
 RED='\033[0;31m'
@@ -156,7 +156,7 @@ case "${1:-}" in
       exec "$python" "$SCRIPT_DIR/apprestore.py" --help
     fi
     cat <<EOF
-AppRestore
+ReVivo
 
   $(basename "$0") setup       установить зависимости
   $(basename "$0") restore     мастер восстановления

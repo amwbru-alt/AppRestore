@@ -11,16 +11,16 @@ from urllib.parse import urlsplit
 VERSION = "0.4.0"
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-ARCHIVE = DIST / f"AppRestore-{VERSION}-source.zip"
+ARCHIVE = DIST / f"ReVivo-{VERSION}-source.zip"
 WINDOWS_BOOTSTRAP = DIST / "install.ps1"
 MACOS_BOOTSTRAP = DIST / "install.sh"
 CHECKSUMS = DIST / "SHA256SUMS.txt"
-ARCHIVE_ROOT = f"AppRestore-{VERSION}"
+ARCHIVE_ROOT = f"ReVivo-{VERSION}"
 FIXED_TIME = (2026, 8, 5, 0, 0, 0)
 WINDOWS_BOOTSTRAP_TEMPLATE = ROOT / "scripts" / "install.ps1.in"
 MACOS_BOOTSTRAP_TEMPLATE = ROOT / "scripts" / "install.sh.in"
 ARCHIVE_URL_TEMPLATE = (
-    "https://github.com/J3ckJ/AppRestore/releases/download/"
+    "https://github.com/amwbru-alt/AppRestore/releases/download/"
     "v{version}/{archive_name}"
 )
 
@@ -42,6 +42,9 @@ ROOT_FILES = [
     "CHANGELOG.md",
     "CONTRIBUTING.md",
     "docs/RELEASING.md",
+    "docs/REVIVO-GUIDE-RU.md",
+    "docs/REVIVO-NETWORK-AUDIT-RU.md",
+    "docs/REVIVO-MACOS-DMG-RU.md",
     "install-macos.sh",
     "install-windows.ps1",
     "LICENSE",

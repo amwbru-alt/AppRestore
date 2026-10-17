@@ -58,7 +58,7 @@ class DeviceAppState(str, Enum):
 
 
 class RedownloadRequestState(str, Enum):
-    """How certain AppRestore is that iOS received a restore request."""
+    """How certain ReVivo is that iOS received a restore request."""
 
     COMPLETED = "completed"
     FAILED_BEFORE_REQUEST = "failed-before-request"

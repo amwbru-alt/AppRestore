@@ -58,7 +58,7 @@ class HttpSafetyAndCacheTests(unittest.TestCase):
         )
         with (
             mock.patch("apprestore_core.catalog.time.monotonic", side_effect=lambda: clock[0]),
-            mock.patch("urllib.request.urlopen", responses),
+            mock.patch("apprestore_core.catalog.policy_urlopen", responses),
         ):
             first = catalog._http_json("https://example.test/cache-positive")
             self.assertIsInstance(first, dict)
@@ -85,7 +85,7 @@ class HttpSafetyAndCacheTests(unittest.TestCase):
         )
         with (
             mock.patch("apprestore_core.catalog.time.monotonic", side_effect=lambda: clock[0]),
-            mock.patch("urllib.request.urlopen", responses),
+            mock.patch("apprestore_core.catalog.policy_urlopen", responses),
         ):
             first = catalog._http_json("https://example.test/cache-negative")
             self.assertEqual(first["results"], [])
@@ -110,7 +110,7 @@ class HttpSafetyAndCacheTests(unittest.TestCase):
                 _FakeResponse(b"[1, 2, 3]"),
             ]
         )
-        with mock.patch("urllib.request.urlopen", responses):
+        with mock.patch("apprestore_core.catalog.policy_urlopen", responses):
             self.assertIsNone(catalog._http_json("https://example.test/html"))
             self.assertIsNone(catalog._http_json("https://example.test/large"))
             self.assertIsNone(catalog._http_json("https://example.test/declared"))
@@ -124,7 +124,7 @@ class HttpSafetyAndCacheTests(unittest.TestCase):
                 _FakeResponse(too_large, content_type="text/html"),
             ]
         )
-        with mock.patch("urllib.request.urlopen", responses):
+        with mock.patch("apprestore_core.web_discovery.policy_urlopen", responses):
             self.assertIsNone(web_discovery._http_text("https://example.test/json"))
             self.assertIsNone(web_discovery._http_text("https://example.test/huge"))
 

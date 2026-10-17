@@ -67,8 +67,8 @@ def test_capture_is_bounded_while_both_streams_are_drained() -> None:
     assert len(result.stderr.encode("utf-8")) <= _CAPTURE_LIMIT_BYTES
     assert result.stdout.startswith("A")
     assert result.stderr.startswith("B")
-    assert "output truncated by AppRestore" in result.stdout
-    assert "output truncated by AppRestore" in result.stderr
+    assert "output truncated by ReVivo" in result.stdout
+    assert "output truncated by ReVivo" in result.stderr
 
 
 def test_timeout_kills_the_descendant_process_tree(tmp_path: Path) -> None:

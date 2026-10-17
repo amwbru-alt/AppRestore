@@ -49,6 +49,8 @@ class Delisted:
 
 def controller(source=None, delisted=None, **kw):
     source = source or FakeSource("missing")
+    # Exercise the retained archive logic with an injected offline provider.
+    kw.setdefault("archive_search", True)
     c = Restore4b(source, find_options={"delisted": delisted or Delisted(), "spawn": lambda f: f(),
                                         "timeout_s": kw.pop("timeout_s", 12.0)}, **kw)
     return c, source
@@ -164,7 +166,7 @@ def test_spinner_while_archive_busy_and_late_answers_are_dropped(qapp) -> None:
     pending = []
     d = Delisted(archive=[hit(ARCH, "Редкое", "Dev", "wayback", 0.8, "20240101")])
     src = FakeSource("missing")
-    c = Restore4b(src, find_options={"delisted": d, "spawn": lambda f: pending.append(f)})
+    c = Restore4b(src, archive_search=True, find_options={"delisted": d, "spawn": lambda f: pending.append(f)})
     c.finder.openWith("редкое")
     pending.pop(0)()  # store search
     assert c.finder.view["spinner"] == F.SEARCHING_ARCHIVE
@@ -182,7 +184,7 @@ def test_archive_timeout_and_down_banner(qapp) -> None:
     assert v["archiveNote"] == F.ARCHIVE_DOWN and v["spinner"] == ""
     assert c.finder.banner["text"] == ""  # the archive failing is not «offline»
     pending = []
-    c2 = Restore4b(FakeSource("missing"), find_options={"delisted": Delisted(), "spawn": pending.append})
+    c2 = Restore4b(FakeSource("missing"), archive_search=True, find_options={"delisted": Delisted(), "spawn": pending.append})
     c2.finder.openWith("редкое")
     pending.pop(0)()
     c2.finder._archive_timeout(c2.finder._gen)
@@ -390,8 +392,12 @@ def test_store_mismatch_keeps_its_own_screen(qapp) -> None:
     item = next(i for i in c.selection.items if i.store_id == sid)
     c.toggle(item.key)
     c.restoreSelected()
-    for _ in range(5):
+    from PySide6.QtTest import QTest
+    for _ in range(300):
         qapp.processEvents()
+        if c.flow.running:
+            break
+        QTest.qWait(10)
     assert c.flow.running
     src.installSettled.emit(sid, False, MESSAGES_RU[ErrorCode.STORE_MISMATCH])
     assert c.home["state"] == STATE_STORE_MISMATCH and c.home.get("cta2") == "Войти заново"

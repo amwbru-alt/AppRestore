@@ -1,4 +1,4 @@
-"""Render the AppRestore app icon (macOS .icns, Windows .ico, PNG previews).
+"""Render the ReVivo app icon (macOS .icns, Windows .ico, PNG previews).
 
 The mark follows the v5 sidebar logo: a terracotta tile with a white phone
 outline and an arrow returning into the phone.  Everything is drawn from
@@ -184,10 +184,10 @@ def write_ico(path: Path) -> None:
 
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
-    render(1024, "mac").save(OUT / "AppRestore-1024.png")
-    render(512, "win").save(OUT / "AppRestore-windows-512.png")
-    write_icns(OUT / "AppRestore.icns")
-    write_ico(OUT / "AppRestore.ico")
+    render(1024, "mac").save(OUT / "ReVivo-1024.png")
+    render(512, "win").save(OUT / "ReVivo-windows-512.png")
+    write_icns(OUT / "ReVivo.icns")
+    write_ico(OUT / "ReVivo.ico")
     # Window icon used by Qt at runtime (title bar, Dock/taskbar when unbundled).
     render(256, "mac").save(GUI_RES / "app-icon-256.png")
     render(64, "win").save(GUI_RES / "app-icon-64.png")
@@ -199,7 +199,7 @@ def main() -> None:
         img = render(px, "win-small" if px <= 32 else "win")
         sheet.alpha_composite(img, (x, 160 - px // 2))
         x += px + 30
-    sheet.save(OUT / "AppRestore-sizes-preview.png")
+    sheet.save(OUT / "ReVivo-sizes-preview.png")
     for p in sorted(OUT.iterdir()):
         print(p, p.stat().st_size)
 

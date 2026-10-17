@@ -219,11 +219,11 @@ def test_ipa_sheet_where_line_comes_from_the_real_scanned_folders(tmp_path, monk
     lib = tmp_path / "lib"
     roots = Fv.labelled_roots(ipa_search_roots(lib))
     labels = [label for label, _ in roots]
-    assert labels[0] == "AppRestore" and "iMazing" in labels and "«Загрузках»" in labels and "iTunes" in labels
+    assert labels[0] == "ReVivo" and "iMazing" in labels and "«Загрузках»" in labels and "iTunes" in labels
     a = str(lib / "A.ipa")
     b = str(tmp_path / "Downloads" / "B.ipa")
-    assert Fv.where_line([a, b], roots) == "Нашли на этом компьютере: в папке AppRestore и «Загрузках»"
-    assert Fv.where_line([], roots).startswith("Ищем на этом компьютере: в папке AppRestore, iMazing")
+    assert Fv.where_line([a, b], roots) == "Нашли на этом компьютере: в папке ReVivo и «Загрузках»"
+    assert Fv.where_line([], roots).startswith("Ищем на этом компьютере: в папке ReVivo, iMazing")
     v = Fv.files_view(open_=True, mode="list", library=[], export=[], note="", busy=False, connected=True)
     assert v["close"] == "Готово"
 

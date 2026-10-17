@@ -147,6 +147,7 @@ def test_not_signed_in_find_works_fully_with_signin_banner_not_offline(qapp) -> 
 def test_archive_down_is_a_note_under_deleted_block_not_offline(qapp) -> None:
     src = FakeSource("missing")
     c = _controller(src, Delisted(down=True))
+    c.setArchiveSearch(True)  # injected test provider; production transport blocks it
     c.finder.openWith("редкое")
     assert c.finder.view["archiveNote"].startswith("Архив сейчас не отвечает")
     assert c.finder.banner["text"] == ""

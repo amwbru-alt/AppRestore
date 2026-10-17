@@ -454,7 +454,7 @@ class AppRestoreService:
             "app removed from the App Store, unavailable for this Apple ID "
             "region, or no purchase/license. To explicitly acquire a license, "
             "retry with --acquire-license. If you already have the IPA "
-            "(e.g. from iMazing), put it in the AppRestore library and retry."
+            "(e.g. from iMazing), put it in the ReVivo library and retry."
         )
 
     @staticmethod
@@ -707,7 +707,7 @@ class AppRestoreService:
         *,
         expected_bundle_id: str | None = None,
     ) -> Iterator[VerifiedIpa]:
-        """Copy an untrusted IPA into a private, AppRestore-owned snapshot.
+        """Copy an untrusted IPA into a private, ReVivo-owned snapshot.
 
         The installer never receives the caller-controlled path. The private
         copy is held open and its digest, metadata, and identity are checked at

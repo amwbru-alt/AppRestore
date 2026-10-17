@@ -13,7 +13,7 @@ from PySide6.QtWidgets import QApplication
 from apprestore_gui import updater
 from apprestore_gui.update_dialog import UpdateDialog
 
-DL = "https://github.com/J3ckJ/AppRestore/releases/download/v0.3.0/"
+DL = "https://github.com/amwbru-alt/AppRestore/releases/download/v0.3.0/"
 
 
 @pytest.fixture(scope="module")
@@ -27,9 +27,9 @@ def _info(installable=True, latest="0.3.0"):
         latest=latest,
         tag="v" + latest,
         notes="## Что нового\n* Окно",
-        page_url="https://github.com/J3ckJ/AppRestore/releases/tag/v" + latest,
-        asset_name="AppRestore-GUI-Windows.zip" if installable else None,
-        asset_url=DL + "AppRestore-GUI-Windows.zip" if installable else None,
+        page_url="https://github.com/amwbru-alt/AppRestore/releases/tag/v" + latest,
+        asset_name="ReVivo-GUI-Windows.zip" if installable else None,
+        asset_url=DL + "ReVivo-GUI-Windows.zip" if installable else None,
         asset_size=5 * 1024 * 1024,
         checksums_url=DL + "SHA256SUMS.txt",
     )

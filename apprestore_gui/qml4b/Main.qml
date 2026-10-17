@@ -7,7 +7,7 @@ import QtQuick.Controls.Basic as Basic
 import "theme"
 import "components"
 
-// AppRestore, design 4b. Context properties: ui (Restore4b), iconBook.
+// ReVivo, design 4b. Context properties: ui (Restore4b), iconBook.
 Window {
     id: win
     objectName: "ui4bWindow"
@@ -17,7 +17,7 @@ Window {
     minimumHeight: Theme.windowMinHeight
     visible: true
     color: Theme.bg
-    title: "AppRestore"
+    title: "ReVivo"
 
     readonly property var home: ui.home
     readonly property bool onboarding: ui.screen === "onboarding"
@@ -57,7 +57,7 @@ Window {
             sourceSize.width: 68; sourceSize.height: 68
             smooth: true; mipmap: true
         }
-        T { token: "brand"; text: "AppRestore"; anchors.verticalCenter: parent.verticalCenter }
+        T { token: "brand"; text: "ReVivo"; anchors.verticalCenter: parent.verticalCenter }
     }
     Stepper {
         visible: win.onboarding

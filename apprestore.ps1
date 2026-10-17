@@ -34,7 +34,7 @@ if ([string]::IsNullOrWhiteSpace($KnownLocalAppData)) {
 }
 $KnownLocalAppData = [System.IO.Path]::GetFullPath($KnownLocalAppData)
 $InstalledRoot = [System.IO.Path]::GetFullPath(
-    (Join-Path $KnownLocalAppData "Programs\AppRestore")
+    (Join-Path $KnownLocalAppData "Programs\ReVivo")
 )
 $InstalledEntryPoint = Join-Path $InstalledRoot "bin\apprestore.cmd"
 $LocalInstalledEntryPoint = Join-Path $PSScriptRoot "bin\apprestore.cmd"
@@ -51,10 +51,10 @@ if (Test-Path -LiteralPath $LocalInstalledEntryPoint -PathType Leaf) {
 
 $RunningFromSourceTree = Test-Path -LiteralPath $Installer -PathType Leaf
 if ($null -eq $EntryPoint -and $RunningFromSourceTree) {
-    Write-Host "Установка или обновление AppRestore…"
+    Write-Host "Установка или обновление ReVivo…"
     & $Installer
     if (-not (Test-Path -LiteralPath $InstalledEntryPoint -PathType Leaf)) {
-        throw "Установщик завершился, но команда AppRestore не найдена."
+        throw "Установщик завершился, но команда ReVivo не найдена."
     }
     $EntryPoint = $InstalledEntryPoint
     $BundledBin = Join-Path $InstalledRoot "bin"
@@ -79,7 +79,7 @@ if ($null -ne $EntryPoint) {
 # Режим запуска непосредственно из исходников без .venv.
 $SourceEntryPoint = Join-Path $PSScriptRoot "apprestore.py"
 if (-not (Test-Path -LiteralPath $SourceEntryPoint -PathType Leaf)) {
-    throw "Не найден AppRestore: ни установленная команда, ни apprestore.py."
+    throw "Не найден ReVivo: ни установленная команда, ни apprestore.py."
 }
 
 $SupportedPythonCheck = (

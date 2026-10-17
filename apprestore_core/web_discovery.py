@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from apprestore_core.network_policy import urlopen as policy_urlopen
+
 import html as html_lib
 import re
 import time
@@ -100,7 +102,7 @@ def _http_text(url: str, *, timeout: float = 20) -> str | None:
         _TEXT_CACHE.put(url, None, ttl=_NEGATIVE_CACHE_TTL_SECONDS)
         return None
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
+        with policy_urlopen(request, timeout=timeout) as response:
             media_type = _response_media_type(response)
             if media_type and media_type not in {
                 "application/xhtml+xml",

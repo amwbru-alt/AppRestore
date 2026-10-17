@@ -5,9 +5,9 @@ from __future__ import annotations
 
 from typing import Any
 
-#: QSettings("AppRestore", "AppRestore") key; default on (LEGAL §1.12 п.2).
+#: QSettings("ReVivo", "ReVivo") key; default on (LEGAL §1.12 п.2).
 ARCHIVE_KEY = "search/archive"
-ARCHIVE_DEFAULT = True
+ARCHIVE_DEFAULT = False
 
 TITLE = "Настройки"
 CLOSE = "Закрыть"
@@ -15,9 +15,10 @@ SEARCH_TITLE = "Поиск"
 ARCHIVE_SWITCH = "Искать в архиве"
 #: Лена, LEGAL.md §1.12 п.2 — дословно (подпись переключателя и сноска «Найти»).
 ARCHIVE_NOTE = (
-    "Поиск удалённых приложений идёт через публичный архив Internet Archive (web.archive.org). "
-    "Туда отправляется только текст запроса, ваш Apple ID — нет."
+    "В ReVivo внешний архив отключён. Поиск использует App Store и встроенный каталог; "
+    "запросы в Internet Archive, поисковики и сторонние каталоги не отправляются."
 )
+
 UPDATES_TITLE = "Обновления"
 CHECK_UPDATES = "Проверить обновления"
 #: Same words as the old window (main_window.check_updates).

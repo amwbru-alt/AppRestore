@@ -1,7 +1,7 @@
 """The one license gate for every front end (Qt Quick, Widgets, CLI).
 
 ``ipatool purchase`` is an App Store transaction that cannot be undone.
-AppRestore sends it only from here, and only like this:
+ReVivo sends it only from here, and only like this:
 
 1. A read-only ``attempt()`` first. If the app is already on the Apple ID,
    nothing else happens.
@@ -56,7 +56,7 @@ _NOT_OWNED = "Этого приложения нет на вашем Apple ID (�
 UNKNOWN_COUNTRY_TEXT = (
     f"{_NOT_OWNED}. Не удалось определить страну аккаунта Apple ID, поэтому "
     "цену проверить нельзя и лицензию не берём. Обновите ipatool "
-    "(или AppRestore): нужна сборка, где «auth info» показывает страну."
+    "(или ReVivo): нужна сборка, где «auth info» показывает страну."
 )
 
 # Apple (or ipatool before sending anything) said no: no transaction happened.
@@ -94,7 +94,7 @@ STORE_MISMATCH_TEXT = f"{STORE_MISMATCH_SHORT} Выйдите из аккаун�
 STORE_MISMATCH_CLI_HINT = (
     "Подсказка: apprestore auth --revoke, затем apprestore auth --email <ваш Apple ID>"
 )
-#: The gate's preflight refusal on an ipatool without AppRestore's patches.
+#: The gate's preflight refusal on an ipatool without ReVivo's patches.
 NEEDS_PATCHED_IPATOOL_TEXT = MESSAGES_RU[ErrorCode.NEEDS_PATCHED_BUILD]
 
 
@@ -166,7 +166,7 @@ def lookup_offer(store_id: str, countries: tuple[str, ...]) -> dict[str, object]
 def refusal_text(verdict: Verdict) -> str:
     reason = verdict.reason.casefold()
     if "платное" in reason:
-        return f"{_NOT_OWNED}. Это платное приложение: на платные AppRestore лицензию не берёт."
+        return f"{_NOT_OWNED}. Это платное приложение: на платные ReVivo лицензию не берёт."
     if "цена" in reason:
         return (
             f"{_NOT_OWNED}. Apple не показывает его цену "
@@ -232,7 +232,7 @@ def run_with_free_license(
     store_id = str(store_id or "").strip()
     # Макс's capability preflight (client.license_preflight): passed to
     # acquire_and_record, which runs it before the journal lock — an ipatool
-    # without AppRestore's patches never reaches purchase, nothing is journaled.
+    # without ReVivo's patches never reaches purchase, nothing is journaled.
     preflight = getattr(tools, "license_preflight", None)
     preflight = preflight if callable(preflight) else None
     country = ""

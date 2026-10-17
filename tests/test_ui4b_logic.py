@@ -721,8 +721,8 @@ def test_qml4b_uses_no_letter_placeholders() -> None:
         assert "placeholder_pixmap" not in text and "modelData.mark" not in text, path
         assert "5E5CE6" not in text.upper(), path
     theme = (_QML / "theme" / "Theme.qml").read_text(encoding="utf-8")
-    # Ника, полная спека: заглушка — palette.iconPlaceholder (#E2E0DA), без буквы
-    assert _re.search(r"iconPlaceholder:\s*\"#E2E0DA\"", theme)
+    # Ника, полная спека: заглушка — palette.iconPlaceholder (#344255), без буквы
+    assert _re.search(r"iconPlaceholder:\s*\"#344255\"", theme)
     assert "Theme.iconPlaceholder" in (_QML / "components" / "AppIcon.qml").read_text(encoding="utf-8")
 
 

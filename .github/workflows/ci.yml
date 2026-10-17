@@ -75,7 +75,7 @@ jobs:
           }
 
           $Version = (& python apprestore.py --version).Trim()
-          $ArchiveName = "AppRestore-$Version-source.zip"
+          $ArchiveName = "ReVivo-$Version-source.zip"
           $ArchivePath = Join-Path "dist" $ArchiveName
           $BootstrapPath = Join-Path "dist" "install.ps1"
           $MacBootstrapPath = Join-Path "dist" "install.sh"
@@ -92,7 +92,7 @@ jobs:
           }
 
           $ExpectedUrl = (
-            "https://github.com/J3ckJ/AppRestore/releases/download/" +
+            "https://github.com/amwbru-alt/AppRestore/releases/download/" +
             "v$Version/$ArchiveName"
           )
           $Bootstrap = Get-Content -LiteralPath $BootstrapPath -Raw
@@ -184,17 +184,17 @@ jobs:
       - name: Validate macOS release asset
         run: |
           version="$(python apprestore.py --version)"
-          archive="dist/AppRestore-${version}-source.zip"
+          archive="dist/ReVivo-${version}-source.zip"
           test -f "$archive"
           test -f dist/install.ps1
           test -f dist/install.sh
           test -f dist/SHA256SUMS.txt
           /bin/bash -n dist/install.sh
           grep -F \
-            "https://github.com/J3ckJ/AppRestore/releases/download/v${version}/AppRestore-${version}-source.zip" \
+            "https://github.com/amwbru-alt/AppRestore/releases/download/v${version}/ReVivo-${version}-source.zip" \
             dist/install.sh
           archive_hash="$(shasum -a 256 "$archive" | awk '{print $1}')"
-          grep -F "${archive_hash}  AppRestore-${version}-source.zip" \
+          grep -F "${archive_hash}  ReVivo-${version}-source.zip" \
             dist/SHA256SUMS.txt
           mac_hash="$(shasum -a 256 dist/install.sh | awk '{print $1}')"
           grep -F "${mac_hash}  install.sh" dist/SHA256SUMS.txt

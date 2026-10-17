@@ -258,7 +258,7 @@ class VersionContractTests(unittest.TestCase):
         )
         self.assertIsNotNone(
             readme_match,
-            "README.md does not state the current AppRestore version",
+            "README.md does not state the current ReVivo version",
         )
 
         changelog_match = re.search(
@@ -516,7 +516,7 @@ class InstallerDependencyContractTests(unittest.TestCase):
     def test_installer_holds_a_per_user_mutex_for_the_full_install(self) -> None:
         installer = (ROOT / "install-windows.ps1").read_text(encoding="utf-8")
 
-        mutex = '$InstallerMutexName = "Local\\AppRestore.Install."'
+        mutex = '$InstallerMutexName = "Local\\ReVivo.Install."'
         early_recovery = "Invoke-AppRestoreBackupRecovery `"
         selected_python = "$SelectedPython = Find-CompatiblePython"
         transaction = "Invoke-AppRestoreInstallTransaction `"
@@ -648,7 +648,7 @@ class InstallerDependencyContractTests(unittest.TestCase):
 @unittest.skipUnless(os.name == "nt", "Windows transaction contract")
 class WindowsInstallerTransactionTests(unittest.TestCase):
     marker_name = ".apprestore-managed"
-    marker_value = "AppRestore managed installation v1"
+    marker_value = "ReVivo managed installation v1"
 
     def _write_managed_install(self, root: Path, version: str) -> None:
         (root / "bin").mkdir(parents=True)
@@ -717,7 +717,7 @@ class WindowsInstallerTransactionTests(unittest.TestCase):
                 ) as directory,
             ):
                 programs = Path(directory) / "Programs"
-                backup = programs / "AppRestore.backup-crashed"
+                backup = programs / "ReVivo.backup-crashed"
                 self._write_managed_install(backup, "0.1.2")
 
                 result = _run_transaction_probe(
@@ -725,8 +725,8 @@ class WindowsInstallerTransactionTests(unittest.TestCase):
                     Path(directory),
                     r"""
 $Programs = Join-Path $env:APPRESTORE_TRANSACTION_ROOT "Programs"
-$Live = Join-Path $Programs "AppRestore"
-$CrashedBackup = Join-Path $Programs "AppRestore.backup-crashed"
+$Live = Join-Path $Programs "ReVivo"
+$CrashedBackup = Join-Path $Programs "ReVivo.backup-crashed"
 $FailingPrerequisite = {
     throw "intentional prerequisite failure"
 }
@@ -734,7 +734,7 @@ try {
     Invoke-AppRestoreBackupRecovery `
         -InstallRoot $Live `
         -ManagedMarkerName ".apprestore-managed" `
-        -ManagedMarkerValue "AppRestore managed installation v1"
+        -ManagedMarkerValue "ReVivo managed installation v1"
     & $FailingPrerequisite
     throw "failing prerequisite unexpectedly succeeded"
 }
@@ -780,8 +780,8 @@ Write-Output "EARLY_RECOVERY_BEFORE_PREREQUISITE_OK"
                 ) as directory,
             ):
                 programs = Path(directory) / "Programs"
-                backup = programs / "AppRestore.backup-crashed"
-                staging = programs / "AppRestore.staging-new"
+                backup = programs / "ReVivo.backup-crashed"
+                staging = programs / "ReVivo.staging-new"
                 self._write_managed_install(backup, "0.1.2")
                 self._write_managed_install(staging, "0.1.3")
 
@@ -790,15 +790,15 @@ Write-Output "EARLY_RECOVERY_BEFORE_PREREQUISITE_OK"
                     Path(directory),
                     r"""
 $Programs = Join-Path $env:APPRESTORE_TRANSACTION_ROOT "Programs"
-$Live = Join-Path $Programs "AppRestore"
-$Staging = Join-Path $Programs "AppRestore.staging-new"
-$Backup = Join-Path $Programs "AppRestore.backup-new"
+$Live = Join-Path $Programs "ReVivo"
+$Staging = Join-Path $Programs "ReVivo.staging-new"
+$Backup = Join-Path $Programs "ReVivo.backup-new"
 Invoke-AppRestoreInstallTransaction `
     -StagingRoot $Staging `
     -InstallRoot $Live `
     -BackupRoot $Backup `
     -ManagedMarkerName ".apprestore-managed" `
-    -ManagedMarkerValue "AppRestore managed installation v1" `
+    -ManagedMarkerValue "ReVivo managed installation v1" `
     -PrepareStaging {
         param($Path)
         $Recovered = ((& (Join-Path $Live "bin\apprestore.cmd") "--version") |
@@ -814,7 +814,7 @@ $Version = ((& (Join-Path $Live "bin\apprestore.cmd") "--version") |
 if ($LASTEXITCODE -ne 0 -or $Version -ne "0.1.3") {
     throw "new live install was not committed after recovery"
 }
-if (@(Get-ChildItem -LiteralPath $Programs -Filter "AppRestore.backup-*").Count) {
+if (@(Get-ChildItem -LiteralPath $Programs -Filter "ReVivo.backup-*").Count) {
     throw "backup remained after recovered update"
 }
 Write-Output "CRASH_RECOVERY_OK"
@@ -840,9 +840,9 @@ Write-Output "CRASH_RECOVERY_OK"
                 ) as directory,
             ):
                 programs = Path(directory) / "Programs"
-                first = programs / "AppRestore.backup-first"
-                second = programs / "AppRestore.backup-second"
-                staging = programs / "AppRestore.staging-new"
+                first = programs / "ReVivo.backup-first"
+                second = programs / "ReVivo.backup-second"
+                staging = programs / "ReVivo.staging-new"
                 self._write_managed_install(first, "0.1.1")
                 self._write_managed_install(second, "0.1.2")
                 staging.mkdir()
@@ -852,9 +852,9 @@ Write-Output "CRASH_RECOVERY_OK"
                     Path(directory),
                     r"""
 $Programs = Join-Path $env:APPRESTORE_TRANSACTION_ROOT "Programs"
-$Live = Join-Path $Programs "AppRestore"
-$Staging = Join-Path $Programs "AppRestore.staging-new"
-$Backup = Join-Path $Programs "AppRestore.backup-new"
+$Live = Join-Path $Programs "ReVivo"
+$Staging = Join-Path $Programs "ReVivo.staging-new"
+$Backup = Join-Path $Programs "ReVivo.backup-new"
 $PrepareMarker = Join-Path $Programs "prepare-called.txt"
 try {
     Invoke-AppRestoreInstallTransaction `
@@ -862,7 +862,7 @@ try {
         -InstallRoot $Live `
         -BackupRoot $Backup `
         -ManagedMarkerName ".apprestore-managed" `
-        -ManagedMarkerValue "AppRestore managed installation v1" `
+        -ManagedMarkerValue "ReVivo managed installation v1" `
         -PrepareStaging {
             param($Path)
             Set-Content -LiteralPath $PrepareMarker -Value "unsafe"
@@ -885,10 +885,10 @@ if (Test-Path -LiteralPath $PrepareMarker) {
 if (Test-Path -LiteralPath $Staging) {
     throw "staging was not cleaned after fail-closed recovery"
 }
-if (-not (Test-Path -LiteralPath (Join-Path $Programs "AppRestore.backup-first"))) {
+if (-not (Test-Path -LiteralPath (Join-Path $Programs "ReVivo.backup-first"))) {
     throw "first recovery candidate was changed"
 }
-if (-not (Test-Path -LiteralPath (Join-Path $Programs "AppRestore.backup-second"))) {
+if (-not (Test-Path -LiteralPath (Join-Path $Programs "ReVivo.backup-second"))) {
     throw "second recovery candidate was changed"
 }
 Write-Output "AMBIGUOUS_RECOVERY_REFUSED_OK"
@@ -917,8 +917,8 @@ Write-Output "AMBIGUOUS_RECOVERY_REFUSED_OK"
                 ) as directory,
             ):
                 programs = Path(directory) / "Programs"
-                backup = programs / "AppRestore.backup-unmanaged"
-                staging = programs / "AppRestore.staging-new"
+                backup = programs / "ReVivo.backup-unmanaged"
+                staging = programs / "ReVivo.staging-new"
                 backup.mkdir(parents=True)
                 (backup / "private.txt").write_text(
                     "preserve",
@@ -931,16 +931,16 @@ Write-Output "AMBIGUOUS_RECOVERY_REFUSED_OK"
                     Path(directory),
                     r"""
 $Programs = Join-Path $env:APPRESTORE_TRANSACTION_ROOT "Programs"
-$Live = Join-Path $Programs "AppRestore"
-$Staging = Join-Path $Programs "AppRestore.staging-new"
-$Candidate = Join-Path $Programs "AppRestore.backup-unmanaged"
+$Live = Join-Path $Programs "ReVivo"
+$Staging = Join-Path $Programs "ReVivo.staging-new"
+$Candidate = Join-Path $Programs "ReVivo.backup-unmanaged"
 try {
     Invoke-AppRestoreInstallTransaction `
         -StagingRoot $Staging `
         -InstallRoot $Live `
-        -BackupRoot (Join-Path $Programs "AppRestore.backup-new") `
+        -BackupRoot (Join-Path $Programs "ReVivo.backup-new") `
         -ManagedMarkerName ".apprestore-managed" `
-        -ManagedMarkerValue "AppRestore managed installation v1" `
+        -ManagedMarkerValue "ReVivo managed installation v1" `
         -PrepareStaging { param($Path) throw "prepare must not run" } `
         -VerifyStaging { param($Path) } `
         -VerifyInstallation { param($Path) }
@@ -985,9 +985,9 @@ Write-Output "UNMANAGED_BACKUP_REFUSED_OK"
             ):
                 root = Path(directory)
                 programs = root / "Programs"
-                live = programs / "AppRestore"
-                first_staging = programs / "AppRestore.staging-first"
-                second_staging = programs / "AppRestore.staging-second"
+                live = programs / "ReVivo"
+                first_staging = programs / "ReVivo.staging-first"
+                second_staging = programs / "ReVivo.staging-second"
                 first_ready = programs / "first-holds-mutex.txt"
                 second_ready = programs / "second-entered-prepare.txt"
                 self._write_managed_install(live, "0.1.2")
@@ -997,11 +997,11 @@ Write-Output "UNMANAGED_BACKUP_REFUSED_OK"
                 first_body = r"""
 $Programs = Join-Path $env:APPRESTORE_TRANSACTION_ROOT "Programs"
 Invoke-AppRestoreInstallTransaction `
-    -StagingRoot (Join-Path $Programs "AppRestore.staging-first") `
-    -InstallRoot (Join-Path $Programs "AppRestore") `
-    -BackupRoot (Join-Path $Programs "AppRestore.backup-first") `
+    -StagingRoot (Join-Path $Programs "ReVivo.staging-first") `
+    -InstallRoot (Join-Path $Programs "ReVivo") `
+    -BackupRoot (Join-Path $Programs "ReVivo.backup-first") `
     -ManagedMarkerName ".apprestore-managed" `
-    -ManagedMarkerValue "AppRestore managed installation v1" `
+    -ManagedMarkerValue "ReVivo managed installation v1" `
     -PrepareStaging {
         param($Path)
         Set-Content `
@@ -1016,11 +1016,11 @@ Write-Output "FIRST_INSTALL_OK"
                 second_body = r"""
 $Programs = Join-Path $env:APPRESTORE_TRANSACTION_ROOT "Programs"
 Invoke-AppRestoreInstallTransaction `
-    -StagingRoot (Join-Path $Programs "AppRestore.staging-second") `
-    -InstallRoot (Join-Path $Programs "AppRestore") `
-    -BackupRoot (Join-Path $Programs "AppRestore.backup-second") `
+    -StagingRoot (Join-Path $Programs "ReVivo.staging-second") `
+    -InstallRoot (Join-Path $Programs "ReVivo") `
+    -BackupRoot (Join-Path $Programs "ReVivo.backup-second") `
     -ManagedMarkerName ".apprestore-managed" `
-    -ManagedMarkerValue "AppRestore managed installation v1" `
+    -ManagedMarkerValue "ReVivo managed installation v1" `
     -PrepareStaging {
         param($Path)
         Set-Content `
@@ -1135,7 +1135,7 @@ Write-Output "SECOND_INSTALL_OK"
                         encoding="utf-8"
                     ),
                 )
-                self.assertFalse(list(programs.glob("AppRestore.backup-*")))
+                self.assertFalse(list(programs.glob("ReVivo.backup-*")))
 
     def test_preparation_failure_preserves_old_command_and_version(self) -> None:
         hosts = _powershell_hosts()
@@ -1150,8 +1150,8 @@ Write-Output "SECOND_INSTALL_OK"
                 ) as directory,
             ):
                 programs = Path(directory) / "Programs"
-                live = programs / "AppRestore"
-                staging = programs / "AppRestore.staging-test"
+                live = programs / "ReVivo"
+                staging = programs / "ReVivo.staging-test"
                 self._write_managed_install(live, "0.1.2")
                 staging.mkdir()
 
@@ -1160,16 +1160,16 @@ Write-Output "SECOND_INSTALL_OK"
                     Path(directory),
                     r"""
 $Programs = Join-Path $env:APPRESTORE_TRANSACTION_ROOT "Programs"
-$Live = Join-Path $Programs "AppRestore"
-$Staging = Join-Path $Programs "AppRestore.staging-test"
-$Backup = Join-Path $Programs "AppRestore.backup-test"
+$Live = Join-Path $Programs "ReVivo"
+$Staging = Join-Path $Programs "ReVivo.staging-test"
+$Backup = Join-Path $Programs "ReVivo.backup-test"
 try {
     Invoke-AppRestoreInstallTransaction `
         -StagingRoot $Staging `
         -InstallRoot $Live `
         -BackupRoot $Backup `
         -ManagedMarkerName ".apprestore-managed" `
-        -ManagedMarkerValue "AppRestore managed installation v1" `
+        -ManagedMarkerValue "ReVivo managed installation v1" `
         -PrepareStaging { param($Path) throw "forced preparation failure" } `
         -VerifyStaging { param($Path) throw "must not verify" } `
         -VerifyInstallation { param($Path) throw "must not commit" }
@@ -1216,8 +1216,8 @@ Write-Output "PREPARATION_ROLLBACK_OK"
                 ) as directory,
             ):
                 programs = Path(directory) / "Programs"
-                live = programs / "AppRestore"
-                staging = programs / "AppRestore.staging-test"
+                live = programs / "ReVivo"
+                staging = programs / "ReVivo.staging-test"
                 self._write_managed_install(live, "0.1.2")
                 self._write_managed_install(staging, "0.1.3")
 
@@ -1226,16 +1226,16 @@ Write-Output "PREPARATION_ROLLBACK_OK"
                     Path(directory),
                     r"""
 $Programs = Join-Path $env:APPRESTORE_TRANSACTION_ROOT "Programs"
-$Live = Join-Path $Programs "AppRestore"
-$Staging = Join-Path $Programs "AppRestore.staging-test"
-$Backup = Join-Path $Programs "AppRestore.backup-test"
+$Live = Join-Path $Programs "ReVivo"
+$Staging = Join-Path $Programs "ReVivo.staging-test"
+$Backup = Join-Path $Programs "ReVivo.backup-test"
 try {
     Invoke-AppRestoreInstallTransaction `
         -StagingRoot $Staging `
         -InstallRoot $Live `
         -BackupRoot $Backup `
         -ManagedMarkerName ".apprestore-managed" `
-        -ManagedMarkerValue "AppRestore managed installation v1" `
+        -ManagedMarkerValue "ReVivo managed installation v1" `
         -PrepareStaging {
             param($Path)
             if (-not (Test-Path -LiteralPath (Join-Path $Live "bin\apprestore.cmd"))) {
@@ -1297,8 +1297,8 @@ Write-Output "LIVE_ROLLBACK_OK"
                 ) as directory,
             ):
                 programs = Path(directory) / "Programs"
-                live = programs / "AppRestore"
-                staging = programs / "AppRestore.staging-test"
+                live = programs / "ReVivo"
+                staging = programs / "ReVivo.staging-test"
                 self._write_legacy_v013_install(live)
                 self._write_managed_install(staging, "0.1.3")
 
@@ -1307,15 +1307,15 @@ Write-Output "LIVE_ROLLBACK_OK"
                     Path(directory),
                     r"""
 $Programs = Join-Path $env:APPRESTORE_TRANSACTION_ROOT "Programs"
-$Live = Join-Path $Programs "AppRestore"
-$Staging = Join-Path $Programs "AppRestore.staging-test"
-$Backup = Join-Path $Programs "AppRestore.backup-test"
+$Live = Join-Path $Programs "ReVivo"
+$Staging = Join-Path $Programs "ReVivo.staging-test"
+$Backup = Join-Path $Programs "ReVivo.backup-test"
 Invoke-AppRestoreInstallTransaction `
     -StagingRoot $Staging `
     -InstallRoot $Live `
     -BackupRoot $Backup `
     -ManagedMarkerName ".apprestore-managed" `
-    -ManagedMarkerValue "AppRestore managed installation v1" `
+    -ManagedMarkerValue "ReVivo managed installation v1" `
     -PrepareStaging { param($Path) } `
     -VerifyStaging { param($Path) } `
     -VerifyInstallation { param($Path) }
@@ -1352,8 +1352,8 @@ Write-Output "LEGACY_V013_ACCEPTED_OK"
                 ) as directory,
             ):
                 programs = Path(directory) / "Programs"
-                live = programs / "AppRestore"
-                staging = programs / "AppRestore.staging-test"
+                live = programs / "ReVivo"
+                staging = programs / "ReVivo.staging-test"
                 self._write_managed_install(live, "0.1.2")
                 self._write_managed_install(staging, "0.1.3")
 
@@ -1369,7 +1369,7 @@ function Remove-Item {
         [switch]$Force
     )
     if ([IO.Path]::GetFileName($LiteralPath).StartsWith(
-        "AppRestore.backup-",
+        "ReVivo.backup-",
         [StringComparison]::Ordinal
     )) {
         throw "forced backup cleanup failure"
@@ -1380,15 +1380,15 @@ function Remove-Item {
         -Force:$Force
 }
 $Programs = Join-Path $env:APPRESTORE_TRANSACTION_ROOT "Programs"
-$Live = Join-Path $Programs "AppRestore"
-$Staging = Join-Path $Programs "AppRestore.staging-test"
-$Backup = Join-Path $Programs "AppRestore.backup-test"
+$Live = Join-Path $Programs "ReVivo"
+$Staging = Join-Path $Programs "ReVivo.staging-test"
+$Backup = Join-Path $Programs "ReVivo.backup-test"
 Invoke-AppRestoreInstallTransaction `
     -StagingRoot $Staging `
     -InstallRoot $Live `
     -BackupRoot $Backup `
     -ManagedMarkerName ".apprestore-managed" `
-    -ManagedMarkerValue "AppRestore managed installation v1" `
+    -ManagedMarkerValue "ReVivo managed installation v1" `
     -PrepareStaging { param($Path) } `
     -VerifyStaging { param($Path) } `
     -VerifyInstallation { param($Path) }
@@ -1423,8 +1423,8 @@ Write-Output "BACKUP_CLEANUP_NONFATAL_OK"
                 ) as directory,
             ):
                 programs = Path(directory) / "Programs"
-                live = programs / "AppRestore"
-                staging = programs / "AppRestore.staging-test"
+                live = programs / "ReVivo"
+                staging = programs / "ReVivo.staging-test"
                 for relative in (
                     "apprestore.ps1",
                     "uninstall-windows.ps1",
@@ -1447,9 +1447,9 @@ Write-Output "BACKUP_CLEANUP_NONFATAL_OK"
                     Path(directory),
                     r"""
 $Programs = Join-Path $env:APPRESTORE_TRANSACTION_ROOT "Programs"
-$Live = Join-Path $Programs "AppRestore"
-$Staging = Join-Path $Programs "AppRestore.staging-test"
-$Backup = Join-Path $Programs "AppRestore.backup-test"
+$Live = Join-Path $Programs "ReVivo"
+$Staging = Join-Path $Programs "ReVivo.staging-test"
+$Backup = Join-Path $Programs "ReVivo.backup-test"
 $Rejected = $false
 try {
     Invoke-AppRestoreInstallTransaction `
@@ -1457,7 +1457,7 @@ try {
         -InstallRoot $Live `
         -BackupRoot $Backup `
         -ManagedMarkerName ".apprestore-managed" `
-        -ManagedMarkerValue "AppRestore managed installation v1" `
+        -ManagedMarkerValue "ReVivo managed installation v1" `
         -PrepareStaging { param($Path) } `
         -VerifyStaging { param($Path) } `
         -VerifyInstallation { param($Path) }
@@ -1500,8 +1500,8 @@ Write-Output "UNOWNED_REFUSED_OK"
             ):
                 programs = Path(directory) / "Programs"
                 programs.mkdir()
-                live = programs / "AppRestore"
-                staging = programs / "AppRestore.staging-test"
+                live = programs / "ReVivo"
+                staging = programs / "ReVivo.staging-test"
                 live.write_text("do not delete", encoding="utf-8")
                 staging.mkdir()
 
@@ -1510,9 +1510,9 @@ Write-Output "UNOWNED_REFUSED_OK"
                     Path(directory),
                     r"""
 $Programs = Join-Path $env:APPRESTORE_TRANSACTION_ROOT "Programs"
-$Live = Join-Path $Programs "AppRestore"
-$Staging = Join-Path $Programs "AppRestore.staging-test"
-$Backup = Join-Path $Programs "AppRestore.backup-test"
+$Live = Join-Path $Programs "ReVivo"
+$Staging = Join-Path $Programs "ReVivo.staging-test"
+$Backup = Join-Path $Programs "ReVivo.backup-test"
 $Rejected = $false
 try {
     Invoke-AppRestoreInstallTransaction `
@@ -1520,7 +1520,7 @@ try {
         -InstallRoot $Live `
         -BackupRoot $Backup `
         -ManagedMarkerName ".apprestore-managed" `
-        -ManagedMarkerValue "AppRestore managed installation v1" `
+        -ManagedMarkerValue "ReVivo managed installation v1" `
         -PrepareStaging { param($Path) } `
         -VerifyStaging { param($Path) } `
         -VerifyInstallation { param($Path) }
@@ -1589,7 +1589,7 @@ $KnownLocalAppData = [System.IO.Path]::GetFullPath($KnownLocalAppData)
                 r"""
 Set-StrictMode -Version Latest
 $entryPoint = Join-Path $env:LOCALAPPDATA `
-    "Programs\AppRestore\bin\apprestore.cmd"
+    "Programs\ReVivo\bin\apprestore.cmd"
 New-Item -ItemType Directory -Path (Split-Path $entryPoint) -Force |
     Out-Null
 [System.IO.File]::WriteAllText(

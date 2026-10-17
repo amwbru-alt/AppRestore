@@ -288,6 +288,11 @@ class QuickSession(QObject):
         with self._lock:
             return self._purchases_view.note
 
+    @Property(str, notify=purchasesChanged)
+    def purchasesWarning(self) -> str:
+        with self._lock:
+            return self._purchases_view.warning
+
     @Property(bool, notify=purchasesChanged)
     def purchasesFromCache(self) -> bool:
         with self._lock:
@@ -511,6 +516,11 @@ class QuickSession(QObject):
         # «Поставить» may add a free app to the Apple ID on purpose, but only
         # through license_gate: price==0 by lookup, 5/day + 15 total, journal.
         self._start_install(store_id, acquire=True)
+
+    @Slot(str)
+    def restorePurchase(self, store_id: str) -> None:
+        """Only redownload an existing Apple entitlement; never request a new license."""
+        self._start_install(store_id, acquire=False)
 
     @Slot(str)
     def acquireStore(self, store_id: str) -> None:

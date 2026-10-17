@@ -99,11 +99,11 @@ def _make_fake_release(
     traversal_entry: bool = False,
     cleanup_reparse: bool = False,
 ) -> None:
-    root_name = f"AppRestore-{version}"
+    root_name = f"ReVivo-{version}"
     fake_installer = rf"""
 #requires -Version 5.1
 $ErrorActionPreference = "Stop"
-$InstallRoot = Join-Path $env:LOCALAPPDATA "Programs\AppRestore"
+$InstallRoot = Join-Path $env:LOCALAPPDATA "Programs\ReVivo"
 $BinTarget = Join-Path $InstallRoot "bin"
 New-Item -ItemType Directory -Path $BinTarget -Force | Out-Null
 $Wrapper = @'
@@ -160,7 +160,7 @@ def _render_test_bootstrap(
         version=version,
         archive_url=(
             "https://invalid.example.test/"
-            f"AppRestore-{version}-source.zip"
+            f"ReVivo-{version}-source.zip"
         ),
         archive_sha256=archive_sha256,
         template_path=TEMPLATE,
@@ -198,7 +198,7 @@ def _run_bootstrap(
 
     if expect_success:
         postcondition = r"""
-$ExpectedBin = Join-Path $env:LOCALAPPDATA "Programs\AppRestore\bin"
+$ExpectedBin = Join-Path $env:LOCALAPPDATA "Programs\ReVivo\bin"
 $ExpectedCommand = Join-Path $ExpectedBin "apprestore.cmd"
 $FirstPath = ($env:Path -split ";")[0].Trim().Trim('"').TrimEnd("\")
 if (-not [string]::Equals(
@@ -264,7 +264,7 @@ Write-Output "APPRESTORE_BOOTSTRAP_E2E_OK"
         check=False,
     )
     if expect_temp_cleanup:
-        assert not list(runtime_temp.glob("AppRestore-bootstrap-*"))
+        assert not list(runtime_temp.glob("ReVivo-bootstrap-*"))
     return result
 
 
@@ -274,7 +274,7 @@ def test_rendered_bootstrap_has_pinned_fields_and_only_url_override() -> None:
         version="1.2.3",
         archive_url=(
             "https://downloads.example.test/"
-            "AppRestore-1.2.3-source.zip"
+            "ReVivo-1.2.3-source.zip"
         ),
         archive_sha256=digest,
         template_path=TEMPLATE,
@@ -283,13 +283,13 @@ def test_rendered_bootstrap_has_pinned_fields_and_only_url_override() -> None:
     assert "$AppRestoreVersion = '1.2.3'" in rendered
     assert (
         "$DefaultArchiveUrl = "
-        "'https://downloads.example.test/AppRestore-1.2.3-source.zip'"
+        "'https://downloads.example.test/ReVivo-1.2.3-source.zip'"
     ) in rendered
     assert f"$ExpectedArchiveSha256 = '{digest}'" in rendered
     assert "APPRESTORE_BOOTSTRAP_ARCHIVE_URL" in rendered
     assert "APPRESTORE_BOOTSTRAP_ARCHIVE_SHA" not in rendered
     assert "@@APPRESTORE_" not in rendered
-    assert '$ExpectedLeafPrefix = "AppRestore-bootstrap-"' in rendered
+    assert '$ExpectedLeafPrefix = "ReVivo-bootstrap-"' in rendered
     assert "$TempParent" in rendered
     assert "$SystemTempRoot" in rendered
     assert "$NestedTempReparse" in rendered
@@ -304,7 +304,7 @@ def test_rendered_macos_bootstrap_has_pinned_fields_and_safe_contract() -> None:
         version="1.2.3",
         archive_url=(
             "https://downloads.example.test/"
-            "AppRestore-1.2.3-source.zip"
+            "ReVivo-1.2.3-source.zip"
         ),
         archive_sha256=digest,
         template_path=MACOS_TEMPLATE,
@@ -313,7 +313,7 @@ def test_rendered_macos_bootstrap_has_pinned_fields_and_safe_contract() -> None:
     assert "APPRESTORE_VERSION='1.2.3'" in rendered
     assert (
         "DEFAULT_ARCHIVE_URL="
-        "'https://downloads.example.test/AppRestore-1.2.3-source.zip'"
+        "'https://downloads.example.test/ReVivo-1.2.3-source.zip'"
     ) in rendered
     assert f"EXPECTED_ARCHIVE_SHA256='{digest}'" in rendered
     assert "APPRESTORE_BOOTSTRAP_ARCHIVE_URL" in rendered
@@ -377,7 +377,7 @@ def test_release_validation_rejects_linked_input(
 
 
 def test_release_build_rejects_version_drift(tmp_path: Path) -> None:
-    release_root = tmp_path / "AppRestore"
+    release_root = tmp_path / "ReVivo"
     _copy_release_inputs(release_root)
     package_init = release_root / "apprestore_core" / "__init__.py"
     package_init.write_text(
@@ -402,7 +402,7 @@ def test_release_build_rejects_version_drift(tmp_path: Path) -> None:
 
 
 def test_release_build_rejects_unlocked_vendored_wheel(tmp_path: Path) -> None:
-    release_root = tmp_path / "AppRestore"
+    release_root = tmp_path / "ReVivo"
     _copy_release_inputs(release_root)
     wheel = (
         release_root
@@ -428,7 +428,7 @@ def test_release_build_rejects_unlocked_vendored_wheel(tmp_path: Path) -> None:
 def test_release_build_is_deterministic_and_generates_bootstrap(
     tmp_path: Path,
 ) -> None:
-    release_root = tmp_path / "AppRestore"
+    release_root = tmp_path / "ReVivo"
     _copy_release_inputs(release_root)
     script = release_root / "scripts" / "build-release.py"
 
@@ -442,7 +442,7 @@ def test_release_build_is_deterministic_and_generates_bootstrap(
     )
     assert first.returncode == 0, first.stdout + first.stderr
 
-    archive = release_root / "dist" / "AppRestore-0.4.0-source.zip"
+    archive = release_root / "dist" / "ReVivo-0.4.0-source.zip"
     windows_bootstrap = release_root / "dist" / "install.ps1"
     macos_bootstrap = release_root / "dist" / "install.sh"
     checksums = release_root / "dist" / "SHA256SUMS.txt"
@@ -461,13 +461,13 @@ def test_release_build_is_deterministic_and_generates_bootstrap(
         in windows_bootstrap_text
     )
     assert (
-        "https://github.com/J3ckJ/AppRestore/releases/download/v0.4.0/"
-        "AppRestore-0.4.0-source.zip"
+        "https://github.com/amwbru-alt/AppRestore/releases/download/v0.4.0/"
+        "ReVivo-0.4.0-source.zip"
     ) in windows_bootstrap_text
     assert f"EXPECTED_ARCHIVE_SHA256='{archive_digest}'" in macos_bootstrap_text
     assert (
-        "https://github.com/J3ckJ/AppRestore/releases/download/v0.4.0/"
-        "AppRestore-0.4.0-source.zip"
+        "https://github.com/amwbru-alt/AppRestore/releases/download/v0.4.0/"
+        "ReVivo-0.4.0-source.zip"
     ) in macos_bootstrap_text
     assert checksums.read_text(encoding="utf-8") == (
         f"{archive_digest}  {archive.name}\n"
@@ -482,29 +482,29 @@ def test_release_build_is_deterministic_and_generates_bootstrap(
             for info in release_zip.infolist()
         )
         macos_installer = release_zip.getinfo(
-            "AppRestore-0.4.0/install-macos.sh"
+            "ReVivo-0.4.0/install-macos.sh"
         )
-    assert "AppRestore-0.4.0/CONTRIBUTING.md" in names
-    assert "AppRestore-0.4.0/.gitattributes" in names
-    assert "AppRestore-0.4.0/.github/workflows/ci.yml" in names
-    assert "AppRestore-0.4.0/.github/workflows/release.yml" in names
-    assert "AppRestore-0.4.0/docs/RELEASING.md" in names
-    assert "AppRestore-0.4.0/SECURITY.md" in names
-    assert "AppRestore-0.4.0/install-macos.sh" in names
-    assert "AppRestore-0.4.0/scripts/install.ps1.in" in names
-    assert "AppRestore-0.4.0/scripts/install.sh.in" in names
-    assert "AppRestore-0.4.0/requirements/runtime.lock" in names
-    assert "AppRestore-0.4.0/requirements/build.lock" in names
-    assert "AppRestore-0.4.0/requirements/test.lock" in names
-    assert "AppRestore-0.4.0/requirements/wheel-build.lock" in names
-    assert "AppRestore-0.4.0/requirements/sources/hexdump-3.3.zip" in names
-    assert "AppRestore-0.4.0/scripts/rebuild-vendored-wheel.py" in names
+    assert "ReVivo-0.4.0/CONTRIBUTING.md" in names
+    assert "ReVivo-0.4.0/.gitattributes" in names
+    assert "ReVivo-0.4.0/.github/workflows/ci.yml" in names
+    assert "ReVivo-0.4.0/.github/workflows/release.yml" in names
+    assert "ReVivo-0.4.0/docs/RELEASING.md" in names
+    assert "ReVivo-0.4.0/SECURITY.md" in names
+    assert "ReVivo-0.4.0/install-macos.sh" in names
+    assert "ReVivo-0.4.0/scripts/install.ps1.in" in names
+    assert "ReVivo-0.4.0/scripts/install.sh.in" in names
+    assert "ReVivo-0.4.0/requirements/runtime.lock" in names
+    assert "ReVivo-0.4.0/requirements/build.lock" in names
+    assert "ReVivo-0.4.0/requirements/test.lock" in names
+    assert "ReVivo-0.4.0/requirements/wheel-build.lock" in names
+    assert "ReVivo-0.4.0/requirements/sources/hexdump-3.3.zip" in names
+    assert "ReVivo-0.4.0/scripts/rebuild-vendored-wheel.py" in names
     assert (
-        "AppRestore-0.4.0/requirements/wheels/"
+        "ReVivo-0.4.0/requirements/wheels/"
         "hexdump-3.3-py3-none-any.whl"
     ) in names
-    assert "AppRestore-0.4.0/dist/install.ps1" not in names
-    assert "AppRestore-0.4.0/dist/install.sh" not in names
+    assert "ReVivo-0.4.0/dist/install.ps1" not in names
+    assert "ReVivo-0.4.0/dist/install.sh" not in names
     assert stat.S_ISREG(macos_installer.external_attr >> 16)
     assert (macos_installer.external_attr >> 16) & 0o777 == 0o755
 
@@ -531,7 +531,7 @@ def test_release_build_is_deterministic_and_generates_bootstrap(
     unpacked = tmp_path / "unpacked"
     with zipfile.ZipFile(archive) as release_zip:
         release_zip.extractall(unpacked)
-    unpacked_root = unpacked / "AppRestore-0.4.0"
+    unpacked_root = unpacked / "ReVivo-0.4.0"
     assert not (unpacked_root / ".git").exists()
     rebuilt = subprocess.run(
         [sys.executable, str(unpacked_root / "scripts" / "build-release.py")],
@@ -543,7 +543,7 @@ def test_release_build_is_deterministic_and_generates_bootstrap(
     )
     assert rebuilt.returncode == 0, rebuilt.stdout + rebuilt.stderr
     assert _sha256(
-        unpacked_root / "dist" / "AppRestore-0.4.0-source.zip"
+        unpacked_root / "dist" / "ReVivo-0.4.0-source.zip"
     ) == first_hashes[0]
 
     if (3, 10) <= sys.version_info[:2] < (3, 14):
@@ -582,7 +582,7 @@ def test_bootstrap_local_override_installs_and_updates_same_process_path(
     powershell: str,
 ) -> None:
     version = "9.9.9"
-    archive = tmp_path / f"AppRestore-{version}-source.zip"
+    archive = tmp_path / f"ReVivo-{version}-source.zip"
     bootstrap = tmp_path / "install.ps1"
     _make_fake_release(archive, version=version)
     _render_test_bootstrap(
@@ -614,7 +614,7 @@ def test_bootstrap_preserves_temp_tree_containing_a_reparse_point(
     powershell: str,
 ) -> None:
     version = "9.9.9"
-    archive = tmp_path / f"AppRestore-{version}-source.zip"
+    archive = tmp_path / f"ReVivo-{version}-source.zip"
     bootstrap = tmp_path / "install.ps1"
     _make_fake_release(
         archive,
@@ -639,7 +639,7 @@ def test_bootstrap_preserves_temp_tree_containing_a_reparse_point(
 
     assert result.returncode == 0, result.stdout + result.stderr
     runtime_temp = tmp_path / "runtime-temp"
-    preserved = list(runtime_temp.glob("AppRestore-bootstrap-*"))
+    preserved = list(runtime_temp.glob("ReVivo-bootstrap-*"))
     assert len(preserved) == 1
     junction = preserved[0] / "unsafe-cleanup-junction"
     outside = tmp_path / "local-app-data" / "bootstrap-cleanup-outside"
@@ -665,7 +665,7 @@ def test_bootstrap_url_override_cannot_bypass_pinned_sha(
     powershell: str,
 ) -> None:
     version = "9.9.9"
-    archive = tmp_path / f"AppRestore-{version}-source.zip"
+    archive = tmp_path / f"ReVivo-{version}-source.zip"
     bootstrap = tmp_path / "install.ps1"
     _make_fake_release(archive, version=version)
     _render_test_bootstrap(
@@ -689,7 +689,7 @@ def test_bootstrap_url_override_cannot_bypass_pinned_sha(
         tmp_path
         / "local-app-data"
         / "Programs"
-        / "AppRestore"
+        / "ReVivo"
         / "bin"
         / "apprestore.cmd"
     ).exists()
@@ -705,7 +705,7 @@ def test_bootstrap_rejects_traversal_even_when_archive_hash_is_pinned(
     powershell: str,
 ) -> None:
     version = "9.9.9"
-    archive = tmp_path / f"AppRestore-{version}-source.zip"
+    archive = tmp_path / f"ReVivo-{version}-source.zip"
     bootstrap = tmp_path / "install.ps1"
     _make_fake_release(
         archive,

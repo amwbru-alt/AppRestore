@@ -23,6 +23,7 @@ Sheet {
         Item { width: 1; height: 12 }
         Basic.Switch {
             id: archive
+            enabled: false
             objectName: "archiveSwitch"
             checked: !!root.s.archive
             text: root.s.archiveSwitch || ""

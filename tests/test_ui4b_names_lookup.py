@@ -107,6 +107,8 @@ def test_no_request_to_web_archive_from_the_names_path(monkeypatch) -> None:
 
     monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
     for mod in (app_names, region_probe):
+        if hasattr(mod, "policy_urlopen"):
+            monkeypatch.setattr(mod, "policy_urlopen", fake_urlopen)
         if hasattr(mod, "urlopen"):
             monkeypatch.setattr(mod, "urlopen", fake_urlopen)
     resolver = app_names.AppNames(region_probe.RegionProbe(min_interval_s=0) if "min_interval_s" in

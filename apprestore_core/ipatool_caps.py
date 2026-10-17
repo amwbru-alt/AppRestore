@@ -1,7 +1,7 @@
 """What the installed ipatool can do, asked once per binary for the whole app.
 
 Today only one question: does it take the keychain passphrase from stdin
-(``--keychain-passphrase-stdin``, AppRestore's ipatool patch 0003)? The GUI's
+(``--keychain-passphrase-stdin``, ReVivo's ipatool patch 0003)? The GUI's
 KeychainRunner (downloads, installs) and the runner behind ``ipatool_api``
 share this cached probe, so the app never disagrees with itself.
 
@@ -62,7 +62,7 @@ def supports_passphrase_stdin(binary: str) -> bool:
 
 
 def reset_cache() -> None:
-    """For tests and after AppRestore replaces its ipatool."""
+    """For tests and after ReVivo replaces its ipatool."""
 
     with _LOCK:
         _HELP.clear()

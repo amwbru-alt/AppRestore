@@ -1,0 +1,248 @@
+diff --git a/cmd/purchases.go b/cmd/purchases.go
+index 809157c..83c5155 100644
+--- a/cmd/purchases.go
++++ b/cmd/purchases.go
+@@ -84,6 +84,7 @@ func listPurchasesCmd() *cobra.Command {
+ 					Int("count", output.Count).
+ 					Int("totalCount", output.TotalCount).
+ 					Int("page", output.Page).
++					Bool("historyComplete", output.HistoryComplete).
+ 					Array("apps", appstore.Apps(output.Results)).
+ 					Send()
+ 
+diff --git a/pkg/appstore/appstore_locker_redirect.go b/pkg/appstore/appstore_locker_redirect.go
+new file mode 100644
+index 0000000..8f77ba0
+--- /dev/null
++++ b/pkg/appstore/appstore_locker_redirect.go
+@@ -0,0 +1,61 @@
++package appstore
++
++import (
++	"context"
++	"errors"
++	"net/url"
++	"regexp"
++	"strings"
++	"time"
++
++	"github.com/majd/ipatool/v2/pkg/http"
++)
++
++var restoreLockerHost = regexp.MustCompile(`^(p[0-9]{1,5}-)?(se|buy)\.itunes\.apple\.com$`)
++var errRestoreLockerRedirect = errors.New("invalid Apple purchase history redirect")
++var errRestoreLockerRedirectLimit = errors.New("Apple purchase history redirect limit")
++
++// Preserve the read-only history POST across bounded Apple Store pod redirects.
++// Keep the same operation, account and query; never forward credentials elsewhere.
++func sendRestoreLocker[R any](client http.Client[R], req http.Request) (http.Result[R], error) {
++	ctx := req.Context
++	if ctx == nil {
++		ctx = context.Background()
++	}
++	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
++	defer cancel()
++	req.Context, req.NoRedirects = ctx, true
++	for attempt := 0; attempt <= 3; attempt++ {
++		if err := ctx.Err(); err != nil {
++			return http.Result[R]{}, err
++		}
++		res, err := client.Send(req)
++		if err != nil || !http.IsAuthenticationRedirect(res.StatusCode) {
++			return res, err
++		}
++		if attempt == 3 {
++			return res, errRestoreLockerRedirectLimit
++		}
++		location, locErr := res.GetHeader("Location")
++		base, baseErr := url.Parse(req.URL)
++		next, nextErr := url.Parse(location)
++		if locErr != nil || strings.TrimSpace(location) == "" || baseErr != nil || nextErr != nil {
++			return res, errRestoreLockerRedirect
++		}
++		next = base.ResolveReference(next)
++		host := strings.ToLower(next.Host)
++		if next.Scheme != "https" || !restoreLockerHost.MatchString(host) ||
++			next.User != nil || next.Fragment != "" || next.Path != base.Path || next.RawPath != "" {
++			return res, errRestoreLockerRedirect
++		}
++		query, queryErr := url.ParseQuery(next.RawQuery)
++		baseQuery, baseQueryErr := url.ParseQuery(base.RawQuery)
++		if queryErr != nil || baseQueryErr != nil || (len(query) != 0 && query.Encode() != baseQuery.Encode()) {
++			return res, errRestoreLockerRedirect
++		}
++		// A relative/absolute Location may omit the original guid query.
++		next.RawQuery = base.RawQuery
++		req.URL = next.String()
++	}
++	return http.Result[R]{}, errRestoreLockerRedirectLimit
++}
+diff --git a/pkg/appstore/appstore_locker_redirect_test.go b/pkg/appstore/appstore_locker_redirect_test.go
+new file mode 100644
+index 0000000..c15bcbe
+--- /dev/null
++++ b/pkg/appstore/appstore_locker_redirect_test.go
+@@ -0,0 +1,55 @@
++package appstore
++
++import (
++ "reflect"
++ "strconv"
++ "testing"
++ "github.com/majd/ipatool/v2/pkg/http"
++ "go.uber.org/mock/gomock"
++)
++
++func TestLockerRedirectPreservesHistoryPost(t *testing.T) {
++ for _, status := range []int{301,302,307,308} {
++  t.Run(strconv.Itoa(status), func(t *testing.T) {
++   ctrl := gomock.NewController(t)
++   client := http.NewMockClient[[]byte](ctrl)
++   original := http.Request{URL: restoreLockerURL+"?s=143469", Method:http.MethodPOST,
++    Headers:map[string]string{"X-Token":"test-token"},Payload:&http.RawPayload{Content:[]byte("vt=lockerData")}}
++   client.EXPECT().Send(gomock.Any()).Return(http.Result[[]byte]{StatusCode:status, Headers:map[string]string{"Location":"https://p42-se.itunes.apple.com/WebObjects/MZStoreElements.woa/wa/purchases"}},nil)
++   client.EXPECT().Send(gomock.Any()).DoAndReturn(func(req http.Request)(http.Result[[]byte],error){
++    if req.Method != original.Method || !reflect.DeepEqual(req.Payload, original.Payload) || !reflect.DeepEqual(req.Headers, original.Headers) || req.URL != "https://p42-se.itunes.apple.com/WebObjects/MZStoreElements.woa/wa/purchases?s=143469" || !req.NoRedirects || req.Context == nil {t.Fatal("history request changed on redirect")}
++    return http.Result[[]byte]{StatusCode:200,Data:[]byte(`{"Apps":{"564177498":[1]}}`)},nil
++   })
++   res,err := sendRestoreLocker(client,original)
++   if err != nil || res.StatusCode != 200 {t.Fatalf("history redirect failed: %v",err)}
++  })
++ }
++}
++
++func TestLockerRedirectRejectsCredentialLeakAndChangedScope(t *testing.T) {
++ for _, location := range []string{"https://evil.example/WebObjects/MZStoreElements.woa/wa/purchases", "http://se.itunes.apple.com/WebObjects/MZStoreElements.woa/wa/purchases", "https://se.itunes.apple.com/other", restoreLockerURL+"?s=143441", "https://user@se.itunes.apple.com/WebObjects/MZStoreElements.woa/wa/purchases"} {
++  ctrl:=gomock.NewController(t)
++  client:=http.NewMockClient[[]byte](ctrl)
++  client.EXPECT().Send(gomock.Any()).Return(http.Result[[]byte]{StatusCode:302, Headers:map[string]string{"Location":location}},nil).Times(1)
++  _,err:=sendRestoreLocker(client,http.Request{URL:restoreLockerURL+"?s=143469",Method:http.MethodPOST})
++  if err == nil {t.Fatalf("accepted unsafe redirect %s",location)}
++ }
++}
++
++func TestLockerUnavailableIsExplicitlyIncomplete(t *testing.T) {
++ store:=&appstore{}
++ apps,complete:=store.mergeRestoreLockerStatus(Account{},[]App{{ID:564177498}})
++ if complete || len(apps)!=1 || apps[0].ID != 564177498 {t.Fatal("lost known purchase or concealed missing archive")}
++}
++
++func TestLockerKeepsDelistedIDWhenPublicLookupReturnsNothing(t *testing.T) {
++ ctrl:=gomock.NewController(t)
++ client:=http.NewMockClient[[]byte](ctrl)
++ store:=&appstore{storefrontClient:client}
++ client.EXPECT().Send(gomock.Any()).DoAndReturn(func(req http.Request)(http.Result[[]byte],error){
++  if req.Method==http.MethodGET {return http.Result[[]byte]{StatusCode:200,Data:[]byte(`{"results":[]}`)},nil}
++  return http.Result[[]byte]{StatusCode:200,Data:[]byte(`{"Apps":{"564177498":[1]}}`)},nil
++ }).AnyTimes()
++ apps,complete:=store.mergeRestoreLockerStatus(Account{StoreFront:"143469-16,34",PasswordToken:"test",DirectoryServicesID:"account"},nil)
++ if !complete || len(apps)!=1 || apps[0].ID!=564177498 {t.Fatalf("delisted purchase filtered out: %#v complete=%v",apps,complete)}
++}
+diff --git a/pkg/appstore/appstore_owned_apps.go b/pkg/appstore/appstore_owned_apps.go
+index 7cb33ab..ee5b928 100644
+--- a/pkg/appstore/appstore_owned_apps.go
++++ b/pkg/appstore/appstore_owned_apps.go
+@@ -39,6 +39,7 @@ type OwnedAppsOutput struct {
+ 	TotalCount int
+ 	Page       int
+ 	Results    []App
++	HistoryComplete bool
+ }
+ 
+ func (t *appstore) OwnedApps(input OwnedAppsInput) (OwnedAppsOutput, error) {
+@@ -75,9 +76,10 @@ func (t *appstore) OwnedApps(input OwnedAppsInput) (OwnedAppsOutput, error) {
+ 		return OwnedAppsOutput{}, errors.New("SAP action signer factory returned nil")
+ 	}
+ 
++	historyComplete := false
+ 	apps, fetchErr := t.fetchOwnedApps(input.Account, guid, signer)
+ 	if fetchErr == nil && input.All {
+-		apps = t.mergeRestoreLocker(input.Account, apps)
++		apps, historyComplete = t.mergeRestoreLockerStatus(input.Account, apps)
+ 	}
+ 	if input.Platform != "" {
+ 		apps = slices.DeleteFunc(apps, func(app App) bool {
+@@ -96,6 +98,7 @@ func (t *appstore) OwnedApps(input OwnedAppsInput) (OwnedAppsOutput, error) {
+ 		TotalCount: len(apps),
+ 		Page:       input.Page,
+ 		Results:    pageApps,
++		HistoryComplete: historyComplete,
+ 	}
+ 	closeErr := signer.Close()
+ 
+diff --git a/pkg/appstore/appstore_restore_locker.go b/pkg/appstore/appstore_restore_locker.go
+index 37096ce..51367b4 100644
+--- a/pkg/appstore/appstore_restore_locker.go
++++ b/pkg/appstore/appstore_restore_locker.go
+@@ -23,13 +23,19 @@ const (
+ // storefront; it includes purchases Apple omits from the Configurator feed.
+ // A locker failure leaves the DAAP list unchanged.
+ func (t *appstore) mergeRestoreLocker(account Account, apps []App) []App {
++	merged, _ := t.mergeRestoreLockerStatus(account, apps)
++	return merged
++}
++
++// Completeness describes retrieval of both locker views, not Apple retaining every historical app.
++func (t *appstore) mergeRestoreLockerStatus(account Account, apps []App) ([]App, bool) {
+ 	if t.storefrontClient == nil {
+-		return apps
++		return apps, false
+ 	}
+ 
+ 	storefrontID := StoreFrontID(account.StoreFront)
+ 	if storefrontID == "" || account.PasswordToken == "" || account.DirectoryServicesID == "" {
+-		return apps
++		return apps, false
+ 	}
+ 
+ 	known := make(map[int64]struct{}, len(apps))
+@@ -93,9 +99,10 @@ func (t *appstore) mergeRestoreLocker(account Account, apps []App) []App {
+ 		}
+ 	}
+ 
++	complete := notes["visible"].Kind == "ok" && notes["hidden"].Kind == "ok"
+ 	if len(extra) == 0 {
+ 		writeLockerStatus(notes, 0)
+-		return apps
++		return apps, complete
+ 	}
+ 
+ 	slices.SortFunc(extra, func(left, right App) int {
+@@ -104,7 +111,7 @@ func (t *appstore) mergeRestoreLocker(account Account, apps []App) []App {
+ 	extra = t.lookupLockerNames(account, extra)
+ 	writeLockerStatus(notes, len(extra))
+ 
+-	return append(apps, extra...)
++	return append(apps, extra...), complete
+ }
+ 
+ type lockerEntry struct {
+@@ -119,7 +126,7 @@ func (t *appstore) fetchLockerEntries(account Account, storefrontID string, hidd
+ 
+ 	for _, query := range lockerQueries(account.StoreFront, storefrontID, hidden) {
+ 		data, attempt, err := t.postRestoreLocker(account, query, body)
+-		if attempt.Status != 0 || attempt.Kind != "" {
++		if note.Kind != "ok" && (attempt.Status != 0 || attempt.Kind != "") {
+ 			note = attempt
+ 		}
+ 		if err != nil {
+@@ -128,7 +135,9 @@ func (t *appstore) fetchLockerEntries(account Account, storefrontID string, hidd
+ 
+ 		entries, parseErr := parseLockerEntries(data)
+ 		if parseErr != nil {
+-			note = lockerAttempt{Status: attempt.Status, Kind: "bad"}
++			if note.Kind != "ok" {
++				note = lockerAttempt{Status: attempt.Status, Kind: "bad"}
++			}
+ 			continue
+ 		}
+ 
+@@ -187,7 +196,7 @@ func (t *appstore) fetchLockerDetails(account Account, storefrontID string, entr
+ }
+ 
+ func (t *appstore) postRestoreLocker(account Account, query, body string) (any, lockerAttempt, error) {
+-	res, err := t.storefrontClient.Send(http.Request{
++	res, err := sendRestoreLocker(t.storefrontClient, http.Request{
+ 		NoRedirects: true,
+ 		URL:         restoreLockerURL + "?" + query,
+ 		Method:      http.MethodPOST,

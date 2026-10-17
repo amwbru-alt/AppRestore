@@ -115,7 +115,7 @@ def _signal(message: str) -> str:
 def is_license_missing(message: str) -> bool:
     """True when the failure means "no license on this Apple ID".
 
-    Only for attempts made without ``--purchase``: only then may AppRestore
+    Only for attempts made without ``--purchase``: only then may ReVivo
     go through the license gate (price==0, limits, journal) and retry.
     """
 

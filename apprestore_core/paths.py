@@ -27,15 +27,15 @@ def cache_dir() -> Path:
         return Path(configured).expanduser()
     if platform.system() == "Windows":
         root = os.environ.get("LOCALAPPDATA")
-        return Path(root) / "AppRestore" if root else Path.home() / "AppData" / "Local" / "AppRestore"
+        return Path(root) / "ReVivo" if root else Path.home() / "AppData" / "Local" / "ReVivo"
     xdg = os.environ.get("XDG_CACHE_HOME")
-    return Path(xdg) / "AppRestore" if xdg else Path.home() / "Library" / "Caches" / "AppRestore"
+    return Path(xdg) / "ReVivo" if xdg else Path.home() / "Library" / "Caches" / "ReVivo"
 
 
 def user_cache_root() -> Path:
     """Платформенный кэш-корень так, как его резолвит Go `os.UserCacheDir()`.
 
-    ipatool >= 2.4 держит там SAP-рантайм авторизации, поэтому AppRestore
+    ipatool >= 2.4 держит там SAP-рантайм авторизации, поэтому ReVivo
     обязан вычислять ровно тот же каталог, что и апстрим.
     """
     if platform.system() == "Windows":
@@ -232,15 +232,15 @@ def data_dir() -> Path:
     if platform.system() == "Windows":
         root = os.environ.get("LOCALAPPDATA")
         return (
-            Path(root) / "AppRestore"
+            Path(root) / "ReVivo"
             if root
-            else Path.home() / "AppData" / "Local" / "AppRestore"
+            else Path.home() / "AppData" / "Local" / "ReVivo"
         )
     return (
         Path.home()
         / "Library"
         / "Application Support"
-        / "AppRestore"
+        / "ReVivo"
     )
 
 
@@ -260,10 +260,10 @@ def ipa_library_dir() -> Path:
             Path.home()
             / "Library"
             / "Application Support"
-            / "AppRestore"
+            / "ReVivo"
             / "ipas"
         )
-    return Path.home() / "AppRestore" / "ipas"
+    return Path.home() / "ReVivo" / "ipas"
 
 
 def imazing_apps_dirs() -> list[Path]:
@@ -337,7 +337,7 @@ def resolve_tool(name: str) -> str | None:
         candidates.append(
             Path(local_app_data)
             / "Programs"
-            / "AppRestore"
+            / "ReVivo"
             / "bin"
             / executable
         )
@@ -551,7 +551,7 @@ def resolve_windows_system_tool(name: str) -> str | None:
     """Resolve a Windows-owned executable without consulting user-controlled PATH.
 
     This resolver is intentionally narrow.  It is for commands that may install
-    system components or otherwise cross a trust boundary; normal AppRestore
+    system components or otherwise cross a trust boundary; normal ReVivo
     dependencies continue to use :func:`resolve_tool`.
     """
 

@@ -1,4 +1,4 @@
-# Generated AppRestore bootstrap for Windows. Do not edit dist/install.ps1.
+# Generated ReVivo bootstrap for Windows. Do not edit dist/install.ps1.
 & {
     Set-StrictMode -Version Latest
     $ErrorActionPreference = "Stop"
@@ -7,19 +7,19 @@
     $AppRestoreVersion = @@APPRESTORE_VERSION@@
     $DefaultArchiveUrl = @@APPRESTORE_ARCHIVE_URL@@
     $ExpectedArchiveSha256 = @@APPRESTORE_ARCHIVE_SHA256@@
-    $ArchiveRootName = "AppRestore-$AppRestoreVersion"
+    $ArchiveRootName = "ReVivo-$AppRestoreVersion"
     $ArchiveFileName = "$ArchiveRootName-source.zip"
     $UrlOverrideVariable = "APPRESTORE_BOOTSTRAP_ARCHIVE_URL"
 
     if ($PSVersionTable.PSVersion -lt [version]"5.1") {
-        throw "AppRestore requires PowerShell 5.1 or newer."
+        throw "ReVivo requires PowerShell 5.1 or newer."
     }
     if (-not [string]::Equals(
         $env:OS,
         "Windows_NT",
         [System.StringComparison]::OrdinalIgnoreCase
     )) {
-        throw "This bootstrap installs the Windows version of AppRestore."
+        throw "This bootstrap installs the Windows version of ReVivo."
     }
     $KnownLocalAppData = [Environment]::GetFolderPath(
         [Environment+SpecialFolder]::LocalApplicationData
@@ -45,10 +45,10 @@
         $ArchiveUri = [uri]$ArchiveUrlText
     }
     catch {
-        throw "The AppRestore archive URL is invalid."
+        throw "The ReVivo archive URL is invalid."
     }
     if (-not $ArchiveUri.IsAbsoluteUri) {
-        throw "The AppRestore archive URL must be absolute."
+        throw "The ReVivo archive URL must be absolute."
     }
     $UsesHttps = [string]::Equals(
         $ArchiveUri.Scheme,
@@ -219,14 +219,14 @@
 
     $TempRoot = Join-Path (
         [System.IO.Path]::GetTempPath()
-    ) ("AppRestore-bootstrap-" + [guid]::NewGuid().ToString("N"))
+    ) ("ReVivo-bootstrap-" + [guid]::NewGuid().ToString("N"))
     $ArchivePath = Join-Path $TempRoot $ArchiveFileName
     $ExtractRoot = Join-Path $TempRoot "payload"
 
     try {
         New-Item -ItemType Directory -Path $ExtractRoot -Force | Out-Null
 
-        Write-Host "Downloading AppRestore $AppRestoreVersion..."
+        Write-Host "Downloading ReVivo $AppRestoreVersion..."
         $PreviousSecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol
         try {
             [System.Net.ServicePointManager]::SecurityProtocol = (
@@ -269,7 +269,7 @@
             [System.StringComparison]::Ordinal
         )) {
             throw (
-                "AppRestore archive SHA-256 mismatch. " +
+                "ReVivo archive SHA-256 mismatch. " +
                 "Expected $ExpectedArchiveSha256, got $ActualArchiveSha256."
             )
         }
@@ -323,11 +323,11 @@
             -File $PayloadInstaller
         $InstallerExitCode = $LASTEXITCODE
         if ($InstallerExitCode -ne 0) {
-            throw "The AppRestore installer failed with code $InstallerExitCode."
+            throw "The ReVivo installer failed with code $InstallerExitCode."
         }
 
         $InstallRoot = [System.IO.Path]::GetFullPath(
-            (Join-Path $KnownLocalAppData "Programs\AppRestore")
+            (Join-Path $KnownLocalAppData "Programs\ReVivo")
         )
         $BinTarget = Join-Path $InstallRoot "bin"
         $ExpectedCommandPath = Join-Path $BinTarget "apprestore.cmd"
@@ -368,14 +368,14 @@
             )
         ) {
             throw (
-                "Installed AppRestore version check failed. " +
+                "Installed ReVivo version check failed. " +
                 "Expected $AppRestoreVersion, got '$InstalledVersion' " +
                 "(code $VersionExitCode)."
             )
         }
 
         Write-Host ""
-        Write-Host "AppRestore $AppRestoreVersion is ready."
+        Write-Host "ReVivo $AppRestoreVersion is ready."
         Write-Host "Run: apprestore"
     }
     finally {
@@ -384,7 +384,7 @@
             $SystemTempRoot = [System.IO.Path]::GetFullPath(
                 [System.IO.Path]::GetTempPath()
             ).TrimEnd("\")
-            $ExpectedLeafPrefix = "AppRestore-bootstrap-"
+            $ExpectedLeafPrefix = "ReVivo-bootstrap-"
             $TempLeaf = [System.IO.Path]::GetFileName($ResolvedTempRoot)
             $TempParent = [System.IO.Path]::GetDirectoryName($ResolvedTempRoot)
             $TempSuffix = ""

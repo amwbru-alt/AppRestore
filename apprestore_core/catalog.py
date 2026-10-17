@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from apprestore_core.network_policy import urlopen as policy_urlopen
+
 import copy
 import json
 import plistlib
@@ -514,7 +516,7 @@ _ITUNES_SEARCH_COUNTRIES: tuple[str, ...] = (
     "gb",
     "",
 )
-_HTTP_UA = f"AppRestore/{__version__} (+local; app discovery)"
+_HTTP_UA = f"ReVivo/{__version__} (+local; app discovery)"
 _HTTP_JSON_CACHE = _BoundedTtlCache(max_entries=_HTTP_CACHE_MAX_ENTRIES)
 
 
@@ -597,7 +599,7 @@ def _http_json(url: str, *, timeout: float = 20) -> Any | None:
         )
         return None
     try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
+        with policy_urlopen(request, timeout=timeout) as response:
             media_type = _response_media_type(response)
             if media_type and not (
                 media_type.endswith("+json")

@@ -48,6 +48,7 @@ GROUP_TITLES: dict[str, str] = {
 
 #: How an item is put back on the device.
 ACTION_OFFLOADED = "offloaded"  # QuickSession.restore (iOS redownload / IPA fallback)
+ACTION_OWNED = "owned_store"  # redownload only; no purchase or public-card prerequisite
 ACTION_STORE = "store"  # QuickSession.installStore → license_gate
 ACTION_IPA = "ipa"  # QuickSession.installSaved (local file)
 ACTION_NONE = "none"

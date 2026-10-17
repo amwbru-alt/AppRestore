@@ -20,7 +20,7 @@ README = ROOT / "README.md"
 
 PRIMARY_COMMAND = (
     'curl -fsSL '
-    'https://github.com/J3ckJ/AppRestore/releases/latest/download/install.sh '
+    'https://github.com/amwbru-alt/AppRestore/releases/latest/download/install.sh '
     '| /bin/bash && export PATH="$HOME/.local/bin:$PATH"'
 )
 PATH_LINE = 'export PATH="$HOME/.local/bin:$PATH"'
@@ -224,14 +224,12 @@ def _run_payload(environment: dict[str, str]) -> subprocess.CompletedProcess[str
     )
 
 
-def test_documented_macos_contract_is_two_commands() -> None:
+def test_documented_macos_contract_points_to_source_build() -> None:
     readme = README.read_text(encoding="utf-8")
-    assert PRIMARY_COMMAND in readme
-    assert "el-system-tools.j3ckj.chatgpt.site/install/apprestore.ps1" not in readme
-    assert re.search(
-        re.escape(PRIMARY_COMMAND) + r"\napprestore(?:\n|$)",
-        readme,
-    )
+    assert "docs/REVIVO-GUIDE-RU.md" in readme
+    guide = (ROOT / "docs/REVIVO-GUIDE-RU.md").read_text(encoding="utf-8")
+    assert "packaging/bootstrap-ipatool.sh" in guide
+    assert "python -m apprestore_gui --ui quick" in guide
 
 
 def test_launcher_clears_only_an_interactive_terminal_without_exec() -> None:
@@ -249,7 +247,7 @@ def test_payload_installer_is_user_space_and_transactional() -> None:
     safe_path = "PATH='/usr/bin:/bin:/usr/sbin:/sbin'\nexport PATH"
     assert safe_path in installer
     assert installer.index(safe_path) < installer.index('SCRIPT_DIR="$(cd ')
-    assert '$HOME/Library/Application Support/AppRestore' in installer
+    assert '$HOME/Library/Application Support/ReVivo' in installer
     assert '$HOME/.local/bin' in installer
     assert 'APPRESTORE_VERSION="0.4.0"' in installer
     assert f"path_line='{PATH_LINE}'" in installer
@@ -342,7 +340,7 @@ def test_bootstrap_pins_archive_and_rejects_unsafe_zip_shapes() -> None:
     assert "getconf DARWIN_USER_TEMP_DIR" in bootstrap
     assert "temp_root_is_safe_for_cleanup" in bootstrap
     assert '[[ -d "$TEMP_ROOT" && ! -L "$TEMP_ROOT" ]]' in bootstrap
-    assert "AppRestore-bootstrap.????????*" in bootstrap
+    assert "ReVivo-bootstrap.????????*" in bootstrap
     assert 'resolved_parent" == "$SYSTEM_TEMP_PARENT' in bootstrap
     assert '/bin/rm -rf -- "$TEMP_ROOT"' in bootstrap
     assert "небезопасный временный путь сохранён без удаления" in bootstrap
@@ -372,7 +370,7 @@ def test_bootstrap_cleanup_preserves_a_symlinked_temp_root(
     outside.mkdir()
     sentinel = outside / "sentinel.txt"
     sentinel.write_text("preserve", encoding="utf-8")
-    linked = tmp_path / "AppRestore-bootstrap.abcdefgh"
+    linked = tmp_path / "ReVivo-bootstrap.abcdefgh"
     linked.symlink_to(outside, target_is_directory=True)
 
     result = subprocess.run(
@@ -433,7 +431,7 @@ def test_payload_installs_apprestore_for_the_same_terminal_path(
     assert launched.stdout.strip() == "0.4.0"
     assert PATH_LINE in (home / ".zprofile").read_text(encoding="utf-8").splitlines()
     assert not list(
-        (home / "Library" / "Application Support" / "AppRestore").glob(
+        (home / "Library" / "Application Support" / "ReVivo").glob(
             ".venv-*"
         )
     )
@@ -452,7 +450,7 @@ def test_failed_first_install_rolls_back_venv_and_command(
     result = _run_payload(environment)
     assert result.returncode != 0
 
-    app_support = home / "Library" / "Application Support" / "AppRestore"
+    app_support = home / "Library" / "Application Support" / "ReVivo"
     assert not (app_support / "venv").exists()
     assert not list(app_support.glob(".venv-*"))
     assert not (home / ".local" / "bin" / "apprestore").exists()
@@ -488,7 +486,7 @@ def test_failed_update_restores_previous_working_venv(
     )
     assert launched.returncode == 0, launched.stdout + launched.stderr
     assert launched.stdout.strip() == "0.4.0"
-    app_support = home / "Library" / "Application Support" / "AppRestore"
+    app_support = home / "Library" / "Application Support" / "ReVivo"
     assert not list(app_support.glob(".venv-*"))
 
 
@@ -503,7 +501,7 @@ def test_orphaned_backup_is_recovered_before_new_staging(
     first = _run_payload(environment)
     assert first.returncode == 0, first.stdout + first.stderr
 
-    app_support = home / "Library" / "Application Support" / "AppRestore"
+    app_support = home / "Library" / "Application Support" / "ReVivo"
     live = app_support / "venv"
     backup = app_support / ".venv-backup.interrupted"
     backup.mkdir()
@@ -537,7 +535,7 @@ def test_unmarked_existing_venv_is_refused_without_modification(
     tmp_path: Path,
 ) -> None:
     home, environment = _fake_macos_environment(tmp_path)
-    venv = home / "Library" / "Application Support" / "AppRestore" / "venv"
+    venv = home / "Library" / "Application Support" / "ReVivo" / "venv"
     venv.mkdir(parents=True)
     sentinel = venv / "do-not-delete.txt"
     sentinel.write_text("unowned", encoding="utf-8")
@@ -561,7 +559,7 @@ def test_marker_substring_does_not_claim_foreign_command(
     command.parent.mkdir(parents=True)
     foreign_content = (
         "#!/bin/sh\n"
-        "echo 'prefix # Managed by AppRestore install-macos.sh suffix'\n"
+        "echo 'prefix # Managed by ReVivo install-macos.sh suffix'\n"
     )
     command.write_text(foreign_content, encoding="utf-8", newline="\n")
     command.chmod(0o755)
@@ -570,7 +568,7 @@ def test_marker_substring_does_not_claim_foreign_command(
 
     assert result.returncode != 0
     assert command.read_text(encoding="utf-8") == foreign_content
-    app_support = home / "Library" / "Application Support" / "AppRestore"
+    app_support = home / "Library" / "Application Support" / "ReVivo"
     assert not (app_support / "venv").exists()
 
 
@@ -589,7 +587,7 @@ def test_backup_cleanup_failure_keeps_successful_new_install(
     update = _run_payload(environment)
 
     assert update.returncode == 0, update.stdout + update.stderr
-    app_support = home / "Library" / "Application Support" / "AppRestore"
+    app_support = home / "Library" / "Application Support" / "ReVivo"
     backups = list(app_support.glob(".venv-backup.*"))
     assert len(backups) == 1
     assert (backups[0] / "venv").is_dir()
@@ -687,7 +685,7 @@ def test_generated_bootstrap_installs_then_command_launches(
     )
     assert build.returncode == 0, build.stdout + build.stderr
 
-    archive = release_root / "dist" / "AppRestore-0.4.0-source.zip"
+    archive = release_root / "dist" / "ReVivo-0.4.0-source.zip"
     bootstrap = release_root / "dist" / "install.sh"
     assert archive.is_file()
     assert bootstrap.is_file()
@@ -710,7 +708,7 @@ def test_generated_bootstrap_installs_then_command_launches(
             check=False,
         )
     assert installed.returncode == 0, installed.stdout + installed.stderr
-    assert not list(runtime_temp.glob("AppRestore-bootstrap.*"))
+    assert not list(runtime_temp.glob("ReVivo-bootstrap.*"))
 
     launch_environment = environment.copy()
     launch_environment["PATH"] = (

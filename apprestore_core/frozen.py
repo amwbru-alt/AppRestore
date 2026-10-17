@@ -1,7 +1,7 @@
-"""Helpers for running AppRestore from a frozen (PyInstaller) bundle.
+"""Helpers for running ReVivo from a frozen (PyInstaller) bundle.
 
 In a frozen build ``sys.executable`` is the bundled application itself
-(``AppRestore.exe`` / ``AppRestore.app/Contents/MacOS/AppRestore``), not a
+(``ReVivo.exe`` / ``ReVivo.app/Contents/MacOS/ReVivo``), not a
 Python interpreter.  ``[sys.executable, "-m", "pymobiledevice3", ...]``
 therefore starts the GUI again instead of pymobiledevice3.  The bundle
 handles a narrow, explicit dispatch flag before any GUI code runs, and the
@@ -67,7 +67,7 @@ def _ensure_stdio() -> None:
 def run_module(module: str, args: Sequence[str]) -> int:
     if module not in DISPATCHABLE_MODULES:
         _ensure_stdio()
-        print(f"AppRestore: refusing to run module {module!r}", file=sys.stderr)
+        print(f"ReVivo: refusing to run module {module!r}", file=sys.stderr)
         return 2
     _ensure_stdio()
     sys.argv = [module, *args]
@@ -102,7 +102,7 @@ def maybe_dispatch(argv: Sequence[str] | None = None) -> int | None:
 def ensure_std_streams() -> list[str]:
     """Give a windowed (no console) frozen app real stdio objects.
 
-    A GUI-subsystem AppRestore.exe started by double click, by Explorer or by
+    A GUI-subsystem ReVivo.exe started by double click, by Explorer or by
     another program without inherited handles gets ``sys.stdout`` (and
     friends) set to ``None``.  Libraries such as pymobiledevice3's CLI call
     ``sys.stdout.fileno()`` at import time and crash.  Point missing streams

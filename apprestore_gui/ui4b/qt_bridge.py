@@ -45,6 +45,8 @@ from apprestore_gui.ui4b.licenses import (
 from apprestore_gui.ui4b.licenses import candidates as license_candidates
 from apprestore_gui.ui4b.home import STATE_APPLE_REJECTED, STATE_DONE, STATE_STORE_MISMATCH, HomeInput, PhoneApp, home_view, link_action
 from apprestore_gui.ui4b.history import ID_BAD, history_view, name_for_store_id, parse_store_id
+from apprestore_gui.ui4b.restore_catalog import search_candidates
+from apprestore_gui.ui4b.catalog import ACTION_OWNED
 from apprestore_gui.ui4b.journal import journal_view
 from apprestore_gui.ui4b.region import apply_statuses, load_classifier
 from apprestore_gui.ui4b.region import classify as classify_region_ids
@@ -74,7 +76,7 @@ def _active_device_name(rows: list[dict[str, object]]) -> str:
             return str(row.get("name") or "").strip()
     return ""
 from apprestore_core.license_gate import is_store_mismatch
-from apprestore_core.license_guard import DEFAULT_TOTAL_LIMIT
+from apprestore_core.license_guard import DEFAULT_TOTAL_LIMIT, unlimited_licenses_enabled
 from apprestore_gui.ui4b.queue import LIMIT_ERROR
 from apprestore_gui.ui4b.onboarding import illustration_tiles, scanning_count, scanning_tiles
 from apprestore_gui.ui4b.scan import ScanCounter
@@ -304,6 +306,9 @@ class SourceBase(QObject):
 
     def install_ipa(self, path: str) -> None:
         raise NotImplementedError
+
+    def restore_purchase(self, store_id: str) -> None:
+        raise NotImplementedError("This backend cannot restore existing purchases")
 
     def start_scan(self) -> None:
         """Onboarding step 4 began: start reading the purchase history."""
@@ -727,6 +732,9 @@ class SessionSource(SourceBase):
         # QuickSession.installStore → license_gate.run_with_free_license.
         self.session.installStore(store_id)
 
+    def restore_purchase(self, store_id: str) -> None:
+        self.session.restorePurchase(store_id)
+
     def install_ipa(self, path: str) -> None:
         self.session.installSaved(path)
 
@@ -769,9 +777,11 @@ class Restore4b(QObject):
 
     def __init__(self, source: SourceBase, *, onboarded: bool = True, mark_color: str = "#f6ebe4",
                  archive_search: bool = ARCHIVE_DEFAULT, update_check: Any = None,
-                 find_options: dict[str, Any] | None = None) -> None:
+                 find_options: dict[str, Any] | None = None, purchase_first: bool = False) -> None:
         super().__init__()
         self.source = source
+        self._purchase_first = purchase_first
+        self._device_mode = False
         self._archive_search = bool(archive_search)
         self._update_check = update_check
         self._settings_open = False
@@ -795,12 +805,13 @@ class Restore4b(QObject):
         self._files_open = False
         self._files_mode = "list"
         self._files_chosen: set[str] = set()
-        self._history_open = False
+        self._history_open = purchase_first
         self._history_query = ""
         self._history_id_note = ""
         self._history_account = ""
         self.flow = RestoreFlow(source, self._refresh)
         self.scan = ScanCounter()
+        onboarded = onboarded or purchase_first
         self.onboarding = Onboarding(started=onboarded, apple_id_skipped=onboarded, finished=onboarded)
         self._picker_open = False
         self._done_dismissed = False
@@ -943,6 +954,30 @@ class Restore4b(QObject):
                 component=bool(self._patches_missing),
             )
         )
+        if self._purchase_first and not self._device_mode and queue is None and not self.flow.store_problem:
+            signed = bool(src.signed_in and not src.relogin)
+            history = history_view(src.purchase_rows(), signed_in=signed)
+            session = getattr(src, "session", None)
+            busy = bool(getattr(session, "purchasesBusy", False))
+            count = len(history["rows"])
+            note = str(getattr(session, "purchasesNote", "") or "")
+            if not signed:
+                lead = "Войдите в Apple ID, с которого раньше загружали приложения. Телефон для просмотра покупок не требуется."
+            elif busy:
+                lead = "Загружаем покупки с серверов Apple…"
+            elif note:
+                lead = "Не удалось обновить покупки. Откройте список и повторите загрузку."
+            else:
+                lead = f"В истории аккаунта: {count}. Здесь доступны и приложения, которых нет на этом телефоне."
+            self._home.update(
+                state="purchases", over=src.account_email or "История Apple ID",
+                title="Покупки\nApple ID", number=0, word="", word2="", lead=lead,
+                cta="Открыть покупки" if signed else "Войти в Apple ID",
+                cta2="", hint="Выберите приложение из покупок. Подключение устройства нужно только для установки.",
+                fine="", steps=[], links=["Приложения на телефоне", "Файлы IPA", "Apple ID"],
+            )
+        elif self._purchase_first and self._device_mode:
+            self._home["links"] = ["Покупки Apple ID", *self._home.get("links", [])]
         self.picker.set_rows(self.selection.rows())
         self._revision += 1
         self.changed.emit()
@@ -1189,7 +1224,7 @@ class Restore4b(QObject):
             return ("", False)
         if self._limit_note[0] is not queue:
             try:
-                total = self.source.license_counts()[1] >= DEFAULT_TOTAL_LIMIT
+                total = not unlimited_licenses_enabled() and self.source.license_counts()[1] >= DEFAULT_TOTAL_LIMIT
                 text = "" if total else self.source.limit_slot_text()
             except Exception:  # noqa: BLE001
                 total, text = False, ""
@@ -1203,7 +1238,12 @@ class Restore4b(QObject):
         """The big button of the home screen."""
 
         state = str(self._home.get("state", ""))
-        if state == STATE_DONE:
+        if state == "purchases":
+            if self.source.signed_in and not self.source.relogin:
+                self.openHistory()
+            else:
+                self.openSignIn()
+        elif state == STATE_DONE:
             self.dismissDone()
         elif state in (STATE_STORE_MISMATCH, STATE_APPLE_REJECTED):
             self.flow.dismiss_store_problem()  # «На главный»
@@ -1434,6 +1474,14 @@ class Restore4b(QObject):
 
     @Slot(str)
     def link(self, name: str) -> None:
+        if name == "Приложения на телефоне":
+            self._device_mode = True
+            self._refresh()
+            return
+        if name == "Покупки Apple ID":
+            self._device_mode = False
+            self.openHistory()
+            return
         action = link_action(name)
         if action == "stop":
             self.stop()
@@ -1488,9 +1536,25 @@ class Restore4b(QObject):
             failed=failed,
             query=self._history_query,
             id_note=self._history_id_note,
+            error_note=note,
         )
+        if self.source.signed_in and self._history_query.strip():
+            candidates = search_candidates(self._history_query, {str(r["storeId"]) for r in view["rows"]})
+            if candidates:
+                view["rows"].extend(candidates)
+                view["empty"] = ""
+                view["lead"] = "Найдены покупки и подсказки каталога. Для подсказок право на повторную загрузку проверит Apple."
+        view["warning"] = str(getattr(session, "purchasesWarning", "") or "") if self.source.signed_in else ""
+        if view["warning"] and not view["rows"] and self.source.signed_in:
+            view["empty"] = "Apple вернула неполную историю. Попробуйте поиск по названию удалённого приложения."
         view["open"] = self._history_open
         view["query"] = self._history_query
+        view["scope"] = "Покупки текущего Apple ID · " + str(self.source.account_email or "")
+        view["canRefresh"] = bool(self.source.signed_in and not busy)
+        view["canRestore"] = bool(self.source.connected and self.source.signed_in and not self.source.relogin)
+        view["deviceNote"] = "" if self.source.connected else "Для установки подключите iPhone или iPad. Просмотр покупок доступен без устройства."
+        for row in view["rows"]:
+            row["enabled"] = view["canRestore"]
         return view
 
     @Slot()
@@ -1498,6 +1562,11 @@ class Restore4b(QObject):
         self._history_open = True
         self._history_query = ""
         self._history_id_note = ""
+        self._load_history(force=True)
+        self._refresh()
+
+    @Slot()
+    def refreshHistory(self) -> None:
         self._load_history(force=True)
         self._refresh()
 
@@ -1517,10 +1586,18 @@ class Restore4b(QObject):
     def restoreFromHistory(self, store_id: str, name: str) -> None:
         if self.flow.running or not str(store_id or "").strip():
             return
+        if not self.source.connected:
+            self._history_id_note = "Подключите iPhone или iPad для установки из покупок."
+            self._refresh()
+            return
+        if not self.source.signed_in or self.source.relogin:
+            self.openSignIn()
+            return
         self._history_open = False
         self._history_query = ""
         self._history_id_note = ""
-        self.installFound(store_id, name)
+        self._start([RestoreItem(key=f"store:{store_id}", name=name or store_id, group=GROUP_REMOVED,
+                                 action=ACTION_OWNED, store_id=store_id)])
 
     @Slot(str)
     def restoreByStoreId(self, text: str) -> None:
@@ -1875,7 +1952,7 @@ def signin_view(
         "hint": CODE_HINT if (code or wrong_code) else "",
         "codePlaceholder": "Код из 6 цифр",  # Windows: one plain field instead of cells
         "fine": (
-            "Пароль связки передаётся ipatool через закрытый stdin-канал и хранится только в памяти до закрытия AppRestore."
+            "Пароль связки передаётся ipatool через закрытый stdin-канал и хранится только в памяти до закрытия ReVivo."
             if keychain else
             "Пароль уходит только в Apple. Программа его не хранит; вход остаётся на этом компьютере, в связке ключей."
         ),

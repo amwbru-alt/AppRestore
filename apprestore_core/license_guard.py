@@ -1,4 +1,4 @@
-"""Лицензионный гард AppRestore: можно ли взять бесплатную лицензию сейчас.
+"""Лицензионный гард ReVivo: можно ли взять бесплатную лицензию сейчас.
 
 Автономный модуль без сторонних зависимостей (только стандартная библиотека).
 Общий для GUI (Дима) и для bench (scripts/bench_restore.py): оба считают лимиты
@@ -131,6 +131,11 @@ __all__ = ["Verdict", "AcquireResult", "check_can_acquire", "record_acquire",
            "RegionAttemptSession", "PRICE_SOURCE_APPLE_FIXED_0", "APPLE_REFUSED",
            "REGION_ALREADY_ATTEMPTED", "REGION_SESSION_REQUIRED",
            "REGION_PREFLIGHT_REQUIRED"]
+
+def unlimited_licenses_enabled() -> bool:
+    """Local operator opt-in; never changes Apple entitlements or price checks."""
+    return os.environ.get("REVIVO_UNLIMITED_LICENSES") == "1"
+
 
 DEFAULT_DAILY_LIMIT = 5
 #: AcquireResult.code, когда preflight (например, IpatoolClient.license_preflight)
@@ -489,7 +494,7 @@ def _next_daily_slot_unlocked(path: Path, daily_limit: int,
     entries = _live_entries(_read_entries_unlocked(path))
     times, undated = _window_times(entries, now() - dt.timedelta(hours=24))
     used_today = len(times) + undated
-    if used_today < daily_limit:
+    if unlimited_licenses_enabled() or used_today < daily_limit:
         return None
     # Чтобы освободился 1 слот, из окна должны выпасть (used_today - daily_limit + 1)
     # самых старых записей; слот появится, когда выпадет последняя из них.
@@ -539,10 +544,10 @@ def _check_unlocked(track_id: Any, price: Any, path: Path, daily_limit: int,
         return Verdict(False, "попытка для этого приложения в этой сессии уже была — "
                               "повторно не пробуем", used_today, used_total,
                        code=REGION_ALREADY_ATTEMPTED, region_exception=True)
-    if used_total >= total_limit:
+    if not unlimited_licenses_enabled() and used_total >= total_limit:
         return Verdict(False, f"лимит лицензий исчерпан: всего {used_total}/{total_limit}",
                        used_today, used_total, region_exception=region_exception)
-    if used_today >= daily_limit:
+    if not unlimited_licenses_enabled() and used_today >= daily_limit:
         return Verdict(False, f"лимит лицензий за сутки исчерпан: {used_today}/{daily_limit}",
                        used_today, used_total, region_exception=region_exception)
     return Verdict(True, "ok", used_today, used_total, region_exception=region_exception)

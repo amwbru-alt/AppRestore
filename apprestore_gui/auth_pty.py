@@ -65,7 +65,7 @@ def login_with_prompts(
         return AuthResult(False, "Укажите корректный email Apple ID")
     ipatool = _which_ipatool()
     if not ipatool:
-        return AuthResult(False, "ipatool не найден. Установите AppRestore или добавьте ipatool в PATH.")
+        return AuthResult(False, "ipatool не найден. Установите ReVivo или добавьте ipatool в PATH.")
 
     # One driver on every platform (pywinpty on Windows, a POSIX pty elsewhere):
     # Apple ID and password through the terminal prompts, output scrubbed.
@@ -612,7 +612,7 @@ class KeychainRunner(Runner):
 
     ipatool keeps the passphrase only in that process. The GUI asks once and
     replays it, never through argv or the environment: as the first line of
-    stdin with ``--keychain-passphrase-stdin`` on AppRestore's patched ipatool
+    stdin with ``--keychain-passphrase-stdin`` on ReVivo's patched ipatool
     (``apprestore_core.ipatool_caps``), else through the hidden ConPTY/pty.
     """
 
@@ -856,12 +856,12 @@ def _drive_windows_unlock(
         return AuthResult(False, "Введите пароль связки ключей.")
     ipatool = _which_ipatool()
     if not ipatool:
-        return AuthResult(False, "ipatool не найден. Установите AppRestore или добавьте ipatool в PATH.")
+        return AuthResult(False, "ipatool не найден. Установите ReVivo или добавьте ipatool в PATH.")
     pty_process = _load_pty_process()
     if pty_process is None:
         return AuthResult(
             False,
-            "Для входа из окна не хватает пакета pywinpty. Перезапустите AppRestore после установки.",
+            "Для входа из окна не хватает пакета pywinpty. Перезапустите ReVivo после установки.",
         )
 
     def say(text: str) -> None:
@@ -978,12 +978,12 @@ def _drive_windows_login(
         return AuthResult(False, "Введите пароль Apple ID")
     ipatool = _which_ipatool()
     if not ipatool:
-        return AuthResult(False, "ipatool не найден. Установите AppRestore или добавьте ipatool в PATH.")
+        return AuthResult(False, "ipatool не найден. Установите ReVivo или добавьте ipatool в PATH.")
     pty_process = _load_pty_process()
     if pty_process is None:
         return AuthResult(
             False,
-            "Для входа из окна не хватает пакета pywinpty. Перезапустите AppRestore после установки.",
+            "Для входа из окна не хватает пакета pywinpty. Перезапустите ReVivo после установки.",
         )
 
     def say(text: str) -> None:

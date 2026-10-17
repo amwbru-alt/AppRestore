@@ -8,19 +8,19 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QFont, QFontDatabase
 from PySide6.QtWidgets import QApplication
 
-BG = "#E8E8ED"
-PANEL = "#FFFFFF"
+BG = "#10151D"
+PANEL = "#19222E"
 SIDE = "#1F1F23"
 SIDE_2 = "#2A2A2F"
-INK = "#1C1C1E"
-MUTED = "#6C6C70"
-LINE = "#D8D8DC"
-ACCENT = "#C45C2A"
-ACCENT_HOVER = "#A84C22"
-ACCENT_SOFT = "#F8E8DF"
-OK = "#1B7F3A"
-WARN = "#9A6700"
-BAD = "#C0392B"
+INK = "#F1F5FA"
+MUTED = "#A7B4C6"
+LINE = "#344255"
+ACCENT = "#B35128"
+ACCENT_HOVER = "#C36236"
+ACCENT_SOFT = "#3A2821"
+OK = "#75D69D"
+WARN = "#EDC16F"
+BAD = "#F29B91"
 SIDE_TEXT = "#D1D1D6"
 SIDE_MUTED = "#8E8E93"
 
@@ -42,14 +42,13 @@ def load_fonts() -> str:
     return family
 
 
-def pin_light_native_chrome(app: QApplication) -> None:
-    """Keep system menus light, matching the window.
+def pin_dark_native_chrome(app: QApplication) -> None:
+    """Keep native menus dark, matching the window.
 
-    macOS draws the right-click menu in the system appearance. A dark menu
-    plus the dark text from the application stylesheet is unreadable.
+    Match native popup appearance to the application palette on macOS/Windows.
     """
 
-    app.styleHints().setColorScheme(Qt.ColorScheme.Light)
+    app.styleHints().setColorScheme(Qt.ColorScheme.Dark)
 
 
 def app_font(family: str, size: int = 13, weight: int = QFont.Weight.Normal) -> QFont:
@@ -114,11 +113,11 @@ QPushButton {{
   font-weight: 600;
 }}
 QPushButton:hover {{
-  background: #F7F7F8;
+  background: #263448;
 }}
 QPushButton:disabled {{
   color: {MUTED};
-  background: #F0F0F2;
+  background: #202C3B;
 }}
 QPushButton#primary {{
   background: {ACCENT};
@@ -130,8 +129,8 @@ QPushButton#primary:hover {{
   border-color: {ACCENT_HOVER};
 }}
 QPushButton#primary:disabled {{
-  background: #E4E4E7;
-  border-color: #E4E4E7;
+  background: #344255;
+  border-color: #344255;
   color: {MUTED};
 }}
 QPushButton#danger {{
@@ -142,12 +141,12 @@ QTableWidget {{
   background: {PANEL};
   border: 1px solid {LINE};
   border-radius: 8px;
-  gridline-color: #EBEBEF;
+  gridline-color: #293649;
   selection-background-color: {ACCENT_SOFT};
   selection-color: {INK};
 }}
 QHeaderView::section {{
-  background: #F7F7F9;
+  background: #202C3B;
   color: {MUTED};
   border: none;
   border-bottom: 1px solid {LINE};
@@ -164,7 +163,7 @@ QCheckBox::indicator {{
 QProgressBar {{
   border: 1px solid {LINE};
   border-radius: 4px;
-  background: #F0F0F2;
+  background: #202C3B;
   text-align: center;
   max-height: 8px;
 }}
@@ -181,3 +180,6 @@ QTextEdit#log {{
   font-size: 12px;
 }}
 """
+
+# Backward-compatible import for older front ends.
+pin_light_native_chrome = pin_dark_native_chrome

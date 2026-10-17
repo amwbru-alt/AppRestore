@@ -74,7 +74,7 @@ def _path_is_inside(child: Path, parent: Path) -> bool:
 
 
 class InstallRequestState(str, Enum):
-    """How certain AppRestore is that iOS received an IPA install request."""
+    """How certain ReVivo is that iOS received an IPA install request."""
 
     COMPLETED = "completed"
     FAILED_BEFORE_REQUEST = "failed-before-request"
@@ -218,7 +218,7 @@ class AppRestoreTools:
             # relocatable interpreter and module instead -- the moved launcher
             # script still points at the now-gone staging path.
             if is_frozen():
-                # In a PyInstaller bundle sys.executable is AppRestore itself;
+                # In a PyInstaller bundle sys.executable is ReVivo itself;
                 # "-m pymobiledevice3" would just start the GUI again.
                 return frozen_module_command("pymobiledevice3", *parts)
             # -I hides user site-packages. A pip install --user copy is
@@ -424,7 +424,7 @@ class AppRestoreTools:
             direct_url_text = distribution.read_text("direct_url.json")
         except package_metadata.PackageNotFoundError:
             return DoctorCheck(
-                "AppRestore runtime",
+                "ReVivo runtime",
                 False,
                 f"package metadata missing; runtime={__version__} at {runtime_path}",
                 required=False,
@@ -450,7 +450,7 @@ class AppRestoreTools:
         if editable:
             detail += f"; editable source={source or 'unknown'}"
         return DoctorCheck(
-            "AppRestore runtime",
+            "ReVivo runtime",
             matches and not editable,
             detail,
             # A source checkout is useful for development, but a managed user
@@ -1034,7 +1034,7 @@ class AppRestoreTools:
 
             async def install_streaming() -> None:
                 nonlocal request_started
-                remote_dir = "/PublicStaging/AppRestore"
+                remote_dir = "/PublicStaging/ReVivo"
                 remote_path = f"{remote_dir}/{uuid.uuid4().hex}.ipa"
                 async with (
                     await create_using_usbmux(
@@ -1210,7 +1210,7 @@ class AppRestoreTools:
             args.extend(["--app-id", store_id])
         else:
             args.extend(["--bundle-identifier", str(bundle_id)])
-        # AppRestore restores iOS/iPadOS, not the tvOS/macOS build of a
+        # ReVivo restores iOS/iPadOS, not the tvOS/macOS build of a
         # universal app. Let ipatool validate the package's iPhoneOS platform.
         args.extend(["--platform", "iphone", "--output", str(output)])
         if "--purchase" in args:  # pragma: no cover - R2 tripwire

@@ -31,24 +31,48 @@ Item {
             width: parent.width
             height: Theme.sheetHead
             T { x: 32; anchors.verticalCenter: parent.verticalCenter; token: "sheetTitle"; text: root.h.title || "" }
-            T {
+            Row {
                 anchors.right: parent.right
                 anchors.rightMargin: 32
                 anchors.verticalCenter: parent.verticalCenter
-                token: "sheetLink"
-                color: Theme.ink2
-                text: root.h.close || ""
-                Accessible.role: Accessible.Button
-                Accessible.name: text
-                MouseArea { anchors.fill: parent; anchors.margins: -8; cursorShape: Qt.PointingHandCursor; onClicked: ui.closeHistory() }
+                spacing: 24
+                T {
+                    objectName: "historyRefresh"
+                    token: "sheetLink"
+                    color: root.h.canRefresh ? Theme.ink : Theme.ink3Text
+                    text: "Обновить"
+                    Accessible.role: Accessible.Button
+                    Accessible.name: text
+                    MouseArea {
+                        anchors.fill: parent; anchors.margins: -8
+                        enabled: !!root.h.canRefresh
+                        cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                        onClicked: ui.refreshHistory()
+                    }
+                }
+                T {
+                    token: "sheetLink"; color: Theme.ink2; text: root.h.close || ""
+                    Accessible.role: Accessible.Button
+                    Accessible.name: text
+                    MouseArea { anchors.fill: parent; anchors.margins: -8; cursorShape: Qt.PointingHandCursor; onClicked: ui.closeHistory() }
+                }
             }
             Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.line }
+        }
+
+        T {
+            id: scopeNote
+            x: Theme.listPadX; y: head.height + 12
+            width: parent.width - 2 * Theme.listPadX
+            token: "status"; color: Theme.ink2
+            wrapMode: Text.WordWrap
+            text: (root.h.scope || "") + "\nНе нашли удалённое приложение? Введите название — например, VK или ВКонтакте." + ((root.h.deviceNote || "") !== "" ? "\n" + root.h.deviceNote : "")
         }
 
         Rectangle {
             id: sbox
             x: Theme.listPadX
-            y: head.height + 16
+            y: scopeNote.y + scopeNote.implicitHeight + 12
             width: parent.width - 2 * Theme.listPadX
             height: 44
             radius: Theme.radiusSearch
@@ -96,7 +120,7 @@ Item {
                 objectName: "historyStoreIdGo"
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                readonly property bool ready: idInput.text.trim().length > 0
+                readonly property bool ready: !!root.h.canRestore && idInput.text.trim().length > 0
                 width: idGoText.implicitWidth + 2 * Theme.rowButtonPadX
                 height: 44
                 radius: Theme.radiusSearch
@@ -182,18 +206,18 @@ Item {
             x: sbox.x
             y: (idNote.visible ? idNote.y + idNote.implicitHeight : byId.y + byId.height) + 12
             width: sbox.width
-            visible: (root.h.lead || "") !== ""
+            visible: (root.h.lead || "") !== "" || (root.h.warning || "") !== ""
             wrapMode: Text.WordWrap
             token: "status"
             color: Theme.ink2
-            text: root.h.lead || ""
+            text: (root.h.lead || "") + ((root.h.warning || "") !== "" ? "\n" + root.h.warning : "")
         }
 
         ListView {
             id: list
             objectName: "historyList"
             x: Theme.listPadX
-            y: (lead.visible ? lead.y + lead.implicitHeight : sbox.y + sbox.height) + 12
+            y: lead.y + (lead.visible ? lead.implicitHeight : 0) + 12
             width: parent.width - 2 * Theme.listPadX
             height: sheet.height - y - 16
             clip: true
@@ -233,15 +257,16 @@ Item {
                     width: btnText.implicitWidth + 2 * Theme.rowButtonPadX
                     height: Theme.rowButtonHeight
                     radius: Theme.rowButtonRadius
-                    color: btnMouse.pressed ? Theme.accentPressed : btnMouse.containsMouse ? Theme.accentHover : Theme.accent
+                    color: !r.enabled ? Theme.accentDisabled : btnMouse.pressed ? Theme.accentPressed : btnMouse.containsMouse ? Theme.accentHover : Theme.accent
                     Accessible.role: Accessible.Button
                     Accessible.name: (r.action || "") + " " + r.name
                     T { id: btnText; anchors.centerIn: parent; token: "seg"; color: Theme.inkOnAccent; text: r.action || "" }
                     MouseArea {
                         id: btnMouse
                         anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
+                        enabled: !!r.enabled
+                        hoverEnabled: enabled
+                        cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
                         onClicked: ui.restoreFromHistory(r.storeId, r.name)
                     }
                 }
