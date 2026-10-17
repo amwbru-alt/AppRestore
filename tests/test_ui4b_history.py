@@ -110,4 +110,4 @@ def test_signed_in_history_offers_an_id_download() -> None:
 def test_history_says_when_the_account_has_none() -> None:
     view = history_view([], signed_in=True)
     assert view["empty"].startswith("В этом Apple ID")
-    assert view["title"] == "Восстановить из истории"
+    assert view["title"] == "Покупки Apple ID"

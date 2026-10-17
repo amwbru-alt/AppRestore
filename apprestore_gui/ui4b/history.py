@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import re
 
-TITLE = "Восстановить из истории"
+TITLE = "Покупки Apple ID"
 CLOSE = "Закрыть"
 ACTION = "Восстановить"
 PLACEHOLDER = "Название в истории покупок"
@@ -145,6 +145,7 @@ def history_view(
     failed: bool = False,
     query: str = "",
     id_note: str = "",
+    error_note: str = "",
 ) -> dict[str, object]:
     """The sheet. Unsigned: no rows from a previous account."""
 
@@ -153,6 +154,8 @@ def history_view(
         empty, empty_link = SIGNIN_TEXT, SIGNIN_LINK
     elif busy and not rows:
         empty, empty_link = "", ""
+    elif failed and not rows:
+        empty, empty_link = FAILED, ""
     elif query.strip() and not rows:
         empty, empty_link = NO_MATCH, ""
     elif not rows:
@@ -169,7 +172,7 @@ def history_view(
     elif failed and count:
         lead = f"{FAILED} Показано сохранённое: {count}."
     elif failed:
-        lead = FAILED
+        lead = error_note or FAILED
     elif query.strip() and count:
         lead = f"Найдено {count}"
     elif count:

@@ -43,6 +43,7 @@ def build(settings: QSettings) -> tuple[QQmlApplicationEngine | None, list[Any]]
         source,
         onboarded=bool(settings.value(ONBOARDED_KEY, False, type=bool)),
         archive_search=False,
+        purchase_first=True,
     )
 
     def remember_onboarding() -> None:
