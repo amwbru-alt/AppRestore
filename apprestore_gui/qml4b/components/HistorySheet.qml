@@ -206,7 +206,7 @@ Item {
             x: sbox.x
             y: (idNote.visible ? idNote.y + idNote.implicitHeight : byId.y + byId.height) + 12
             width: sbox.width
-            visible: (root.h.lead || "") !== ""
+            visible: (root.h.lead || "") !== "" || (root.h.warning || "") !== ""
             wrapMode: Text.WordWrap
             token: "status"
             color: Theme.ink2
@@ -217,7 +217,7 @@ Item {
             id: list
             objectName: "historyList"
             x: Theme.listPadX
-            y: (lead.visible ? lead.y + lead.implicitHeight : sbox.y + sbox.height) + 12
+            y: lead.y + (lead.visible ? lead.implicitHeight : 0) + 12
             width: parent.width - 2 * Theme.listPadX
             height: sheet.height - y - 16
             clip: true

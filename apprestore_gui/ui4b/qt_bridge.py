@@ -1544,7 +1544,9 @@ class Restore4b(QObject):
                 view["rows"].extend(candidates)
                 view["empty"] = ""
                 view["lead"] = "Найдены покупки и подсказки каталога. Для подсказок право на повторную загрузку проверит Apple."
-        view["warning"] = str(getattr(session, "purchasesWarning", "") or "")
+        view["warning"] = str(getattr(session, "purchasesWarning", "") or "") if self.source.signed_in else ""
+        if view["warning"] and not view["rows"] and self.source.signed_in:
+            view["empty"] = "Apple вернула неполную историю. Попробуйте поиск по названию удалённого приложения."
         view["open"] = self._history_open
         view["query"] = self._history_query
         view["scope"] = "Покупки текущего Apple ID · " + str(self.source.account_email or "")

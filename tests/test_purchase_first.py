@@ -135,3 +135,24 @@ def test_owned_purchase_does_not_enter_new_license_flow(qapp):
 def test_catalog_does_not_duplicate_confirmed_purchases():
     from apprestore_gui.ui4b.restore_catalog import search_candidates
     assert all(row["storeId"] != "564177498" for row in search_candidates("VK", {"564177498"}))
+
+
+def test_incomplete_empty_archive_does_not_claim_no_purchases(qapp):
+    source = source_with_purchases()
+    source.purchase_rows = lambda: []
+    source.session.purchasesWarning = "Архивные покупки недоступны; список неполный."
+    controller = Restore4b(source, purchase_first=True)
+    assert "нет покупок" not in controller.history["empty"].lower()
+    assert "неполную" in controller.history["empty"]
+    from tests.test_ui4b_qml import open_window
+    engine, icons, warnings = open_window(qapp, controller)
+    window = engine.rootObjects()[0]
+    from PySide6.QtQuick import QQuickItem
+    listing = window.findChild(QQuickItem, "historyList")
+    field = window.findChild(QQuickItem, "historyStoreId")
+    assert listing.y() > field.parentItem().parentItem().y() + 44
+    assert listing.height() > 0
+    window.close()
+    del window, engine
+    qapp.processEvents()
+    assert not warnings
