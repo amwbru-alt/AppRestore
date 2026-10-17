@@ -9,7 +9,7 @@ ApplicationWindow {
     minimumWidth: 920
     minimumHeight: 640
     visible: true
-    title: "AppRestore"
+    title: "АппВерни"
     color: "#E8E8ED"
 
     font.family: onest.name
@@ -425,7 +425,7 @@ ApplicationWindow {
                 mipmap: true
             }
             Text {
-                text: "AppRestore"
+                text: "АппВерни"
                 color: win.ink
                 font.pixelSize: 20
                 font.weight: 650

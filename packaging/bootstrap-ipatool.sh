@@ -175,8 +175,13 @@ else
   [[ -f "$archive" ]] || die "build did not produce $archive"
   ex="$(mktemp -d "$state/ex.XXXXXX")"
   tar -xzf "$archive" -C "$ex"
-  built="$ex/bin/ipatool-2.6.0-$asset$suffix"
-  [[ -f "$built" ]] || die "unexpected archive layout"
+  # build-ipatool.sh uses a versioned asset name inside bin/. Older/local
+  # packers may use the plain executable name; accept only those two layouts.
+  built="$ex/bin/ipatool-2.6.0-${asset}${suffix}"
+  if [[ ! -f "$built" ]]; then
+    built="$ex/bin/ipatool$suffix"
+  fi
+  [[ -f "$built" && ! -L "$built" ]] || die "unexpected archive layout"
   mkdir -p "$target_dir"
   chmod 0755 "$built"
   mv -f "$built" "$target.tmp"

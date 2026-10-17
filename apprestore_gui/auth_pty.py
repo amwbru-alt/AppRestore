@@ -23,6 +23,7 @@ from PySide6.QtCore import QThread, Signal
 from apprestore_core.command import CommandError, Runner, child_env, windows_creationflags
 from apprestore_core.models import CommandResult
 from apprestore_core.tools import AppRestoreTools
+from apprestore_core.paths import IPATOOL_MISSING_TEXT
 
 
 @dataclass
@@ -65,7 +66,7 @@ def login_with_prompts(
         return AuthResult(False, "Укажите корректный email Apple ID")
     ipatool = _which_ipatool()
     if not ipatool:
-        return AuthResult(False, "ipatool не найден. Установите AppRestore или добавьте ipatool в PATH.")
+        return AuthResult(False, IPATOOL_MISSING_TEXT)
 
     # One driver on every platform (pywinpty on Windows, a POSIX pty elsewhere):
     # Apple ID and password through the terminal prompts, output scrubbed.
@@ -856,7 +857,7 @@ def _drive_windows_unlock(
         return AuthResult(False, "Введите пароль связки ключей.")
     ipatool = _which_ipatool()
     if not ipatool:
-        return AuthResult(False, "ipatool не найден. Установите AppRestore или добавьте ipatool в PATH.")
+        return AuthResult(False, IPATOOL_MISSING_TEXT)
     pty_process = _load_pty_process()
     if pty_process is None:
         return AuthResult(
@@ -978,7 +979,7 @@ def _drive_windows_login(
         return AuthResult(False, "Введите пароль Apple ID")
     ipatool = _which_ipatool()
     if not ipatool:
-        return AuthResult(False, "ipatool не найден. Установите AppRestore или добавьте ipatool в PATH.")
+        return AuthResult(False, IPATOOL_MISSING_TEXT)
     pty_process = _load_pty_process()
     if pty_process is None:
         return AuthResult(

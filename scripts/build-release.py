@@ -47,6 +47,17 @@ ROOT_FILES = [
     "LICENSE",
     "pyproject.toml",
     "README.md",
+    "docs/APPVERNI.md",
+    "docs/RUN-FROM-SOURCE.md",
+    "appverni/__init__.py",
+    "appverni/__main__.py",
+    "appverni/store.py",
+    "appverni/web.py",
+    "appverni/worker.py",
+    "appverni/desktop.py",
+    "start-macos.sh",
+    "appverni/static/style.css",
+    "appverni/static/app.js",
     "SECURITY.md",
     "THIRD_PARTY_NOTICES.md",
     "uninstall-windows.ps1",
@@ -59,6 +70,7 @@ SCRIPT_FILES = [
 ]
 REQUIREMENT_FILES = [
     "requirements/README.md",
+    "requirements/gui-build.txt",
     "requirements/build.in",
     "requirements/build.lock",
     "requirements/runtime.in",
@@ -70,6 +82,14 @@ REQUIREMENT_FILES = [
     "requirements/sources/hexdump-3.3.zip",
     "requirements/wheels/hexdump-3.3-py3-none-any.whl",
 ]
+
+
+# Native UI, artwork and patched-ipatool bootstrap must also be usable from
+# the source release, without a Git checkout. Keep caches and built binaries out.
+for _folder in ('apprestore_gui', 'packaging'):
+    ROOT_FILES.extend(str(p.relative_to(ROOT)) for p in sorted((ROOT / _folder).rglob('*'))
+                      if p.is_file() and '__pycache__' not in p.parts
+                      and (p.suffix in ('.py','.qml','.svg','.png','.ttf','.otf','.json','.ico','.icns','.md','.sh','.spec','.patch') or p.name == 'qmldir'))
 
 
 def release_files() -> list[Path]:

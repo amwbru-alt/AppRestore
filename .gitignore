@@ -42,3 +42,11 @@ Thumbs.db
 Desktop.ini
 screenshots/
 /bin/
+
+# АппВерни: база, фото и секреты исполнителей
+/data/
+*.sqlite3
+*.sqlite3-*
+
+.venv-appverni/
+*.desktop.lock

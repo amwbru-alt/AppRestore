@@ -60,9 +60,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--ui",
         choices=("widgets", "quick", "quick-legacy"),
-        # The packaged exe opens the new window. From source, widgets stays
-        # the default so the old shell is still one flag away.
-        default="quick" if is_frozen() else "widgets",
+        # Service accounts, catalog and native Apple login live in Widgets.
+        # The original Quick windows remain explicit operator modes.
+        default="widgets",
         help=(
             "widgets is the current window; quick is the Qt Quick window in "
             "design 4b; quick-legacy is the previous Qt Quick window"
@@ -161,7 +161,29 @@ def main(argv: list[str] | None = None) -> int:
         prefetch_many(demo.demo_prefetch_targets(), artwork)
 
     service = GuiService(demo_mode=args.demo)
-    window = MainWindow(service, artwork)
+    if args.demo or args.screenshot_dir:
+        window = MainWindow(service, artwork)
+    else:
+        from PySide6.QtCore import QLockFile
+        from PySide6.QtWidgets import QDialog, QMessageBox
+        from appverni.desktop import DesktopLedger, database_path
+        from apprestore_gui.commerce_window import CommerceWindow, ServiceAuthDialog
+
+        path = database_path()
+        path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        application_lock = QLockFile(str(path) + '.desktop.lock')
+        if not application_lock.tryLock(100):
+            QMessageBox.information(None, 'АппВерни', 'Приложение с этой базой уже открыто. Перейдите в существующее окно.')
+            return 0
+        ledger = DesktopLedger(path)
+        ledger.recover_interrupted()
+        # A native modal dialog is the first window. No browser or server starts.
+        app.setQuitOnLastWindowClosed(False)
+        auth = ServiceAuthDialog(ledger)
+        if auth.exec() != QDialog.DialogCode.Accepted:
+            return 0
+        window = CommerceWindow(service, artwork, ledger, auth.user)
+        app.setQuitOnLastWindowClosed(True)
     window.show()
 
     if args.screenshot_dir:

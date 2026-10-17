@@ -234,7 +234,7 @@ class Sidebar(QFrame):
         titles = QVBoxLayout()
         titles.setContentsMargins(0, 0, 0, 0)
         titles.setSpacing(0)
-        name = QLabel("AppRestore")
+        name = QLabel("АппВерни")
         name.setStyleSheet("color:#FFFFFF;font-size:13px;font-weight:700;border:none;")
         tag = QLabel("возврат приложений")
         tag.setStyleSheet(f"color:{SIDE_MUTED};font-size:11px;font-weight:400;border:none;")
@@ -309,7 +309,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.service = service
         self.artwork = artwork
-        self.setWindowTitle("AppRestore")
+        self.setWindowTitle("АппВерни")
         self.resize(1200, 760)
         self._device_udid: str | None = None
         self._device = None
@@ -661,7 +661,7 @@ class MainWindow(QMainWindow):
             apps = demo.DEMO_HOME
             icons: list[tuple[QPixmap, bool]] = []
             for app in apps[:16]:
-                pix = self.artwork.pixmap_for_app(
+                pix = self.artwork.cached_pixmap(
                     bundle_id=app.bundle_id,
                     store_id=app.store_id,
                     name=app.name,
@@ -1239,7 +1239,7 @@ class MainWindow(QMainWindow):
         session_open = self._apple_session == "in" or self._apple_signed_in
         box = QMessageBox(self)
         box.setIcon(QMessageBox.Icon.Warning)
-        box.setWindowTitle("AppRestore")
+        box.setWindowTitle("АппВерни")
         box.setText("Загрузка на iPhone не подтвердилась")
         locked = self._apple_session == "locked" and not session_open
         if session_open:
@@ -1552,7 +1552,7 @@ class MainWindow(QMainWindow):
         if self.service.demo_mode:
             for r, (fname, bundle, name) in enumerate(entries):
                 table.setItem(r, 0, QTableWidgetItem(fname))
-                pix = self.artwork.pixmap_for_app(bundle_id=bundle, name=name, size=36)
+                pix = self.artwork.cached_pixmap(bundle_id=bundle, name=name, size=36)
                 table.setCellWidget(r, 1, AppCell(pix, name, bundle))
                 table.setItem(r, 1, QTableWidgetItem(""))
                 link = QTableWidgetItem("Установить")
@@ -1567,7 +1567,7 @@ class MainWindow(QMainWindow):
             name = getattr(entry, "name", path.stem)
             bundle = getattr(entry, "bundle_id", "")
             table.setItem(r, 0, QTableWidgetItem(Path(path).name))
-            pix = self.artwork.pixmap_for_app(bundle_id=bundle, name=name, size=36)
+            pix = self.artwork.cached_pixmap(bundle_id=bundle, name=name, size=36)
             table.setCellWidget(r, 1, AppCell(pix, name, bundle or "IPA"))
             item = QTableWidgetItem("")
             item.setData(Qt.ItemDataRole.UserRole, str(path))

@@ -328,10 +328,23 @@ def imazing_catalog_candidates() -> list[Path]:
 
 def resolve_tool(name: str) -> str | None:
     executable = f"{name}.exe" if platform.system() == "Windows" else name
+    # An explicit path also supports installations outside the managed folder.
+    # Do not silently fall back when it is invalid: that could open a different
+    # Apple account's keychain with another tool.
+    configured = os.environ.get(f"APPRESTORE_{name.upper()}_PATH")
+    if configured:
+        candidate = Path(configured).expanduser()
+        return str(candidate.resolve()) if candidate.is_file() else None
+    app_dir = Path(sys.executable).resolve().parent
     candidates = [
         project_root() / "bin" / executable,
-        Path(sys.executable).resolve().parent / executable,
+        app_dir / executable,
     ]
+    if getattr(sys, "frozen", False):
+        candidates.extend([app_dir / "bin" / executable])
+        # macOS .app distributions can store tools in Resources/bin.
+        if app_dir.name == "MacOS" and app_dir.parent.name == "Contents":
+            candidates.append(app_dir.parent / "Resources" / "bin" / executable)
     local_app_data = os.environ.get("LOCALAPPDATA")
     if local_app_data:
         candidates.append(
@@ -345,6 +358,15 @@ def resolve_tool(name: str) -> str | None:
         if candidate.is_file():
             return str(candidate)
     return shutil.which(name)
+
+
+IPATOOL_MISSING_TEXT = (
+    "Не найден компонент ipatool для входа в Apple ID. "
+    "Распакуйте полный архив программы в отдельную папку и запускайте её оттуда: "
+    "одного файла AppRestore.exe недостаточно. При запуске из исходников "
+    "поместите сборку ipatool с патчами проекта в bin/ipatool.exe (Windows) "
+    "или bin/ipatool (macOS). Подробнее: docs/RUN-FROM-SOURCE.md."
+)
 
 
 _DESKTOP_APP_INSTALLER_PACKAGE_RE = re.compile(
