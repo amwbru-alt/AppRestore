@@ -8,17 +8,19 @@ from apprestore_gui.restoration_codes import PromoDialog, PromoController
 
 def test_dialog_rejects_missing_code_then_redeems_in_background(qtbot, tmp_path):
     network_threads = []
-    def fetch():
+    def activate(code, token, request_id):
         network_threads.append(threading.get_ident())
-        return {'GOOD'}
-    credits = RestorationCredits(tmp_path / 'credits.sqlite3', fetch=fetch)
+        if code != 'GOOD':
+            from apprestore_core.restoration_codes import RestorationCodeError
+            raise RestorationCodeError('Код не найден или уже использован.')
+    credits = RestorationCredits(tmp_path / 'credits.sqlite3', activate=activate)
     dialog = PromoDialog(credits)
     qtbot.addWidget(dialog)
     dialog.show()
     dialog.code.setText('BAD')
     dialog._activate()
     qtbot.waitUntil(lambda: not dialog._checking)
-    assert dialog.message.text() == 'Код не найден.'
+    assert dialog.message.text() == 'Код не найден или уже использован.'
     assert credits.remaining == 1
     dialog.code.setText('GOOD')
     with qtbot.waitSignal(dialog.accepted):
@@ -28,7 +30,7 @@ def test_dialog_rejects_missing_code_then_redeems_in_background(qtbot, tmp_path)
 
 
 def test_worker_waits_for_code_and_continues_original_restore(qtbot, tmp_path):
-    store = RestorationCredits(tmp_path / 'credits.sqlite3', fetch=lambda: {'NEXT'})
+    store = RestorationCredits(tmp_path / 'credits.sqlite3', activate=lambda *args: None)
     controller = PromoController(store)
     access = RestorationAccess(store, controller.request_code)
     access.run(lambda: None)  # initial gift

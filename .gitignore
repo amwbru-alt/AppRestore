@@ -42,3 +42,6 @@ Thumbs.db
 Desktop.ini
 screenshots/
 /bin/
+
+# Server-only database credentials
+server/promo/private/config.php
