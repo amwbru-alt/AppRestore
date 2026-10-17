@@ -12,6 +12,12 @@ ApplicationWindow {
     title: "AppRevive"
     color: "#E8E8ED"
 
+    Label {
+        x: 32; y: 66; z: 2
+        text: "Первое восстановление бесплатно · затем по коду"
+        color: win.muted; font.pixelSize: 12
+    }
+
     font.family: onest.name
     font.pixelSize: 15
 

@@ -238,7 +238,7 @@ class Sidebar(QFrame):
         titles.setSpacing(0)
         name = QLabel("AppRevive")
         name.setStyleSheet("color:#FFFFFF;font-size:13px;font-weight:700;border:none;")
-        tag = QLabel("возврат приложений")
+        tag = QLabel("первое — бесплатно")
         tag.setStyleSheet(f"color:{SIDE_MUTED};font-size:11px;font-weight:400;border:none;")
         titles.addWidget(name)
         titles.addWidget(tag)

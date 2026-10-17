@@ -37,6 +37,8 @@ def build(settings: QSettings) -> tuple[QQmlApplicationEngine | None, list[Any]]
     from apprestore_gui.ui4b.settings import ARCHIVE_DEFAULT, ARCHIVE_KEY
 
     session = QuickSession()
+    from apprestore_gui.restoration_codes import enable_restoration_codes
+    promo_controller = enable_restoration_codes(session.service, session)
     icon_book = IconBook()
     source = SessionSource(session)
     controller = Restore4b(
@@ -113,7 +115,7 @@ def build(settings: QSettings) -> tuple[QQmlApplicationEngine | None, list[Any]]
     retry.timeout.connect(queue_icons)
     retry.start()
     engine = QQmlApplicationEngine()
-    keep: list[Any] = [session, source, controller, icon_book, engine, retry]
+    keep: list[Any] = [session, source, controller, icon_book, engine, retry, promo_controller]
     if not load(engine, controller, icon_book):
         return None, keep
     session.refresh()

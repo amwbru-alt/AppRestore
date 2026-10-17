@@ -160,6 +160,9 @@ def main(argv: list[str] | None = None) -> int:
     artwork = ArtworkCache()
     service = GuiService(demo_mode=args.demo)
     window = MainWindow(service, artwork)
+    if not args.demo:
+        from apprestore_gui.restoration_codes import enable_restoration_codes
+        window._promo_controller = enable_restoration_codes(service, window)
     window.show()
 
     if args.screenshot_dir:

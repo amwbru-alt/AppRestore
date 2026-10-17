@@ -13,6 +13,8 @@ import uuid
 from pathlib import Path
 from typing import Callable, TypeVar
 
+from .restoration_codes import metered_restoration
+
 from .catalog import (
     installed_bundle_ids,
     load_imazing_app_records,
@@ -1139,6 +1141,7 @@ class AppRestoreService:
             self._local_scan_cache = None
             return target
 
+    @metered_restoration
     def restore_by_store_id(
         self,
         udid: str,
@@ -1170,6 +1173,7 @@ class AppRestoreService:
         )
         return f"installed {metadata.name} {metadata.version}"
 
+    @metered_restoration
     def install(
         self,
         udid: str,
@@ -1253,6 +1257,7 @@ class AppRestoreService:
             print("  App Store ID not found on device or online")
         return store_id
 
+    @metered_restoration
     def restore_offloaded(
         self,
         udid: str,
@@ -1346,6 +1351,7 @@ class AppRestoreService:
             print("  App Store ID not found online")
         return store_id
 
+    @metered_restoration
     def restore_missing(
         self,
         udid: str,

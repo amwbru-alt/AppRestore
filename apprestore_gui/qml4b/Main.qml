@@ -59,6 +59,11 @@ Window {
         }
         T { token: "brand"; text: "AppRevive"; anchors.verticalCenter: parent.verticalCenter }
     }
+    T {
+        x: Theme.padX; y: Theme.topY + Theme.pillHeight + 10
+        token: "sheetSub"; color: Theme.ink2
+        text: "Первое восстановление бесплатно · затем по коду"
+    }
     Stepper {
         visible: win.onboarding
         anchors.horizontalCenter: parent.horizontalCenter

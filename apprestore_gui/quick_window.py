@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 from PySide6.QtCore import QUrl
-from PySide6.QtGui import QGuiApplication
+from PySide6.QtWidgets import QApplication
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtQuickControls2 import QQuickStyle
 
@@ -26,11 +26,13 @@ def qml_path() -> Path:
 
 def main() -> int:
     QQuickStyle.setStyle("Basic")
-    app = QGuiApplication([sys.argv[0]])
+    app = QApplication([sys.argv[0]])
     app.setApplicationName("AppRestore")
     app.setApplicationDisplayName("AppRevive")
     app.setWindowIcon(app_icon())
     session = QuickSession()
+    from apprestore_gui.restoration_codes import enable_restoration_codes
+    promo_controller = enable_restoration_codes(session.service, session)
     icon_book = IconBook()
     engine = QQmlApplicationEngine()
     engine.rootContext().setContextProperty("popularApps", popular_apps())
