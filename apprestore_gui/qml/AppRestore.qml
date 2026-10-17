@@ -9,7 +9,7 @@ ApplicationWindow {
     minimumWidth: 920
     minimumHeight: 640
     visible: true
-    title: "AppRestore"
+    title: "AppRevive"
     color: "#E8E8ED"
 
     font.family: onest.name
@@ -425,7 +425,7 @@ ApplicationWindow {
                 mipmap: true
             }
             Text {
-                text: "AppRestore"
+                text: "AppRevive"
                 color: win.ink
                 font.pixelSize: 20
                 font.weight: 650
@@ -2516,7 +2516,7 @@ ApplicationWindow {
                 }
                 Text {
                     width: parent.width
-                    text: "Это не пароль Apple ID. ipatool спрашивает его у каждого своего запуска. Введите его один раз — дальше AppRestore подставит его сам."
+                    text: "Это не пароль Apple ID. ipatool спрашивает его у каждого своего запуска. Введите его один раз — дальше AppRevive подставит его сам."
                     color: win.muted
                     font.pixelSize: 14
                     wrapMode: Text.WordWrap

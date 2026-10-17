@@ -44,7 +44,7 @@ from apprestore_gui.auth_pty import (
     probe_keychain,
     unlock_keychain,
 )
-from apprestore_gui.icons_cache import ArtworkCache
+from apprestore_gui.icons_cache import ArtworkCache, ArtworkLoader
 from apprestore_gui.service_adapter import GuiService
 from apprestore_gui.theme import (
     ACCENT,
@@ -135,6 +135,8 @@ class AppCell(QWidget):
         layout.setContentsMargins(4, 4, 8, 4)
         layout.setSpacing(10)
         icon = QLabel()
+        self.icon_label = icon
+        self.artwork_identity = None
         icon.setFixedSize(36, 36)
         icon.setPixmap(pixmap)
         icon.setStyleSheet("border:none;background:transparent;")
@@ -234,7 +236,7 @@ class Sidebar(QFrame):
         titles = QVBoxLayout()
         titles.setContentsMargins(0, 0, 0, 0)
         titles.setSpacing(0)
-        name = QLabel("AppRestore")
+        name = QLabel("AppRevive")
         name.setStyleSheet("color:#FFFFFF;font-size:13px;font-weight:700;border:none;")
         tag = QLabel("возврат приложений")
         tag.setStyleSheet(f"color:{SIDE_MUTED};font-size:11px;font-weight:400;border:none;")
@@ -309,7 +311,10 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.service = service
         self.artwork = artwork
-        self.setWindowTitle("AppRestore")
+        self._artwork_loader = ArtworkLoader(artwork, self)
+        self._artwork_loader.changed.connect(self._on_artwork_changed)
+        self._phone_artwork_rows = []
+        self.setWindowTitle("AppRevive")
         self.resize(1200, 760)
         self._device_udid: str | None = None
         self._device = None
@@ -358,6 +363,23 @@ class MainWindow(QMainWindow):
             self._device_timer.timeout.connect(self._watch_devices)
             self._device_timer.start()
             QTimer.singleShot(0, self._watch_devices)
+
+    def _artwork_cell(self, pixmap, name, subtitle, bundle_id="", store_id=""):
+        cell = AppCell(pixmap, name, subtitle)
+        cell.artwork_identity = (bundle_id, store_id, name)
+        return cell
+
+    def _on_artwork_changed(self) -> None:
+        # Repaint only icons: preserve selections, scroll positions and USB data.
+        for cell in self.findChildren(AppCell):
+            if cell.artwork_identity is not None:
+                bundle, store, name = cell.artwork_identity
+                cell.icon_label.setPixmap(self._artwork_loader.peek(bundle_id=bundle, store_id=store, name=name, size=36))
+        if self._phone and self._phone_artwork_rows:
+            self._phone.set_icons([
+                (self._artwork_loader.peek(bundle_id=bid, store_id=sid, name=name, size=64), offloaded)
+                for bid, sid, name, offloaded in self._phone_artwork_rows
+            ])
 
     def log(self, message: str) -> None:
         self._log_lines.append(message)
@@ -520,13 +542,13 @@ class MainWindow(QMainWindow):
         if saved_account:
             explanation = (
                 "Это не пароль Apple ID. ipatool спрашивает его у каждого своего запуска. "
-                "Введите его здесь один раз — дальше AppRestore подставит его сам, без чёрного окна."
+                "Введите его здесь один раз — дальше AppRevive подставит его сам, без чёрного окна."
             )
         else:
             explanation = (
                 "Сохранённого входа нет: он удалён при выходе. Это не пароль Apple ID. "
                 "ipatool зашифрует этим паролем новый вход. Введите его один раз — "
-                "дальше AppRestore подставит его сам, без чёрного окна."
+                "дальше AppRevive подставит его сам, без чёрного окна."
             )
         text = QLabel(explanation)
         text.setWordWrap(True)
@@ -660,8 +682,9 @@ class MainWindow(QMainWindow):
         if self.service.demo_mode:
             apps = demo.DEMO_HOME
             icons: list[tuple[QPixmap, bool]] = []
+            self._phone_artwork_rows = [(a.bundle_id, a.store_id, a.name, a.offloaded) for a in apps[:16]]
             for app in apps[:16]:
-                pix = self.artwork.pixmap_for_app(
+                pix = self._artwork_loader.pixmap(
                     bundle_id=app.bundle_id,
                     store_id=app.store_id,
                     name=app.name,
@@ -685,8 +708,9 @@ class MainWindow(QMainWindow):
             if self._device_udid != udid:
                 return
             icons = []
+            self._phone_artwork_rows = [(a.bundle_id, a.store_id, a.name, True) for a in list(apps)[:16]]
             for app in list(apps)[:16]:
-                pix = self.artwork.cached_pixmap(
+                pix = self._artwork_loader.pixmap(
                     bundle_id=app.bundle_id,
                     store_id=app.store_id,
                     name=app.name,
@@ -744,6 +768,8 @@ class MainWindow(QMainWindow):
         device_name: str = "iPhone",
         offloaded_n: int = 0,
     ) -> None:
+        if not icons:
+            self._phone_artwork_rows = []
         if self._phone:
             self._phone.set_icons(icons)
         if self._phone_cap_title:
@@ -946,10 +972,10 @@ class MainWindow(QMainWindow):
             )
             check.setData(Qt.ItemDataRole.UserRole, obj)
             table.setItem(r, 0, check)
-            pix = self.artwork.cached_pixmap(
+            pix = self._artwork_loader.pixmap(
                 bundle_id=bundle_id, store_id=store_id, name=name, size=36
             )
-            cell = AppCell(pix, name, version)
+            cell = self._artwork_cell(pix, name, version, bundle_id, store_id)
             table.setCellWidget(r, 1, cell)
             # placeholder item so background tint works
             name_item = QTableWidgetItem("")
@@ -1098,10 +1124,10 @@ class MainWindow(QMainWindow):
             )
             check.setData(Qt.ItemDataRole.UserRole, obj)
             table.setItem(r, 0, check)
-            pix = self.artwork.cached_pixmap(
+            pix = self._artwork_loader.pixmap(
                 bundle_id=bundle_id, store_id=store_id, name=name, size=36
             )
-            table.setCellWidget(r, 1, AppCell(pix, name, version))
+            table.setCellWidget(r, 1, self._artwork_cell(pix, name, version, bundle_id, store_id))
             name_item = QTableWidgetItem("")
             name_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
             table.setItem(r, 1, name_item)
@@ -1146,7 +1172,7 @@ class MainWindow(QMainWindow):
             return
         apps = self._selected_apps(table)
         if not apps:
-            QMessageBox.information(self, "AppRestore", "Выберите хотя бы одно приложение.")
+            QMessageBox.information(self, "AppRevive", "Выберите хотя бы одно приложение.")
             return
         self._start_offloaded_restore(apps, try_device_redownload=True)
 
@@ -1239,7 +1265,7 @@ class MainWindow(QMainWindow):
         session_open = self._apple_session == "in" or self._apple_signed_in
         box = QMessageBox(self)
         box.setIcon(QMessageBox.Icon.Warning)
-        box.setWindowTitle("AppRestore")
+        box.setWindowTitle("AppRevive")
         box.setText("Загрузка на iPhone не подтвердилась")
         locked = self._apple_session == "locked" and not session_open
         if session_open:
@@ -1467,7 +1493,7 @@ class MainWindow(QMainWindow):
             return
         apps = self._selected_apps(table)
         if not apps:
-            QMessageBox.information(self, "AppRestore", "Выберите приложение.")
+            QMessageBox.information(self, "AppRevive", "Выберите приложение.")
             return
         acquire = self.acquire.isChecked()
         udid = self._device_udid
@@ -1552,8 +1578,8 @@ class MainWindow(QMainWindow):
         if self.service.demo_mode:
             for r, (fname, bundle, name) in enumerate(entries):
                 table.setItem(r, 0, QTableWidgetItem(fname))
-                pix = self.artwork.pixmap_for_app(bundle_id=bundle, name=name, size=36)
-                table.setCellWidget(r, 1, AppCell(pix, name, bundle))
+                pix = self._artwork_loader.pixmap(bundle_id=bundle, name=name, size=36)
+                table.setCellWidget(r, 1, self._artwork_cell(pix, name, bundle, bundle))
                 table.setItem(r, 1, QTableWidgetItem(""))
                 link = QTableWidgetItem("Установить")
                 link.setForeground(QColor(ACCENT))
@@ -1567,8 +1593,8 @@ class MainWindow(QMainWindow):
             name = getattr(entry, "name", path.stem)
             bundle = getattr(entry, "bundle_id", "")
             table.setItem(r, 0, QTableWidgetItem(Path(path).name))
-            pix = self.artwork.pixmap_for_app(bundle_id=bundle, name=name, size=36)
-            table.setCellWidget(r, 1, AppCell(pix, name, bundle or "IPA"))
+            pix = self._artwork_loader.pixmap(bundle_id=bundle, name=name, size=36)
+            table.setCellWidget(r, 1, self._artwork_cell(pix, name, bundle or "IPA", bundle))
             item = QTableWidgetItem("")
             item.setData(Qt.ItemDataRole.UserRole, str(path))
             table.setItem(r, 1, item)
@@ -1868,7 +1894,7 @@ class MainWindow(QMainWindow):
             self._mark_auth_field("auth_email")
             return
         if not password:
-            self._set_auth_status("Введите пароль. AppRestore его не сохраняет.", WARN)
+            self._set_auth_status("Введите пароль. AppRevive его не сохраняет.", WARN)
             self._mark_auth_field("auth_password")
             return
 

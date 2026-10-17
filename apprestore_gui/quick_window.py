@@ -28,6 +28,7 @@ def main() -> int:
     QQuickStyle.setStyle("Basic")
     app = QGuiApplication([sys.argv[0]])
     app.setApplicationName("AppRestore")
+    app.setApplicationDisplayName("AppRevive")
     app.setWindowIcon(app_icon())
     session = QuickSession()
     icon_book = IconBook()

@@ -20,6 +20,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from apprestore_gui.icons_cache import ArtworkCache, ArtworkLoader
 from apprestore_core.models import InstalledApp
 from apprestore_gui.errors import explain_user_error
 from apprestore_gui.message_box import show_message
@@ -35,6 +36,8 @@ class _AppCell(QWidget):
         layout.setContentsMargins(4, 4, 8, 4)
         layout.setSpacing(10)
         icon = QLabel()
+        self.icon_label = icon
+        self.artwork_identity = None
         icon.setFixedSize(36, 36)
         icon.setPixmap(pixmap)
         icon.setStyleSheet("border:none;background:transparent;")
@@ -72,6 +75,8 @@ class ExportFromDeviceDialog(QDialog):
         super().__init__(parent)
         self.service = service
         self.artwork = artwork
+        self._artwork_loader = ArtworkLoader(artwork, self)
+        self._artwork_loader.changed.connect(self._refresh_artwork)
         self._udid = udid
         self._signed_in = signed_in
         self._busy = False
@@ -174,6 +179,14 @@ class ExportFromDeviceDialog(QDialog):
         self._closed = True
         super().reject()
 
+    def _refresh_artwork(self) -> None:
+        if self._closed:
+            return
+        for cell in self.findChildren(_AppCell):
+            if cell.artwork_identity is not None:
+                bundle, store, name = cell.artwork_identity
+                cell.icon_label.setPixmap(self._artwork_loader.peek(bundle_id=bundle, store_id=store, name=name, size=36))
+
     def _set_status(self, text: str) -> None:
         self.status.setText(text)
 
@@ -240,13 +253,15 @@ class ExportFromDeviceDialog(QDialog):
                 f"{app.name} {app.bundle_id}".casefold(),
             )
             self.table.setItem(row, 0, check)
-            pix = self.artwork.cached_pixmap(
+            pix = self._artwork_loader.pixmap(
                 bundle_id=app.bundle_id,
                 store_id=app.store_id,
                 name=app.name,
                 size=36,
             )
-            self.table.setCellWidget(row, 1, _AppCell(pix, app.name, f"версия {app.version}"))
+            cell = _AppCell(pix, app.name, f"версия {app.version}")
+            cell.artwork_identity = (app.bundle_id, app.store_id, app.name)
+            self.table.setCellWidget(row, 1, cell)
             name_item = QTableWidgetItem("")
             name_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
             self.table.setItem(row, 1, name_item)

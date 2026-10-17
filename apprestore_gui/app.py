@@ -137,7 +137,7 @@ def main(argv: list[str] | None = None) -> int:
 
     from PySide6.QtWidgets import QApplication
 
-    from apprestore_gui.icons_cache import ArtworkCache, prefetch_many
+    from apprestore_gui.icons_cache import ArtworkCache
     from apprestore_gui.main_window import MainWindow, NAV
     from apprestore_gui.service_adapter import GuiService
     from apprestore_gui.theme import STYLESHEET, load_fonts, pin_light_native_chrome
@@ -147,6 +147,7 @@ def main(argv: list[str] | None = None) -> int:
     app = QApplication(sys.argv)
     pin_light_native_chrome(app)
     app.setApplicationName("AppRestore")
+    app.setApplicationDisplayName("AppRevive")
     app.setWindowIcon(app_icon())
     family = load_fonts()
     app.setStyle("Fusion")
@@ -157,9 +158,6 @@ def main(argv: list[str] | None = None) -> int:
     app.setFont(font)
 
     artwork = ArtworkCache()
-    if args.demo:
-        prefetch_many(demo.demo_prefetch_targets(), artwork)
-
     service = GuiService(demo_mode=args.demo)
     window = MainWindow(service, artwork)
     window.show()

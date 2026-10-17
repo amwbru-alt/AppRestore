@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import tempfile
 import re
 import threading
 import time
@@ -13,10 +15,10 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import Property, QByteArray, QObject, QSize, QUrl, Qt, Signal, Slot
+from PySide6.QtCore import Property, QByteArray, QObject, QSize, QTimer, QUrl, Qt, Signal, Slot
 from PySide6.QtGui import QColor, QImage, QPainter, QPainterPath, QPixmap
 
-USER_AGENT = "AppRestoreGUI/0.3 (+https://github.com/J3ckJ/AppRestore)"
+USER_AGENT = "AppReviveGUI/0.4 (+https://github.com/J3ckJ/AppRestore)"
 LOOKUP = "https://itunes.apple.com/lookup"
 
 
@@ -39,27 +41,55 @@ class ArtworkCache:
     def __init__(self, cache_dir: Path | None = None, timeout: float = 12.0) -> None:
         self.cache_dir = cache_dir or default_cache_dir()
         self.timeout = timeout
+        try:
+            self.cache_dir.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            pass
+        self._save_lock = threading.Lock()
         self._meta_path = self.cache_dir / "index.json"
         self._index: dict[str, Any] = {}
         if self._meta_path.is_file():
             try:
-                self._index = json.loads(self._meta_path.read_text(encoding="utf-8"))
+                parsed = json.loads(self._meta_path.read_text(encoding="utf-8"))
+                self._index = parsed if isinstance(parsed, dict) else {}
             except (OSError, json.JSONDecodeError):
                 self._index = {}
 
+    MISS_TTL = 45.0
+    MAX_DOWNLOAD_BYTES = 8 * 1024 * 1024
+
     def _save_index(self) -> None:
-        try:
-            self._meta_path.write_text(
-                json.dumps(self._index, ensure_ascii=False, indent=2),
-                encoding="utf-8",
-            )
-        except OSError:
-            pass
+        # Readers never see a half-written JSON file, even when the export
+        # dialog and main window fetch artwork concurrently.
+        with self._save_lock:
+            temporary = None
+            try:
+                with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=self.cache_dir,
+                                                  prefix="index-", suffix=".tmp", delete=False) as out:
+                    temporary = Path(out.name)
+                    json.dump(self._index.copy(), out, ensure_ascii=False, indent=2)
+                os.replace(temporary, self._meta_path)
+            except OSError:
+                pass
+            finally:
+                if temporary is not None:
+                    temporary.unlink(missing_ok=True)
 
     def _http_get(self, url: str) -> bytes:
         req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
         with urllib.request.urlopen(req, timeout=self.timeout) as resp:
-            return resp.read()
+            data = resp.read(self.MAX_DOWNLOAD_BYTES + 1)
+            if len(data) > self.MAX_DOWNLOAD_BYTES:
+                raise OSError("artwork response is too large")
+            return data
+
+    def _fresh_answer(self, value: Any) -> bool:
+        if not isinstance(value, dict) or "artwork" not in value:
+            return False
+        if value.get("artwork"):
+            return True
+        checked = value.get("checked_at")
+        return isinstance(checked, (int, float)) and 0 <= time.time() - checked < self.MISS_TTL
 
     def lookup(
         self,
@@ -79,18 +109,19 @@ class ArtworkCache:
         else:
             return None
         cached = self._index.get(key)
-        # A stored miss ({"artwork": None}) is an answer too. Re-fetching it
-        # made every delisted icon wait on two iTunes lookups.
-        if isinstance(cached, dict) and "artwork" in cached:
+        # Briefly cache misses, then retry; old permanent misses expire too.
+        if self._fresh_answer(cached):
             return cached
         try:
             raw = self._http_get(f"{LOOKUP}?{urllib.parse.urlencode(params)}")
             payload = json.loads(raw.decode("utf-8"))
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError):
             return cached if isinstance(cached, dict) else None
+        if not isinstance(payload, dict):
+            return None
         results = payload.get("results") or []
         if not results:
-            self._index[key] = {"artwork": None}
+            self._index[key] = {"artwork": None, "checked_at": time.time()}
             self._save_index()
             return self._index[key]
         item = results[0]
@@ -125,10 +156,7 @@ class ArtworkCache:
         for country in ("ru", "us"):
             missing = [
                 sid for sid in ids
-                if not (
-                    isinstance(self._index.get(f"id:{sid}:{country}"), dict)
-                    and "artwork" in self._index[f"id:{sid}:{country}"]
-                )
+                if not self._fresh_answer(self._index.get(f"id:{sid}:{country}"))
             ]
             for start in range(0, len(missing), 40):
                 self._prime_chunk(missing[start:start + 40], country)
@@ -158,7 +186,7 @@ class ArtworkCache:
             }
         for sid in ids:
             if sid not in found:
-                self._index[f"id:{sid}:{country}"] = {"artwork": None}
+                self._index[f"id:{sid}:{country}"] = {"artwork": None, "checked_at": time.time()}
         self._save_index()
 
     def local_path_for(self, url: str) -> Path:
@@ -170,16 +198,28 @@ class ArtworkCache:
 
     def fetch_file(self, url: str) -> Path | None:
         path = self.local_path_for(url)
-        if path.is_file() and path.stat().st_size > 64:
+        if path.is_file() and path.stat().st_size > 64 and not QImage(str(path)).isNull():
             return path
+        # Repair cached HTML/error/truncated responses instead of treating
+        # their mere presence on disk as a successfully downloaded icon.
         try:
             data = self._http_get(url)
         except (urllib.error.URLError, TimeoutError, OSError):
-            return path if path.is_file() else None
+            return None
+        image = QImage()
+        if not image.loadFromData(QByteArray(data)):
+            return None
+        temporary = None
         try:
-            path.write_bytes(data)
+            with tempfile.NamedTemporaryFile(dir=self.cache_dir, prefix="art-", suffix=".tmp", delete=False) as out:
+                temporary = Path(out.name)
+                out.write(data)
+            os.replace(temporary, path)
         except OSError:
             return None
+        finally:
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
         return path
 
     def pixmap_for_app(
@@ -209,14 +249,16 @@ class ArtworkCache:
     ) -> QPixmap:
         """Icon from the local cache. Never touches the network."""
         info: dict[str, Any] | None = None
-        if store_id:
-            cached = self._index.get(f"id:{store_id}:us")
-            if isinstance(cached, dict):
-                info = cached
-        if info is None and bundle_id:
-            cached = self._index.get(f"bundle:{bundle_id}:us")
-            if isinstance(cached, dict):
-                info = cached
+        for identity in (f"id:{store_id}" if store_id else "", f"bundle:{bundle_id}" if bundle_id else ""):
+            if not identity:
+                continue
+            for country in ("ru", "us"):
+                cached = self._index.get(f"{identity}:{country}")
+                if isinstance(cached, dict) and cached.get("artwork"):
+                    info = cached
+                    break
+            if info is not None:
+                break
         artwork = info.get("artwork") if info else None
         if isinstance(artwork, str) and artwork:
             path = self.local_path_for(artwork)
@@ -306,7 +348,7 @@ class ArtworkCache:
             return None
         digest = hashlib.sha256(f"v3|{source}|{size}".encode("utf-8")).hexdigest()[:16]
         dest = self.cache_dir / f"round-{digest}.png"
-        if dest.is_file() and dest.stat().st_size > 64:
+        if dest.is_file() and dest.stat().st_size > 64 and not QImage(str(dest)).isNull():
             return dest
         rounded = _as_icon(image, size)
         if rounded.isNull() or not rounded.save(str(dest), "PNG"):
@@ -618,3 +660,38 @@ def prefetch_many(
         if info and info.get("artwork"):
             art.fetch_file(str(info["artwork"]))
     return art
+
+
+class ArtworkLoader(QObject):
+    """Widget artwork: download off-thread, paint QPixmaps only on the GUI thread."""
+    changed = Signal()
+
+    def __init__(self, cache: ArtworkCache, parent: QObject | None = None) -> None:
+        super().__init__(parent)
+        self.cache = cache
+        self.book = IconBook(cache)
+        self.book.changed.connect(self.changed)
+        self._items: dict[tuple[str, str, str], None] = {}
+        self._retry = QTimer(self)
+        self._retry.setInterval(int(IconBook.RETRY_S * 1000))
+        self._retry.timeout.connect(lambda: self.book.consider_async(list(self._items)))
+
+    def pixmap(self, *, bundle_id=None, store_id=None, name="", size=40) -> QPixmap:
+        from .popular_apps import ICON_SITES
+        sid, bid = str(store_id or ""), str(bundle_id or "")
+        item = (sid, bid, ICON_SITES.get(sid, ""))
+        if sid or bid:
+            self._items[item] = None
+            self.book.consider_async([item])
+            if not self._retry.isActive():
+                self._retry.start()
+        return self.peek(bundle_id=bid, store_id=sid, name=name, size=size)
+
+    def peek(self, *, bundle_id=None, store_id=None, name="", size=40) -> QPixmap:
+        for key in (str(store_id or ""), str(bundle_id or "")):
+            url = self.book.pathFor(key)
+            if url:
+                image = QImage(QUrl(url).toLocalFile())
+                if not image.isNull():
+                    return _rounded_pixmap(image, size)
+        return self.cache.cached_pixmap(bundle_id=bundle_id, store_id=store_id, name=name, size=size)

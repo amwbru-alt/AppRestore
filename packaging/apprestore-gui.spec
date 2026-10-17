@@ -152,7 +152,7 @@ if sys.platform == "darwin":
         version=_app_version(),
         info_plist={
             "NSHighResolutionCapable": True,
-            "CFBundleDisplayName": "AppRestore",
+            "CFBundleDisplayName": "AppRevive",
             "CFBundleShortVersionString": _app_version(),
             "CFBundleVersion": _app_version(),
         },

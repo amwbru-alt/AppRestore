@@ -131,6 +131,7 @@ def main(*, diagnostic_targets: list[tuple[str, str]] | None = None, diagnostic_
     # QApplication (not QGuiApplication): «Проверить обновления» reuses the old UpdateDialog
     app = QApplication([sys.argv[0]])
     app.setApplicationName("AppRestore")
+    app.setApplicationDisplayName("AppRevive")
     app.setWindowIcon(app_icon())
     engine, keep = build(QSettings("AppRestore", "AppRestore"))
     if engine is None:

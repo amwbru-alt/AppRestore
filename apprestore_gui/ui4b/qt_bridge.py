@@ -1875,7 +1875,7 @@ def signin_view(
         "hint": CODE_HINT if (code or wrong_code) else "",
         "codePlaceholder": "Код из 6 цифр",  # Windows: one plain field instead of cells
         "fine": (
-            "Пароль связки передаётся ipatool через закрытый stdin-канал и хранится только в памяти до закрытия AppRestore."
+            "Пароль связки передаётся ipatool через закрытый stdin-канал и хранится только в памяти до закрытия AppRevive."
             if keychain else
             "Пароль уходит только в Apple. Программа его не хранит; вход остаётся на этом компьютере, в связке ключей."
         ),
