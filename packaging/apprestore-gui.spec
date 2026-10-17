@@ -5,7 +5,7 @@ import importlib.util
 import sys
 from pathlib import Path
 
-from PyInstaller.utils.hooks import collect_all, collect_submodules, copy_metadata
+from PyInstaller.utils.hooks import collect_all, collect_data_files, collect_submodules, copy_metadata
 
 block_cipher = None
 root = Path(SPECPATH).resolve().parent
@@ -17,6 +17,7 @@ datas = [
     (str(root / "LICENSE"), "."),
     (str(root / "THIRD_PARTY_NOTICES.md"), "."),
 ]
+datas += collect_data_files("certifi")  # HTTPS trust roots in the standalone app
 binaries = []
 
 hidden = [

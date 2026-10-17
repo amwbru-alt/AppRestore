@@ -114,7 +114,7 @@ def test_bad_server_response_is_not_a_missing_code(monkeypatch, content, content
         stream.headers = {'Content-Type': content_type}
         return stream
     monkeypatch.setattr('urllib.request.urlopen', response)
-    with pytest.raises(RestorationCodeError, match='Не удалось проверить'):
+    with pytest.raises(RestorationCodeError, match='файл|файла'):
         fetch_promo_codes()
 
 
@@ -132,3 +132,63 @@ def test_core_native_restore_is_gated_before_any_device_action(tmp_path, monkeyp
     with pytest.raises(RestorationCodeError):
         core.restore_offloaded('phone', app)
     assert tools.device_request_redownload.call_count == 1
+
+
+def test_plain_text_is_accepted_even_if_hosting_uses_html_content_type(monkeypatch):
+    def response(request, **kwargs):
+        assert request.full_url == 'https://sv-bz.ru/uploads/promo.txt'
+        import ssl
+        assert kwargs['context'].check_hostname
+        assert kwargs['context'].verify_mode == ssl.CERT_REQUIRED
+        assert kwargs['context'].cert_store_stats()['x509_ca'] > 0
+        stream = io.BytesIO(b'test1\r\nSECOND\n')
+        stream.headers = {'Content-Type': 'text/html'}
+        return stream
+    monkeypatch.setattr('urllib.request.urlopen', response)
+    assert fetch_promo_codes() == {'test1', 'SECOND'}
+
+
+def test_utf16_bom_saved_by_text_editor_is_supported(monkeypatch):
+    monkeypatch.setattr('urllib.request.urlopen', lambda *a, **kw: io.BytesIO('test1\r\nSECOND'.encode('utf-16')))
+    assert fetch_promo_codes() == {'test1', 'SECOND'}
+
+
+@pytest.mark.parametrize('status', [403, 404, 502])
+def test_http_error_is_visible_and_never_reported_as_missing_code(monkeypatch, status):
+    import urllib.error
+    def fail(*a, **kw):
+        raise urllib.error.HTTPError('https://sv-bz.ru/uploads/promo.txt', status, 'unavailable', {}, None)
+    monkeypatch.setattr('urllib.request.urlopen', fail)
+    with pytest.raises(RestorationCodeError, match='HTTP ' + str(status)) as error:
+        fetch_promo_codes()
+    assert 'Код не найден' not in str(error.value)
+
+
+@pytest.mark.parametrize('kind,expected', [('certificate', 'сертификат'), ('timeout', '15 секунд'), ('dns', 'DNS')])
+def test_transport_failures_explain_the_actual_stage(monkeypatch, kind, expected):
+    import socket
+    import ssl
+    import urllib.error
+    reasons = {'certificate': ssl.SSLCertVerificationError(1, 'certificate verify failed'), 'timeout': TimeoutError(), 'dns': socket.gaierror(-2, 'name not known')}
+    def fail(*a, **kw):
+        raise urllib.error.URLError(reasons[kind])
+    monkeypatch.setattr('urllib.request.urlopen', fail)
+    with pytest.raises(RestorationCodeError, match=expected):
+        fetch_promo_codes()
+
+
+def test_missing_default_ca_file_is_fixed_by_bundled_roots(monkeypatch):
+    import ssl
+    from apprestore_core.restoration_codes import promo_ssl_context
+    def empty_default_context():
+        return ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    monkeypatch.setattr(ssl, 'create_default_context', empty_default_context)
+    context = promo_ssl_context()
+    assert context.check_hostname and context.verify_mode == ssl.CERT_REQUIRED
+    assert context.cert_store_stats()['x509_ca'] > 0
+
+
+def test_real_html_is_not_accepted_as_a_code_list(monkeypatch):
+    monkeypatch.setattr('urllib.request.urlopen', lambda *a, **kw: io.BytesIO(b'<!doctype html><html>test1</html>'))
+    with pytest.raises(RestorationCodeError, match='вместо текстового файла'):
+        fetch_promo_codes()

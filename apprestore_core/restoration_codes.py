@@ -3,13 +3,18 @@ from __future__ import annotations
 
 from contextlib import closing
 from functools import wraps
+import codecs
 import hashlib
+import socket
+import ssl
 from pathlib import Path
 import sqlite3
 import threading
 from typing import Callable, TypeVar
 import urllib.error
 import urllib.request
+
+import certifi
 
 PROMO_URL = "https://sv-bz.ru/uploads/promo.txt"
 TELEGRAM_URL = "https://t.me/llifegoldll"
@@ -20,19 +25,57 @@ class RestorationCodeError(RuntimeError):
     pass
 
 
+def promo_ssl_context() -> ssl.SSLContext:
+    # Keep platform/custom roots, then add the bundled Mozilla roots. Python
+    # installed from python.org may not have a usable default CA file on Mac.
+    context = ssl.create_default_context()
+    context.load_verify_locations(cafile=certifi.where())
+    return context
+
+
+def _network_error(reason: object) -> str:
+    if isinstance(reason, ssl.SSLCertVerificationError):
+        return "HTTPS: не удалось проверить сертификат sv-bz.ru. Проверьте дату компьютера и обновите приложение."
+    if isinstance(reason, ssl.SSLError):
+        return "Не удалось установить защищённое HTTPS-соединение с sv-bz.ru."
+    if isinstance(reason, (TimeoutError, socket.timeout)):
+        return "Сервер кодов не ответил за 15 секунд. Повторите проверку."
+    if isinstance(reason, socket.gaierror):
+        return "Не удалось найти сервер sv-bz.ru. Проверьте DNS и подключение к интернету."
+    return "Не удалось соединиться с sv-bz.ru. Проверьте подключение, VPN или прокси и повторите проверку."
+
+
 def fetch_promo_codes() -> set[str]:
     request = urllib.request.Request(PROMO_URL, headers={"User-Agent": "AppRevive/0.4", "Cache-Control": "no-cache"})
     try:
-        with urllib.request.urlopen(request, timeout=15) as response:
+        context = promo_ssl_context()
+        with urllib.request.urlopen(request, timeout=15, context=context) as response:
             data = response.read(2 * 1024 * 1024 + 1)
-            content_type = response.headers.get("Content-Type", "").lower()
-        if len(data) > 2 * 1024 * 1024 or "text/html" in content_type:
-            raise ValueError("unexpected promo response")
-        text = data.decode("utf-8-sig")
-        if text.lstrip().startswith("<"):
-            raise ValueError("unexpected HTML response")
-    except (OSError, urllib.error.URLError, UnicodeError, ValueError) as exc:
-        raise RestorationCodeError("Не удалось проверить код. Проверьте интернет или повторите позже.") from exc
+    except urllib.error.HTTPError as exc:
+        if exc.code == 404:
+            message = "Файл promo.txt не найден на сервере (HTTP 404)."
+        elif exc.code in (401, 403):
+            message = f"Сервер кодов отклонил запрос приложения (HTTP {exc.code})."
+        else:
+            message = f"Сервер кодов вернул HTTP {exc.code}. Повторите проверку позже."
+        raise RestorationCodeError(message) from exc
+    except urllib.error.URLError as exc:
+        raise RestorationCodeError(_network_error(exc.reason)) from exc
+    except OSError as exc:
+        raise RestorationCodeError(_network_error(exc)) from exc
+    if len(data) > 2 * 1024 * 1024:
+        raise RestorationCodeError("Файл кодов слишком большой (более 2 МБ).")
+    try:
+        # Text editors may save a .txt as UTF-16. A BOM is required to select
+        # it; never guess an arbitrary encoding or reinterpret binary data.
+        encoding = "utf-16" if data.startswith((codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE)) else "utf-8-sig"
+        text = data.decode(encoding)
+    except UnicodeError as exc:
+        raise RestorationCodeError("Не удалось прочитать файл кодов. Сохраните promo.txt в UTF-8.") from exc
+    # Some hosting servers label plain .txt files as text/html. Inspect the
+    # actual body instead of rejecting a valid code list based on that header.
+    if text.lstrip().startswith("<") or "\x00" in text:
+        raise RestorationCodeError("Сервер вернул страницу или неверный формат вместо текстового файла promo.txt.")
     return {line.strip() for line in text.splitlines() if line.strip()}
 
 
