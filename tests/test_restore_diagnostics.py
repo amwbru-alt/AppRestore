@@ -5,10 +5,10 @@ from types import SimpleNamespace
 
 import pytest
 
-from apprestore_core import delisted_attempt, license_gate
-from apprestore_core.region_probe import RegionResult, RegionStatus
-from apprestore_core.restore_diagnostics import parse_targets, run_report
-from apprestore_core.tools import ToolUnavailable
+from apprevive_core import delisted_attempt, license_gate
+from apprevive_core.region_probe import RegionResult, RegionStatus
+from apprevive_core.restore_diagnostics import parse_targets, run_report
+from apprevive_core.tools import ToolUnavailable
 
 
 class Tools:
@@ -40,7 +40,7 @@ class Tools:
         }]}
 
     def purchase_license(self, sid, *, grant):
-        from apprestore_core.purchase_grant import require_grant
+        from apprevive_core.purchase_grant import require_grant
         require_grant(grant, sid)
         self.purchases += 1
         self.last_purchase_diagnostic = {"appId": sid, "attempts": [{"pricingParameters": "STDQ", "outcome": "refused" if self.refuse else "granted", "httpStatus": 200}]}

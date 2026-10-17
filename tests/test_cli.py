@@ -11,9 +11,9 @@ from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from apprestore_core import __version__, cli
-from apprestore_core.models import Device, OffloadedApp
-from apprestore_core.service import AppRestoreError
+from apprevive_core import __version__, cli
+from apprevive_core.models import Device, OffloadedApp
+from apprevive_core.service import AppReviveError
 
 
 class AuthenticatedTools:
@@ -64,7 +64,7 @@ class RestoreRetryService:
     ) -> str:
         self.restore_calls.append(try_device_redownload)
         if len(self.restore_calls) == 1:
-            raise AppRestoreError("ipatool is not authenticated")
+            raise AppReviveError("ipatool is not authenticated")
         return "restored"
 
 
@@ -78,7 +78,7 @@ class CliRegressionTests(unittest.TestCase):
                 stdout = io.StringIO()
                 stderr = io.StringIO()
                 with (
-                    patch("apprestore_core.cli.AppRestoreService") as service,
+                    patch("apprevive_core.cli.AppReviveService") as service,
                     redirect_stdout(stdout),
                     redirect_stderr(stderr),
                 ):
@@ -104,7 +104,7 @@ class CliRegressionTests(unittest.TestCase):
 
     def test_module_entrypoint_reports_exact_version(self) -> None:
         result = subprocess.run(
-            [sys.executable, "-m", "apprestore_core.cli", "--version"],
+            [sys.executable, "-m", "apprevive_core.cli", "--version"],
             capture_output=True,
             text=True,
             encoding="utf-8",
@@ -122,7 +122,7 @@ class CliRegressionTests(unittest.TestCase):
 
     def test_module_entrypoint_without_arguments_opens_menu(self) -> None:
         result = subprocess.run(
-            [sys.executable, "-m", "apprestore_core.cli"],
+            [sys.executable, "-m", "apprevive_core.cli"],
             input="0\n",
             capture_output=True,
             text=True,
@@ -162,7 +162,7 @@ class CliRegressionTests(unittest.TestCase):
 
     def test_clear_screen_does_not_launch_an_external_command(self) -> None:
         stdout = io.StringIO()
-        with redirect_stdout(stdout), patch("apprestore_core.cli.os.system") as system:
+        with redirect_stdout(stdout), patch("apprevive_core.cli.os.system") as system:
             cli._clear_screen()
 
         system.assert_not_called()
@@ -172,7 +172,7 @@ class CliRegressionTests(unittest.TestCase):
         stdout = io.StringIO()
         stderr = io.StringIO()
         with (
-            patch("apprestore_core.cli.AppRestoreService", JsonDownloadService),
+            patch("apprevive_core.cli.AppReviveService", JsonDownloadService),
             redirect_stdout(stdout),
             redirect_stderr(stderr),
         ):
@@ -192,14 +192,14 @@ class CliRegressionTests(unittest.TestCase):
         service = Mock()
         service.tools = UnauthenticatedTools()
         with patch("builtins.input") as prompt:
-            with self.assertRaisesRegex(AppRestoreError, "pass --email"):
+            with self.assertRaisesRegex(AppReviveError, "pass --email"):
                 cli._ensure_auth(service, None, noninteractive=True)
         prompt.assert_not_called()
 
     def test_json_search_requires_term_without_prompting(self) -> None:
         service = Mock()
         with patch("builtins.input") as prompt:
-            with self.assertRaisesRegex(AppRestoreError, "term is required"):
+            with self.assertRaisesRegex(AppReviveError, "term is required"):
                 cli._command_search(service, None, json_output=True)
         prompt.assert_not_called()
 
@@ -231,7 +231,7 @@ class CliRegressionTests(unittest.TestCase):
         stdout = io.StringIO()
         stderr = io.StringIO()
         with (
-            patch("apprestore_core.cli.AppRestoreService", JsonDownloadService),
+            patch("apprevive_core.cli.AppReviveService", JsonDownloadService),
             redirect_stdout(stdout),
             redirect_stderr(stderr),
         ):
@@ -247,7 +247,7 @@ class CliRegressionTests(unittest.TestCase):
     def test_machine_readable_restore_rejects_ambiguous_search(self) -> None:
         service = Mock()
         with patch("builtins.input") as prompt:
-            with self.assertRaisesRegex(AppRestoreError, "--store-id"):
+            with self.assertRaisesRegex(AppReviveError, "--store-id"):
                 cli._resolve_missing_targets(
                     "Example",
                     [],
@@ -267,7 +267,7 @@ class CliRegressionTests(unittest.TestCase):
 
         stdout = io.StringIO()
         with (
-            patch("apprestore_core.cli.AppRestoreService", side_effect=make_service),
+            patch("apprevive_core.cli.AppReviveService", side_effect=make_service),
             redirect_stdout(stdout),
             redirect_stderr(io.StringIO()),
         ):
@@ -282,7 +282,7 @@ class CliRegressionTests(unittest.TestCase):
         service = JsonDownloadService()
         stdout = io.StringIO()
         with (
-            patch("apprestore_core.cli.AppRestoreService", return_value=service),
+            patch("apprevive_core.cli.AppReviveService", return_value=service),
             redirect_stdout(stdout),
             redirect_stderr(io.StringIO()),
         ):
@@ -310,7 +310,7 @@ class CliRegressionTests(unittest.TestCase):
                 stdout = io.StringIO()
                 with (
                     patch(
-                        "apprestore_core.cli.AppRestoreService",
+                        "apprevive_core.cli.AppReviveService",
                         return_value=JsonDownloadService(),
                     ),
                     redirect_stdout(stdout),
@@ -328,7 +328,7 @@ class CliRegressionTests(unittest.TestCase):
         stdout = io.StringIO()
         with (
             patch(
-                "apprestore_core.cli.AppRestoreService",
+                "apprevive_core.cli.AppReviveService",
                 return_value=JsonDownloadService(),
             ),
             redirect_stdout(stdout),
@@ -346,7 +346,7 @@ class CliRegressionTests(unittest.TestCase):
         stdout = io.StringIO()
         with (
             patch(
-                "apprestore_core.cli.AppRestoreService",
+                "apprevive_core.cli.AppReviveService",
                 return_value=JsonDownloadService(),
             ),
             redirect_stdout(stdout),
@@ -407,7 +407,7 @@ class CliRegressionTests(unittest.TestCase):
         service.restore_calls.clear()
         service.restore_offloaded = Mock(  # type: ignore[method-assign]
             side_effect=[
-                AppRestoreError(
+                AppReviveError(
                     "could not safely determine whether native redownload "
                     "started (last state: offloaded); refusing a competing "
                     "IPA install. After confirming that iPhone is not "
@@ -438,7 +438,7 @@ class CliRegressionTests(unittest.TestCase):
         service = RestoreRetryService()
         service.restore_calls.clear()
         service.restore_offloaded = Mock(  # type: ignore[method-assign]
-            side_effect=AppRestoreError(
+            side_effect=AppReviveError(
                 "iPhone did not finish downloading com.example.alpha "
                 "(last state: downloading); refusing a competing IPA "
                 "install. After confirming that iPhone is no longer "
@@ -471,7 +471,7 @@ class CliRegressionTests(unittest.TestCase):
             }
         ]
         with (
-            patch("apprestore_core.cli.remember_known_app") as remember,
+            patch("apprevive_core.cli.remember_known_app") as remember,
             redirect_stdout(io.StringIO()),
         ):
             result = cli._command_search(service, "Result")
@@ -484,7 +484,7 @@ class CliRegressionTests(unittest.TestCase):
         stdout = io.StringIO()
         stderr = io.StringIO()
         with (
-            patch("apprestore_core.cli.AppRestoreService", return_value=service),
+            patch("apprevive_core.cli.AppReviveService", return_value=service),
             redirect_stdout(stdout),
             redirect_stderr(stderr),
         ):
@@ -502,7 +502,7 @@ class CliRegressionTests(unittest.TestCase):
         stdout = io.StringIO()
         with (
             patch(
-                "apprestore_core.cli.AppRestoreService",
+                "apprevive_core.cli.AppReviveService",
                 return_value=RestoreRetryService(),
             ),
             redirect_stdout(stdout),
@@ -520,7 +520,7 @@ class CliRegressionTests(unittest.TestCase):
         stdout = io.StringIO()
         with (
             patch(
-                "apprestore_core.cli.AppRestoreService",
+                "apprevive_core.cli.AppReviveService",
                 return_value=RestoreRetryService(),
             ),
             redirect_stdout(stdout),

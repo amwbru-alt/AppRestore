@@ -41,9 +41,9 @@ jobs:
             echo "Release tag must use vMAJOR.MINOR.PATCH: $tag" >&2
             exit 1
           }
-          version="$(python apprestore.py --version)"
+          version="$(python apprevive.py --version)"
           [[ "$tag" == "v${version}" ]] || {
-            echo "Tag $tag does not match AppRestore $version" >&2
+            echo "Tag $tag does not match AppRevive $version" >&2
             exit 1
           }
           python scripts/build-release.py
@@ -105,7 +105,7 @@ jobs:
         run: python -m pytest -q
 
       - name: Compile Python sources
-        run: python -m compileall -q apprestore.py apprestore_core scripts tests
+        run: python -m compileall -q apprevive.py apprevive_core scripts tests
 
       - name: Validate PowerShell syntax
         shell: pwsh
@@ -115,7 +115,7 @@ jobs:
             throw "release build failed"
           }
           $Files = @(
-            "apprestore.ps1",
+            "apprevive.ps1",
             "install-windows.ps1",
             "uninstall-windows.ps1",
             "dist/install.ps1"
@@ -170,7 +170,7 @@ jobs:
 
       - name: Validate shell syntax
         run: |
-          /bin/bash -n apprestore.sh
+          /bin/bash -n apprevive.sh
           /bin/bash -n install-macos.sh
           /bin/bash -n scripts/install.sh.in
 
@@ -181,7 +181,7 @@ jobs:
         run: /bin/bash scripts/verify-vendored-wheel-macos.sh
 
       - name: Compile Python sources
-        run: python -m compileall -q apprestore.py apprestore_core scripts tests
+        run: python -m compileall -q apprevive.py apprevive_core scripts tests
 
   gui-windows:
     name: GUI app / Windows
@@ -206,7 +206,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Set up pinned Go toolchain for AppRestore ipatool
+      - name: Set up pinned Go toolchain for AppRevive ipatool
         uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
         with:
           go-version: "1.25.0"
@@ -230,7 +230,7 @@ jobs:
         run: |
           bash packaging/build-ipatool.sh windows-amd64
           if ($LASTEXITCODE -ne 0) { throw "patched ipatool build failed" }
-          pyinstaller packaging/apprestore-gui.spec --noconfirm --clean
+          pyinstaller packaging/apprevive-gui.spec --noconfirm --clean
           if ($LASTEXITCODE -ne 0) { throw "pyinstaller failed" }
           python packaging/package_gui.py --out gui-dist --expect-version "${{ needs.validate-tag.outputs.version }}" --ipatool-archive dist/ipatool/ipatool-2.6.0-windows-amd64.tar.gz
           if ($LASTEXITCODE -ne 0) { throw "GUI packaging failed" }
@@ -238,8 +238,8 @@ jobs:
       - name: Upload GUI asset
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: apprestore-gui-windows-${{ needs.validate-tag.outputs.version }}
-          path: gui-dist/AppRestore-GUI-Windows.zip
+          name: apprevive-gui-windows-${{ needs.validate-tag.outputs.version }}
+          path: gui-dist/AppRevive-GUI-Windows.zip
           if-no-files-found: error
           retention-days: 7
 
@@ -266,7 +266,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Set up pinned Go toolchain for AppRestore ipatool
+      - name: Set up pinned Go toolchain for AppRevive ipatool
         uses: actions/setup-go@0a12ed9d6a96ab950c8f026ed9f722fe0da7ef32 # v5.0.2
         with:
           go-version: "1.25.0"
@@ -294,15 +294,15 @@ jobs:
             *) echo "unsupported macOS architecture: $(uname -m)" >&2; exit 1 ;;
           esac
           bash packaging/build-ipatool.sh "$ipatool_asset"
-          pyinstaller packaging/apprestore-gui.spec --noconfirm --clean
+          pyinstaller packaging/apprevive-gui.spec --noconfirm --clean
           python packaging/package_gui.py --out gui-dist --expect-version "${{ needs.validate-tag.outputs.version }}" \
             --ipatool-archive "dist/ipatool/ipatool-2.6.0-${ipatool_asset}.tar.gz"
 
       - name: Upload GUI asset
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: apprestore-gui-macos-${{ needs.validate-tag.outputs.version }}
-          path: gui-dist/AppRestore-GUI-macOS.zip
+          name: apprevive-gui-macos-${{ needs.validate-tag.outputs.version }}
+          path: gui-dist/AppRevive-GUI-macOS.zip
           if-no-files-found: error
           retention-days: 7
 
@@ -331,8 +331,8 @@ jobs:
         run: |
           set -euo pipefail
           version="${{ needs.validate-tag.outputs.version }}"
-          archive="AppRestore-${version}-source.zip"
-          snapshot="${RUNNER_TEMP}/apprestore-first-build"
+          archive="AppRevive-${version}-source.zip"
+          snapshot="${RUNNER_TEMP}/apprevive-first-build"
           mkdir -p "$snapshot"
 
           python scripts/build-release.py
@@ -350,10 +350,10 @@ jobs:
           unzip -tq "dist/$archive"
           /bin/bash -n dist/install.sh
 
-          source_rebuild="${RUNNER_TEMP}/apprestore-source-rebuild"
+          source_rebuild="${RUNNER_TEMP}/apprevive-source-rebuild"
           mkdir -p "$source_rebuild"
           unzip -q "dist/$archive" -d "$source_rebuild"
-          source_root="$source_rebuild/AppRestore-${version}"
+          source_root="$source_rebuild/AppRevive-${version}"
           test -d "$source_root"
           test ! -e "$source_root/.git"
           (cd "$source_root" && python scripts/build-release.py)
@@ -364,9 +364,9 @@ jobs:
       - name: Upload verified assets
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: apprestore-release-${{ needs.validate-tag.outputs.version }}
+          name: apprevive-release-${{ needs.validate-tag.outputs.version }}
           path: |
-            dist/AppRestore-${{ needs.validate-tag.outputs.version }}-source.zip
+            dist/AppRevive-${{ needs.validate-tag.outputs.version }}-source.zip
             dist/install.ps1
             dist/install.sh
             dist/SHA256SUMS.txt
@@ -389,20 +389,20 @@ jobs:
       - name: Download verified assets
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
         with:
-          name: apprestore-release-${{ needs.validate-tag.outputs.version }}
-          path: ${{ runner.temp }}/apprestore-release
+          name: apprevive-release-${{ needs.validate-tag.outputs.version }}
+          path: ${{ runner.temp }}/apprevive-release
 
       - name: Download Windows GUI app
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
         with:
-          name: apprestore-gui-windows-${{ needs.validate-tag.outputs.version }}
-          path: ${{ runner.temp }}/apprestore-release
+          name: apprevive-gui-windows-${{ needs.validate-tag.outputs.version }}
+          path: ${{ runner.temp }}/apprevive-release
 
       - name: Download macOS GUI app
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
         with:
-          name: apprestore-gui-macos-${{ needs.validate-tag.outputs.version }}
-          path: ${{ runner.temp }}/apprestore-release
+          name: apprevive-gui-macos-${{ needs.validate-tag.outputs.version }}
+          path: ${{ runner.temp }}/apprevive-release
 
       - name: Check out tagged source
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -413,14 +413,14 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          ASSET_DIR: ${{ runner.temp }}/apprestore-release
+          ASSET_DIR: ${{ runner.temp }}/apprevive-release
           VERSION: ${{ needs.validate-tag.outputs.version }}
         run: |
           set -euo pipefail
           tag="v${VERSION}"
-          archive="AppRestore-${VERSION}-source.zip"
-          gui_windows="AppRestore-GUI-Windows.zip"
-          gui_macos="AppRestore-GUI-macOS.zip"
+          archive="AppRevive-${VERSION}-source.zip"
+          gui_windows="AppRevive-GUI-Windows.zip"
+          gui_macos="AppRevive-GUI-macOS.zip"
           for asset in "$archive" install.ps1 install.sh SHA256SUMS.txt "$gui_windows" "$gui_macos"; do
             test -f "${ASSET_DIR}/${asset}"
           done
@@ -517,7 +517,7 @@ jobs:
             --verify-tag \
             --draft \
             --notes-file "$notes_file" \
-            --title "AppRestore ${VERSION}"
+            --title "AppRevive ${VERSION}"
           created_draft=true
           gh release upload "$tag" \
             "${ASSET_DIR}/${archive}" \

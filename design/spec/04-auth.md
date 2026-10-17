@@ -1,4 +1,4 @@
-# AppRestore 4b · Спецификация, часть 4: вход в Apple ID
+# AppRevive 4b · Спецификация, часть 4: вход в Apple ID
 
 База — `variant-4b-auth.html` (`src/auth.py`), рендеры `variant-4b-auth-*.png` (+ `-auth-all.png`). Реальный флоу — `feat/ui-4b`: `QuickSession.login/submitCode/unlock`, `authPhase`, `authStatus`, `sessionRelogin`; `auth_pty.AppleLogin`, `_explain_login_failure`, `classify_keychain_unlock`; мост — `Restore4b.signIn` (map), `openSignIn/closeSignIn/login/submitCode`. Всё ниже — лист поверх главного, анатомия как у «Что вернуть». Пометки **[нет в коде]** / **[предл.]**.
 

@@ -6,14 +6,14 @@
 # 301 makes login fail before the password is checked. This audited build stays
 # pinned while newer upstream releases are evaluated separately.
 #
-# On top of that commit AppRestore applies its own patches from
+# On top of that commit AppRevive applies its own patches from
 # packaging/patches/ (each pinned by SHA-256 below):
 #   0001-ipatool-auth-info-country.patch - `auth info` also prints the
 #   signed-in account's raw storeFront and its ISO countryCode. Read-only.
 #   0002-ipatool-list-purchases-all.patch - `list-purchases --all` returns the
 #   whole purchase history in one call; without the flag nothing changes.
 #   0003-ipatool-keychain-passphrase-env-stdin.patch - keychain passphrase via
-#   --keychain-passphrase-stdin (AppRestore uses only this; never argv/env).
+#   --keychain-passphrase-stdin (AppRevive uses only this; never argv/env).
 #   0004-ipatool-delisted-redownload.patch - licensed iOS redownload remains
 #   possible without a public catalog card; verify the returned app identity.
 #   0005-ipatool-readonly-download-probe.patch - compare download channels
@@ -34,7 +34,7 @@
 # patches = same SHA-256. The Go toolchain is pinned below (go1.25.0, the same
 # version build-ipatool.yml installs); override with IPATOOL_GOTOOLCHAIN.
 #
-# linux-amd64 is only for local checks; AppRestore does not ship it.
+# linux-amd64 is only for local checks; AppRevive does not ship it.
 #
 # Usage: packaging/build-ipatool.sh windows-amd64|macos-arm64|macos-amd64|linux-amd64
 set -euo pipefail
@@ -100,15 +100,15 @@ sha256_of() {
 
 # name:sha256 of every patch, applied in this order.
 patches=(
-  "0001-ipatool-auth-info-country.patch:05d87977a554102c9b036306ec2c125febaa62433d2a080d588527a8225b7fb8"
-  "0002-ipatool-list-purchases-all.patch:025d9919871dba636a80559614a3ca402c37cf2be6965fb7a3203f4088e54445"
-  "0003-ipatool-keychain-passphrase-env-stdin.patch:76fdf028e6e6a5c11b9be9f647ab8281e17c2e4bd6ee1a22fa57c7d1c38e115c"
-  "0004-ipatool-delisted-redownload.patch:b97e7938e587c99650410f706e18992a9aad0289d58a2cff47619857d47feb8b"
+  "0001-ipatool-auth-info-country.patch:5aae085cc751020ef13ef163ecde6b9f09dcccd7c98febf3c44a58e2b90c5868"
+  "0002-ipatool-list-purchases-all.patch:ddef2676e2583f07f363d06482f7bf2605119bf57b237f21720c7f52913fe02d"
+  "0003-ipatool-keychain-passphrase-env-stdin.patch:d9a940d03fce5488963242ff677b8ebc2df46956b048aa4904af871f923a8e2b"
+  "0004-ipatool-delisted-redownload.patch:33ed6836733907b27abc84c0df3b2fca8d6e004505e478fa75f2cdfc0ded1f63"
   "0005-ipatool-readonly-download-probe.patch:84cb1dd65ed7ea48a8020462b1aaa5c3cc67781ac9ca9a47b7e3367af3cfb2aa"
   "0006-ipatool-product-post-redirects.patch:60e3892b9f7d9251b8bba83a27d79af796af1a0de009d1dc84d2c25ca9007981"
   "0007-ipatool-purchase-evidence.patch:f7fb822c4897e31a9d8b57827e9fc56fd8521a99dddbf5174c59db2656c97afe"
   "0008-ipatool-unpinned-update.patch:a1274240a24aa0c4f8e376775168f6db5710086bc7eaaf0a06580fb05ba69a22"
-  "0009-ipatool-purchase-locker.patch:e173d0729fc81a169cf519213e02b38087befe72fec621b7908da94c2bb124c4"
+  "0009-ipatool-purchase-locker.patch:20d5179f4c8f3f693186ad5c700b281f2ea0198b2bd811f0b2545143e7311614"
 )
 for entry in "${patches[@]}"; do
   patch_name="${entry%%:*}"

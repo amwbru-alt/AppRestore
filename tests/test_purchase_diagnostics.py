@@ -5,10 +5,10 @@ from types import SimpleNamespace
 
 import pytest
 
-from apprestore_core.license_gate import purchase_outcome, run_with_free_license
-from apprestore_core.models import CommandResult
-from apprestore_core.purchase_diagnostics import purchase_diagnostics
-from apprestore_core.tools import AppRestoreTools, ToolUnavailable
+from apprevive_core.license_gate import purchase_outcome, run_with_free_license
+from apprevive_core.models import CommandResult
+from apprevive_core.purchase_diagnostics import purchase_diagnostics
+from apprevive_core.tools import AppReviveTools, ToolUnavailable
 
 
 def line(outcome="refused", **extra):
@@ -47,11 +47,11 @@ def test_malformed_grant_is_not_success(extra):
 
 
 def test_tools_keep_safe_evidence_even_when_purchase_fails(monkeypatch):
-    from apprestore_core.purchase_grant import _mint
-    monkeypatch.setattr("apprestore_core.tools.resolve_tool", lambda _: "ipatool")
+    from apprevive_core.purchase_grant import _mint
+    monkeypatch.setattr("apprevive_core.tools.resolve_tool", lambda _: "ipatool")
     output = line(failureType="2059") + '\n{"error":"item is temporarily unavailable","success":false}\n'
     result = CommandResult(("ipatool",), 1, output, "")
-    tools = AppRestoreTools(runner=SimpleNamespace(run=lambda *a, **k: result))
+    tools = AppReviveTools(runner=SimpleNamespace(run=lambda *a, **k: result))
     with pytest.raises(ToolUnavailable):
         tools.purchase_license("42", grant=_mint("42"))
     assert tools.last_purchase_diagnostic["attempts"][0]["failureType"] == "2059"
@@ -59,7 +59,7 @@ def test_tools_keep_safe_evidence_even_when_purchase_fails(monkeypatch):
 
 def test_ambiguous_purchase_is_journaled_as_uncertain_without_retry(tmp_path):
     from tests.test_license_gate import Tools, Download, STORE
-    from apprestore_core.license_guard import read_counts
+    from apprevive_core.license_guard import read_counts
     message = "failed to purchase item with param 'STDQ': purchase response unconfirmed"
     tools = Tools(error=ToolUnavailable(message))
     download = Download(tools)
@@ -76,8 +76,8 @@ def test_ambiguous_purchase_is_journaled_as_uncertain_without_retry(tmp_path):
 
 
 def test_uncertain_purchase_is_not_presented_as_an_apple_refusal():
-    from apprestore_core.ipatool_api import ErrorCode, classify_error
-    from apprestore_gui.errors import explain_store_operation_error, explain_user_error
+    from apprevive_core.ipatool_api import ErrorCode, classify_error
+    from apprevive_gui.errors import explain_store_operation_error, explain_user_error
     message = "failed to purchase item: purchase response unconfirmed"
     assert classify_error(message) is ErrorCode.PURCHASE_UNCONFIRMED
     for text in (explain_user_error(message),

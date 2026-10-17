@@ -11,13 +11,13 @@ pytest.importorskip("PySide6")
 
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
-from apprestore_core.region_probe import RegionStatus  # noqa: E402
-from apprestore_gui.ui4b import find as F  # noqa: E402
-from apprestore_gui.ui4b.fake_data import FakeIconBook, FakeSource  # noqa: E402
-from apprestore_gui.ui4b.flow import APPLE_REJECTED_NOTE, is_apple_rejected  # noqa: E402
-from apprestore_gui.ui4b.home import APPLE_REJECTED_LEAD, STATE_APPLE_REJECTED, STATE_STORE_MISMATCH  # noqa: E402
-from apprestore_gui.ui4b.qt_bridge import Restore4b  # noqa: E402
-from apprestore_gui.ui4b.settings import ARCHIVE_NOTE  # noqa: E402
+from apprevive_core.region_probe import RegionStatus  # noqa: E402
+from apprevive_gui.ui4b import find as F  # noqa: E402
+from apprevive_gui.ui4b.fake_data import FakeIconBook, FakeSource  # noqa: E402
+from apprevive_gui.ui4b.flow import APPLE_REJECTED_NOTE, is_apple_rejected  # noqa: E402
+from apprevive_gui.ui4b.home import APPLE_REJECTED_LEAD, STATE_APPLE_REJECTED, STATE_STORE_MISMATCH  # noqa: E402
+from apprevive_gui.ui4b.qt_bridge import Restore4b  # noqa: E402
+from apprevive_gui.ui4b.settings import ARCHIVE_NOTE  # noqa: E402
 
 SIRIUS, ARCH, VK = "6749962031", "111222333", "564177498"
 
@@ -223,7 +223,7 @@ def test_empty_field_shows_only_the_vetted_frequent_list(qapp) -> None:
     c.finder.openWith("")
     v = c.finder.view
     assert v["rows"][0]["title"] == "Часто ищут" and v["empty"] == "" and d.calls == []
-    from apprestore_gui.ui4b import frequent
+    from apprevive_gui.ui4b import frequent
 
     assert [r["storeId"] for r in v["rows"][1:]] == [r["storeId"] for r in frequent.load()]
 
@@ -259,7 +259,7 @@ def test_install_goes_the_usual_path_and_closes_the_sheet(qapp) -> None:
 def test_find_sheet_and_settings_load_without_warnings(qapp) -> None:
     from PySide6.QtQml import QQmlApplicationEngine
 
-    from apprestore_gui.ui4b.window import load
+    from apprevive_gui.ui4b.window import load
 
     d = Delisted([hit(SIRIUS, "Cириус", "Sergei Smirnov", dib=False)])
     c, src = controller(delisted=d)
@@ -317,7 +317,7 @@ def test_settings_archive_switch_persists_and_updates_check(qapp) -> None:
 
 
 def test_windows_settings_link_and_mac_menu_in_qml() -> None:
-    from apprestore_gui.ui4b.window import QML_DIR
+    from apprevive_gui.ui4b.window import QML_DIR
 
     hero = (QML_DIR / "components" / "HomeHero.qml").read_text(encoding="utf-8")
     main = (QML_DIR / "Main.qml").read_text(encoding="utf-8")
@@ -330,9 +330,9 @@ def test_windows_settings_link_and_mac_menu_in_qml() -> None:
 
 
 def test_apple_rejected_vs_store_mismatch_mapping() -> None:
-    from apprestore_core.ipatool_api import MESSAGES_RU, ErrorCode
-    from apprestore_core.license_gate import LIMIT_REFUSAL_TEXT, NEEDS_PATCHED_IPATOOL_TEXT
-    from apprestore_gui.errors import STORE_REFUSED_TEXT
+    from apprevive_core.ipatool_api import MESSAGES_RU, ErrorCode
+    from apprevive_core.license_gate import LIMIT_REFUSAL_TEXT, NEEDS_PATCHED_IPATOOL_TEXT
+    from apprevive_gui.errors import STORE_REFUSED_TEXT
 
     for text in (STORE_REFUSED_TEXT, MESSAGES_RU[ErrorCode.APPLE_REJECTED],
                  "failed to purchase item with param 'STDQ': Purchase of this item is not currently available",
@@ -344,7 +344,7 @@ def test_apple_rejected_vs_store_mismatch_mapping() -> None:
 
 
 def test_apple_rejected_screen_mark_in_memory_no_region_group_no_retry(qapp, tmp_path, monkeypatch) -> None:
-    from apprestore_gui.errors import STORE_REFUSED_TEXT
+    from apprevive_gui.errors import STORE_REFUSED_TEXT
 
     monkeypatch.setenv("HOME", str(tmp_path))
     src = FakeSource("missing")
@@ -355,8 +355,13 @@ def test_apple_rejected_screen_mark_in_memory_no_region_group_no_retry(qapp, tmp
     c.clearAll()
     c.toggle(alfa.key)
     c.restoreSelected()
-    for _ in range(5):
+    # Wait for the background free-space check to reach the restore flow.
+    from PySide6.QtTest import QTest
+    for _ in range(200):
         qapp.processEvents()
+        if c.flow.running:
+            break
+        QTest.qWait(10)
     assert c.flow.running
     src.installSettled.emit(alfa.store_id, False, STORE_REFUSED_TEXT)
     home = c.home
@@ -379,7 +384,7 @@ def test_apple_rejected_screen_mark_in_memory_no_region_group_no_retry(qapp, tmp
 
 
 def test_store_mismatch_keeps_its_own_screen(qapp) -> None:
-    from apprestore_core.ipatool_api import MESSAGES_RU, ErrorCode
+    from apprevive_core.ipatool_api import MESSAGES_RU, ErrorCode
 
     src = FakeSource("missing")
     c, _ = controller(source=src)
@@ -390,8 +395,13 @@ def test_store_mismatch_keeps_its_own_screen(qapp) -> None:
     item = next(i for i in c.selection.items if i.store_id == sid)
     c.toggle(item.key)
     c.restoreSelected()
-    for _ in range(5):
+    # Wait for the background free-space check to reach the restore flow.
+    from PySide6.QtTest import QTest
+    for _ in range(200):
         qapp.processEvents()
+        if c.flow.running:
+            break
+        QTest.qWait(10)
     assert c.flow.running
     src.installSettled.emit(sid, False, MESSAGES_RU[ErrorCode.STORE_MISMATCH])
     assert c.home["state"] == STATE_STORE_MISMATCH and c.home.get("cta2") == "Войти заново"
@@ -482,7 +492,7 @@ def _find_with(statuses, offers=None):
 
 @pytest.fixture
 def attempt_on():
-    from apprestore_core import delisted_attempt
+    from apprevive_core import delisted_attempt
 
     delisted_attempt.forget_all()
     yield
@@ -508,7 +518,7 @@ def test_install_flag_only_from_region_probe_never_from_builtin_list(qapp, attem
 
 
 def test_find_install_goes_consent_with_k_then_flag_reaches_gate_registry(qapp, attempt_on) -> None:
-    from apprestore_core import delisted_attempt
+    from apprevive_core import delisted_attempt
 
     delisted_attempt.forget_all()
     c, src, by = _find_with({"11": RegionStatus.DELISTED})
@@ -531,7 +541,7 @@ def test_find_install_goes_consent_with_k_then_flag_reaches_gate_registry(qapp, 
 
 
 def test_signout_in_4b_resets_attempts_so_find_offers_again(qapp, attempt_on) -> None:
-    from apprestore_core import delisted_attempt
+    from apprevive_core import delisted_attempt
 
     c, src, by = _find_with({"11": RegionStatus.DELISTED})
     delisted_attempt.mark_attempted(["11"])

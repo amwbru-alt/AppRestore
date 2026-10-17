@@ -1,7 +1,7 @@
 """R2 + "the gate cannot be skipped" (LEGAL.md, Лена).
 
 * No ``ipatool download`` anywhere carries ``--purchase``.
-* ``purchase_license`` is called from ``apprestore_core/license_gate.py`` only,
+* ``purchase_license`` is called from ``apprevive_core/license_gate.py`` only,
   and refuses to run without the gate's one-shot grant.
 * Every front end (CLI ``--acquire-license``, the Widgets «Получить бесплатно»
   checkbox, Qt Quick) takes a license through the gate: paid apps and an
@@ -19,14 +19,14 @@ from unittest.mock import patch
 
 import pytest
 
-from apprestore_core.models import CommandResult, MissingApp
-from apprestore_core.service import AppRestoreService
-from apprestore_core.tools import AppRestoreTools
+from apprevive_core.models import CommandResult, MissingApp
+from apprevive_core.service import AppReviveService
+from apprevive_core.tools import AppReviveTools
 from tests.helpers import make_ipa
 
 ROOT = Path(__file__).resolve().parents[1]
-SHIPPED = ("apprestore_core", "apprestore_gui", "scripts", "packaging")
-SHIPPED_FILES = ("apprestore.py",)
+SHIPPED = ("apprevive_core", "apprevive_gui", "scripts", "packaging")
+SHIPPED_FILES = ("apprevive.py",)
 STORE = "1234567890"
 
 
@@ -87,7 +87,7 @@ def test_purchase_license_is_called_from_the_gate_only() -> None:
             # getattr(tools, "purchase_license") would dodge the call check
             if isinstance(node, ast.Constant) and node.value == "purchase_license":
                 callers.append(f"{path.relative_to(ROOT)} (string)")
-    assert callers == ["apprestore_core/license_gate.py"]
+    assert callers == ["apprevive_core/license_gate.py"]
 
 
 def test_grants_are_minted_by_the_gate_only() -> None:
@@ -98,7 +98,7 @@ def test_grants_are_minted_by_the_gate_only() -> None:
         if isinstance(node, (ast.Name, ast.Attribute))
         and (node.id if isinstance(node, ast.Name) else node.attr) in {"_mint", "_MINT_KEY"}
     ]
-    assert set(minters) == {"apprestore_core/license_gate.py", "apprestore_core/purchase_grant.py"}
+    assert set(minters) == {"apprevive_core/license_gate.py", "apprevive_core/purchase_grant.py"}
 
 
 # ------------------------------------------------------------------ runtime
@@ -154,9 +154,9 @@ class FakeIpatool:
 def world(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     runner = FakeIpatool(make_ipa(tmp_path / "good.ipa"))
     journal = tmp_path / "licenses_acquired.jsonl"
-    monkeypatch.setenv("APPRESTORE_LICENSE_JOURNAL", str(journal))
+    monkeypatch.setenv("APPREVIVE_LICENSE_JOURNAL", str(journal))
     price = {"value": 0.0}
-    from apprestore_core import license_gate
+    from apprevive_core import license_gate
 
     monkeypatch.setattr(
         license_gate,
@@ -164,11 +164,11 @@ def world(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
         lambda s, countries=None: {"storeId": s, "bundleId": "com.example.alpha",
                                    "price": price["value"], "country": "ru"},
     )
-    with patch("apprestore_core.tools.resolve_tool", return_value="ipatool"), patch.object(
-        AppRestoreTools, "_tool", return_value="ipatool"
-    ), patch.object(AppRestoreTools, "_ipatool_env", return_value={}), patch(
-        "apprestore_core.service.lookup_itunes_store_id", return_value=None
-    ), patch("apprestore_core.service.remember_known_app"):
+    with patch("apprevive_core.tools.resolve_tool", return_value="ipatool"), patch.object(
+        AppReviveTools, "_tool", return_value="ipatool"
+    ), patch.object(AppReviveTools, "_ipatool_env", return_value={}), patch(
+        "apprevive_core.service.lookup_itunes_store_id", return_value=None
+    ), patch("apprevive_core.service.remember_known_app"):
         yield runner, tmp_path, journal, price
 
 
@@ -181,9 +181,9 @@ def _fill_limit(journal: Path) -> None:
 
 
 def _run_cli(runner: FakeIpatool, root: Path, *argv: str) -> int:
-    from apprestore_core import cli
+    from apprevive_core import cli
 
-    with patch("apprestore_core.service.AppRestoreTools", lambda **_kw: AppRestoreTools(runner)):  # type: ignore[arg-type]
+    with patch("apprevive_core.service.AppReviveTools", lambda **_kw: AppReviveTools(runner)):  # type: ignore[arg-type]
         return cli.main(["--ipa-dir", str(root / "lib"), "--cache-dir", str(root / "cache"), *argv])
 
 
@@ -230,11 +230,11 @@ def test_cli_without_flag_never_purchases(world) -> None:
 
 def _widgets_service(runner: FakeIpatool, root: Path):
     pytest.importorskip("PySide6")
-    from apprestore_gui.service_adapter import GuiService
+    from apprevive_gui.service_adapter import GuiService
 
     gui = GuiService(demo_mode=True)
     gui.demo_mode = False
-    gui._attach_service(AppRestoreService(tools=AppRestoreTools(runner), library=root / "lib", cache=root / "cache"))  # type: ignore[arg-type]
+    gui._attach_service(AppReviveService(tools=AppReviveTools(runner), library=root / "lib", cache=root / "cache"))  # type: ignore[arg-type]
     gui.core.tools.runner = runner  # keep the recording runner, no keychain prompts
     return gui
 
@@ -242,7 +242,7 @@ def _widgets_service(runner: FakeIpatool, root: Path):
 def _widgets_calls(gui, which: str):
     """Exactly what the Widgets window calls with «Получить бесплатно» ticked."""
 
-    from apprestore_core.models import InstalledApp
+    from apprevive_core.models import InstalledApp
 
     if which == "install":  # main_window._install_selected_missing
         app = MissingApp(bundle_id="com.example.alpha", name="Alpha", store_id=STORE)
@@ -263,7 +263,7 @@ def test_widgets_checkbox_free_app_goes_through_gate(world, which) -> None:
 
 @pytest.mark.parametrize("which", ["install", "copy"])
 def test_widgets_checkbox_refuses_paid_app(world, which) -> None:
-    from apprestore_core.license_gate import LicenseDenied
+    from apprevive_core.license_gate import LicenseDenied
 
     runner, root, journal, price = world
     price["value"] = 0.99
@@ -276,7 +276,7 @@ def test_widgets_checkbox_refuses_paid_app(world, which) -> None:
 
 @pytest.mark.parametrize("which", ["install", "copy"])
 def test_widgets_checkbox_refuses_over_limit(world, which) -> None:
-    from apprestore_core.license_gate import LicenseDenied
+    from apprevive_core.license_gate import LicenseDenied
 
     runner, root, journal, _price = world
     _fill_limit(journal)
@@ -298,7 +298,7 @@ def test_cli_bundle_id_is_looked_up_in_account_country_then_gated(world) -> None
         asked.append((bundle_id, countries))
         return STORE if countries == ("ru",) else None
 
-    with patch("apprestore_core.service.lookup_itunes_store_id", side_effect=lookup):
+    with patch("apprevive_core.service.lookup_itunes_store_id", side_effect=lookup):
         assert _run_cli(runner, root, "download", "com.example.alpha", "--acquire-license") == 0
     assert asked[0] == ("com.example.alpha", ("ru",))
     [purchase] = runner.purchases()
@@ -316,7 +316,7 @@ def test_cli_bundle_id_falls_back_to_the_country_list(world) -> None:
         asked.append(countries)
         return None if countries == ("kz",) else STORE
 
-    with patch("apprestore_core.service.lookup_itunes_store_id", side_effect=lookup):
+    with patch("apprevive_core.service.lookup_itunes_store_id", side_effect=lookup):
         assert _run_cli(runner, root, "download", "com.example.alpha", "--acquire-license") == 0
     assert asked == [("kz",), None]
     assert runner.purchases()[0][-2:] == ("--app-id", STORE)
@@ -324,7 +324,7 @@ def test_cli_bundle_id_falls_back_to_the_country_list(world) -> None:
 
 def test_cli_bundle_id_not_found_refuses_without_purchase(world, capsys) -> None:
     runner, root, journal, _price = world
-    with patch("apprestore_core.service.lookup_itunes_store_id", return_value=None):
+    with patch("apprevive_core.service.lookup_itunes_store_id", return_value=None):
         assert _run_cli(runner, root, "download", "com.example.missing", "--acquire-license") == 1
     err = capsys.readouterr().err
     assert "--store-id" in err and "com.example.missing" in err
@@ -361,7 +361,7 @@ def test_cli_bundle_lookup_may_use_the_list_but_the_gate_still_refuses(world, ca
         asked.append(countries)
         return STORE
 
-    with patch("apprestore_core.service.lookup_itunes_store_id", side_effect=lookup):
+    with patch("apprevive_core.service.lookup_itunes_store_id", side_effect=lookup):
         assert _run_cli(runner, root, "download", "com.example.alpha", "--acquire-license") == 1
     assert asked == [None]  # read-only lookup: the fallback list is fine here
     assert "страну аккаунта" in capsys.readouterr().err

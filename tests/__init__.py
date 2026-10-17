@@ -1,1 +1,1 @@
-"""AppRestore test suite."""
+"""AppRevive test suite."""

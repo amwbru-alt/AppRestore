@@ -9,10 +9,10 @@ import pytest
 
 pytest.importorskip("PySide6")
 
-import apprestore_core.ipatool_api as api  # noqa: E402
-from apprestore_core.purchases_cache import CachedPurchase, PurchasesCache  # noqa: E402
-from apprestore_gui import quick_session as qs  # noqa: E402
-from apprestore_gui.purchases import PurchasesLoader, SessionChecker  # noqa: E402
+import apprevive_core.ipatool_api as api  # noqa: E402
+from apprevive_core.purchases_cache import CachedPurchase, PurchasesCache  # noqa: E402
+from apprevive_gui import quick_session as qs  # noqa: E402
+from apprevive_gui.purchases import PurchasesLoader, SessionChecker  # noqa: E402
 
 EMAIL = "person@example.com"
 
@@ -202,8 +202,8 @@ def _failing_install(s, exc: BaseException) -> list[tuple]:
 
 
 def test_store_mismatch_offers_sign_in_again_like_expired(session) -> None:
-    from apprestore_core.license_gate import STORE_MISMATCH_TEXT
-    from apprestore_core.tools import ToolUnavailable
+    from apprevive_core.license_gate import STORE_MISMATCH_TEXT
+    from apprevive_core.tools import ToolUnavailable
 
     s, prompts, _ = session
     settled = _failing_install(s, ToolUnavailable(APPLE_128))
@@ -215,7 +215,7 @@ def test_store_mismatch_offers_sign_in_again_like_expired(session) -> None:
 
 
 def test_other_install_errors_do_not_offer_relogin(session) -> None:
-    from apprestore_core.tools import ToolUnavailable
+    from apprevive_core.tools import ToolUnavailable
 
     s, prompts, _ = session
     _failing_install(s, ToolUnavailable("failed to purchase item: something else"))

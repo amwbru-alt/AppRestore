@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# User-space AppRestore installer for macOS release payloads.
+# User-space AppRevive installer for macOS release payloads.
 
 set -euo pipefail
 umask 077
 PATH='/usr/bin:/bin:/usr/sbin:/sbin'
 export PATH
 
-APPRESTORE_VERSION="0.4.0"
+APPREVIVE_VERSION="0.4.0"
 PYTHON_VERSION="3.12.13"
 PYTHON_BUILD="20260804"
 PYTHON_MACOS_X64_SHA256="23c1069b954060a875cce80a2d98afe9ca20b8e5244cf8df6c9475497d78bc4c"
@@ -15,13 +15,13 @@ IPATOOL_VERSION="2.6.0"
 IPATOOL_MACOS_AMD64_SHA256="576bde4baf04365fcdea46eb7f3e5bb6ea143d0d9e53d6e2711136cc608aac84"
 IPATOOL_MACOS_ARM64_SHA256="faf98ef8067f1ef4783123d00561b4ece10dc7419631eb9555d88a1da2f61f3f"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
-APP_SUPPORT_DIR="$HOME/Library/Application Support/AppRestore"
+APP_SUPPORT_DIR="$HOME/Library/Application Support/AppRevive"
 VENV_DIR="$APP_SUPPORT_DIR/venv"
 BIN_DIR="$HOME/.local/bin"
-COMMAND_PATH="$BIN_DIR/apprestore"
-MANAGED_MARKER="# Managed by AppRestore install-macos.sh"
-VENV_MARKER_NAME=".apprestore-managed"
-VENV_MARKER_VALUE="AppRestore managed venv v1"
+COMMAND_PATH="$BIN_DIR/apprevive"
+MANAGED_MARKER="# Managed by AppRevive install-macos.sh"
+VENV_MARKER_NAME=".apprevive-managed"
+VENV_MARKER_VALUE="AppRevive managed venv v1"
 TEMP_WRAPPER=""
 CREATED_COMMAND=false
 VENV_STAGING=""
@@ -435,7 +435,7 @@ configure_future_path() {
   fi
 
   {
-    printf '\n%s\n' "# AppRestore user command"
+    printf '\n%s\n' "# AppRevive user command"
     printf '%s\n' "$path_line"
   } >>"$profile"
 }
@@ -445,22 +445,22 @@ write_command_wrapper() {
   local entrypoint="$VENV_DIR/bin/python"
   local command_existed=false
 
-  [[ -x "$entrypoint" ]] || die "Python interpreter AppRestore не создан"
+  [[ -x "$entrypoint" ]] || die "Python interpreter AppRevive не создан"
   if [[ -e "$COMMAND_PATH" || -L "$COMMAND_PATH" ]]; then
     command_existed=true
     if ! command_is_managed; then
-      die "$COMMAND_PATH уже существует и не принадлежит AppRestore"
+      die "$COMMAND_PATH уже существует и не принадлежит AppRevive"
     fi
   fi
 
-  TEMP_WRAPPER="$(mktemp "$BIN_DIR/.apprestore.XXXXXXXX")"
+  TEMP_WRAPPER="$(mktemp "$BIN_DIR/.apprevive.XXXXXXXX")"
   {
     printf '%s\n' '#!/usr/bin/env bash'
     printf '%s\n' "$MANAGED_MARKER"
     printf '%s\n' 'set -euo pipefail'
     printf '%s\n' 'unset PYTHONPATH PYTHONHOME PYTHONSTARTUP'
     printf 'export PATH=%q:"$PATH"\n' "$runtime_bin"
-    printf 'exec %q -X utf8 -I -m apprestore_core.cli "$@"\n' "$entrypoint"
+    printf 'exec %q -X utf8 -I -m apprevive_core.cli "$@"\n' "$entrypoint"
   } >"$TEMP_WRAPPER"
   chmod 755 "$TEMP_WRAPPER"
   mv -f "$TEMP_WRAPPER" "$COMMAND_PATH"
@@ -485,7 +485,7 @@ main() {
   validate_dependency_payload
   if [[ -e "$COMMAND_PATH" || -L "$COMMAND_PATH" ]]; then
     command_is_managed || die \
-      "$COMMAND_PATH уже существует и не принадлежит AppRestore"
+      "$COMMAND_PATH уже существует и не принадлежит AppRevive"
   fi
 
   if [[ -e "$VENV_DIR" || -L "$VENV_DIR" ]]; then
@@ -521,9 +521,9 @@ main() {
     --no-build-isolation \
     "$SCRIPT_DIR"
 
-  installed_version="$("$python" -X utf8 -I -m apprestore_core.cli --version)"
-  [[ "$installed_version" == "$APPRESTORE_VERSION" ]] || die \
-    "ожидалась версия $APPRESTORE_VERSION, установлена $installed_version"
+  installed_version="$("$python" -X utf8 -I -m apprevive_core.cli --version)"
+  [[ "$installed_version" == "$APPREVIVE_VERSION" ]] || die \
+    "ожидалась версия $APPREVIVE_VERSION, установлена $installed_version"
 
   if [[ -d "$VENV_DIR" ]]; then
     VENV_BACKUP="$(mktemp -d "$APP_SUPPORT_DIR/.venv-backup.XXXXXXXX")"
@@ -536,7 +536,7 @@ main() {
 
   write_command_wrapper "$VENV_DIR/bin"
   installed_version="$("$COMMAND_PATH" --version)"
-  [[ "$installed_version" == "$APPRESTORE_VERSION" ]] || die \
+  [[ "$installed_version" == "$APPREVIVE_VERSION" ]] || die \
     "launcher $COMMAND_PATH вернул неожиданную версию $installed_version"
   if ! configure_future_path; then
     warn "Не удалось автоматически обновить профиль shell."
@@ -549,7 +549,7 @@ main() {
     if rm -rf -- "$VENV_BACKUP/venv"; then
       OLD_VENV_MOVED=false
     else
-      warn "AppRestore установлен, но старый venv сохранён: $VENV_BACKUP"
+      warn "AppRevive установлен, но старый venv сохранён: $VENV_BACKUP"
     fi
   fi
   if [[ "$OLD_VENV_MOVED" != true && \
@@ -560,7 +560,7 @@ main() {
       warn "Пустой backup-каталог оставлен для проверки: $VENV_BACKUP"
     fi
   fi
-  printf "%b\n" "${GREEN}AppRestore ${installed_version} установлен.${NC}"
+  printf "%b\n" "${GREEN}AppRevive ${installed_version} установлен.${NC}"
   printf '%s\n' "Команда: $COMMAND_PATH"
   printf '%s\n' \
     'Для текущего терминала выполни: export PATH="$HOME/.local/bin:$PATH"'

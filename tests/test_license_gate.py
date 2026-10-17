@@ -9,9 +9,9 @@ from pathlib import Path
 
 import pytest
 
-from apprestore_core.license_guard import read_counts
-from apprestore_core.tools import ToolUnavailable
-from apprestore_core.license_gate import LICENSE_NOTICE, LicenseDenied, run_with_free_license
+from apprevive_core.license_guard import read_counts
+from apprevive_core.tools import ToolUnavailable
+from apprevive_core.license_gate import LICENSE_NOTICE, LicenseDenied, run_with_free_license
 
 STORE = "1234567890"
 MISSING = (
@@ -32,7 +32,7 @@ class Tools:
         return self.country
 
     def purchase_license(self, store_id: str, *, grant: object) -> dict:
-        from apprestore_core.purchase_grant import require_grant
+        from apprevive_core.purchase_grant import require_grant
 
         require_grant(grant, store_id)
         self.purchases.append(str(store_id))
@@ -149,7 +149,7 @@ def test_price_is_looked_up_only_in_the_account_country(tmp_path: Path) -> None:
 
 
 def test_default_lookup_has_no_fallback_list(monkeypatch: pytest.MonkeyPatch) -> None:
-    from apprestore_core import catalog, license_gate
+    from apprevive_core import catalog, license_gate
 
     seen: list[object] = []
     monkeypatch.setattr(catalog, "lookup_itunes_offer", lambda sid, countries: seen.append(countries) or None)
@@ -292,8 +292,8 @@ def test_temporary_unavailability_on_download_still_takes_a_free_license(tmp_pat
 
 
 def _uncertain_errors():
-    from apprestore_core.command import CommandError
-    from apprestore_core.models import CommandResult
+    from apprevive_core.command import CommandError
+    from apprevive_core.models import CommandResult
 
     timeout = CommandError(CommandResult(("ipatool",), 124, "", ""), "command timed out: ipatool")
     return [
@@ -307,7 +307,7 @@ def _uncertain_errors():
 
 @pytest.mark.parametrize("error", _uncertain_errors(), ids=lambda e: str(e)[:24])
 def test_network_or_timeout_on_purchase_is_journaled_as_uncertain(tmp_path: Path, error) -> None:
-    from apprestore_core.license_guard import check_can_acquire
+    from apprevive_core.license_guard import check_can_acquire
 
     journal = tmp_path / "j.jsonl"
     tools = Tools(error=error)
@@ -366,8 +366,8 @@ APPLE_2040_LINE = json.dumps(
 def _real_tools(stdout: str, stderr: str, returncode: int = 1):
     from unittest.mock import patch
 
-    from apprestore_core.models import CommandResult
-    from apprestore_core.tools import AppRestoreTools
+    from apprevive_core.models import CommandResult
+    from apprevive_core.tools import AppReviveTools
 
     class Runner:
         def __init__(self) -> None:
@@ -377,7 +377,7 @@ def _real_tools(stdout: str, stderr: str, returncode: int = 1):
             self.calls.append(tuple(args))
             return CommandResult(tuple(args), returncode, stdout, stderr)
 
-    class Tools(AppRestoreTools):
+    class Tools(AppReviveTools):
         licensed = False
 
         def account_country(self) -> str:
@@ -389,8 +389,8 @@ def _real_tools(stdout: str, stderr: str, returncode: int = 1):
     runner = Runner()
     tools = Tools(runner)  # type: ignore[arg-type]
     patches = (
-        patch("apprestore_core.tools.resolve_tool", return_value="ipatool"),
-        patch.object(AppRestoreTools, "_ipatool_env", return_value={}),
+        patch("apprevive_core.tools.resolve_tool", return_value="ipatool"),
+        patch.object(AppReviveTools, "_ipatool_env", return_value={}),
     )
     return tools, runner, patches
 
@@ -412,10 +412,10 @@ def test_apple_2040_refusal_exact_output_is_refused_and_not_journaled(tmp_path: 
             run_with_free_license(STORE, Download(tools), tools=tools, lookup=Lookup(0), journal=journal)  # type: ignore[arg-type]
     assert [call[-3:] for call in runner.calls] == [("purchase", "--app-id", STORE)]
     assert not journal.exists(), "Apple's explicit refusal must not be journaled"
-    from apprestore_core.license_gate import purchase_outcome
+    from apprevive_core.license_gate import purchase_outcome
 
     assert purchase_outcome(caught.value) == "refused"
-    from apprestore_gui.errors import STORE_REFUSED_TEXT, explain_user_error
+    from apprevive_gui.errors import STORE_REFUSED_TEXT, explain_user_error
 
     assert explain_user_error(str(caught.value)) == STORE_REFUSED_TEXT
     assert STORE_REFUSED_TEXT == "Apple сейчас не выдаёт это приложение для вашего аккаунта."
@@ -434,7 +434,7 @@ def test_apple_2040_refusal_exact_output_is_refused_and_not_journaled(tmp_path: 
     ],
 )
 def test_store_refusal_is_case_insensitive(message: str) -> None:
-    from apprestore_core.license_gate import is_store_refusal, purchase_outcome
+    from apprevive_core.license_gate import is_store_refusal, purchase_outcome
 
     assert is_store_refusal(message)
     assert purchase_outcome(ToolUnavailable(message)) == "refused"
@@ -463,8 +463,8 @@ def test_account_not_in_this_store_exact_output_is_refused_and_not_journaled(tmp
             run_with_free_license(STORE, Download(tools), tools=tools, lookup=Lookup(0), journal=journal)  # type: ignore[arg-type]
     assert [call[-3:] for call in runner.calls] == [("purchase", "--app-id", STORE)]
     assert not journal.exists(), "Apple's explicit refusal must not be journaled"
-    from apprestore_core.license_gate import purchase_outcome
-    from apprestore_gui.errors import STORE_MISMATCH_TEXT, explain_user_error
+    from apprevive_core.license_gate import purchase_outcome
+    from apprevive_gui.errors import STORE_MISMATCH_TEXT, explain_user_error
 
     assert purchase_outcome(caught.value) == "refused"
     assert explain_user_error(str(caught.value)) == STORE_MISMATCH_TEXT
@@ -486,7 +486,7 @@ def test_account_not_in_this_store_exact_output_is_refused_and_not_journaled(tmp
     ],
 )
 def test_account_not_in_this_store_is_refused_case_insensitive(message: str) -> None:
-    from apprestore_core.license_gate import is_store_refusal, purchase_outcome
+    from apprevive_core.license_gate import is_store_refusal, purchase_outcome
 
     assert is_store_refusal(message)
     assert purchase_outcome(ToolUnavailable(message)) == "refused"
@@ -502,7 +502,7 @@ def test_account_not_in_this_store_is_refused_case_insensitive(message: str) -> 
     ],
 )
 def test_network_wrapped_or_unknown_purchase_errors_stay_uncertain(message: str) -> None:
-    from apprestore_core.license_gate import is_store_refusal, purchase_outcome
+    from apprevive_core.license_gate import is_store_refusal, purchase_outcome
 
     assert not is_store_refusal(message)
     assert purchase_outcome(ToolUnavailable(message)) == "uncertain"
@@ -533,7 +533,7 @@ def test_store_mismatch_is_refused_and_not_journaled(tmp_path: Path, stdout, std
             run_with_free_license(STORE, Download(tools), tools=tools, lookup=Lookup(0), journal=journal)  # type: ignore[arg-type]
     assert [call[-3:] for call in runner.calls] == [("purchase", "--app-id", STORE)]
     assert not journal.exists(), "-128 is a refusal: no journal line"
-    from apprestore_core.license_gate import is_store_mismatch, purchase_outcome
+    from apprevive_core.license_gate import is_store_mismatch, purchase_outcome
 
     assert purchase_outcome(caught.value) == "refused"
     assert is_store_mismatch(str(caught.value))
@@ -552,8 +552,8 @@ def test_store_mismatch_is_refused_and_not_journaled(tmp_path: Path, stdout, std
     ],
 )
 def test_store_mismatch_detection(message: str, expected: bool) -> None:
-    from apprestore_core.ipatool_api import SESSION_CODES, TRANSPORT_CODES, ErrorCode
-    from apprestore_core.license_gate import is_store_mismatch
+    from apprevive_core.ipatool_api import SESSION_CODES, TRANSPORT_CODES, ErrorCode
+    from apprevive_core.license_gate import is_store_mismatch
 
     assert is_store_mismatch(message) is expected
     assert ErrorCode.STORE_MISMATCH not in SESSION_CODES
@@ -561,9 +561,9 @@ def test_store_mismatch_detection(message: str, expected: bool) -> None:
 
 
 def test_gui_text_for_store_mismatch_is_recognised_again() -> None:
-    from apprestore_core.license_gate import STORE_MISMATCH_TEXT, is_limit_refusal, is_store_mismatch, refusal_text
-    from apprestore_core.license_journal import Verdict
-    from apprestore_gui.errors import explain_user_error
+    from apprevive_core.license_gate import STORE_MISMATCH_TEXT, is_limit_refusal, is_store_mismatch, refusal_text
+    from apprevive_core.license_journal import Verdict
+    from apprevive_gui.errors import explain_user_error
 
     text = explain_user_error(APPLE_128_ERROR)
     assert text == STORE_MISMATCH_TEXT and text.startswith("Магазин в текущем входе не совпадает со страной вашего Apple ID.")
@@ -586,23 +586,23 @@ class _MismatchService:
 def test_cli_store_mismatch_says_sign_out_and_in(argv, capsys) -> None:
     from unittest.mock import patch
 
-    from apprestore_core import cli
+    from apprevive_core import cli
 
-    with patch("apprestore_core.cli.AppRestoreService", _MismatchService):
+    with patch("apprevive_core.cli.AppReviveService", _MismatchService):
         assert cli.main(argv) == 1
     err = capsys.readouterr().err
     assert "Магазин в текущем входе не совпадает со страной вашего Apple ID." in err
-    assert "apprestore auth --revoke" in err and "apprestore auth --email" in err
+    assert "apprevive auth --revoke" in err and "apprevive auth --email" in err
     assert "vpn" not in err.casefold()
 
 
 def test_cli_json_store_mismatch_has_message_and_hint(capsys) -> None:
     from unittest.mock import patch
 
-    from apprestore_core import cli
-    from apprestore_core.license_gate import STORE_MISMATCH_TEXT
+    from apprevive_core import cli
+    from apprevive_core.license_gate import STORE_MISMATCH_TEXT
 
-    with patch("apprestore_core.cli.AppRestoreService", _MismatchService):
+    with patch("apprevive_core.cli.AppReviveService", _MismatchService):
         assert cli.main(["--json", "download", "com.example.alpha"]) == 1
     payload = json.loads(capsys.readouterr().out)
     assert payload["error"] == APPLE_128_ERROR
@@ -611,7 +611,7 @@ def test_cli_json_store_mismatch_has_message_and_hint(capsys) -> None:
 
 
 def test_cli_other_errors_unchanged() -> None:
-    from apprestore_core import cli
+    from apprevive_core import cli
 
     assert cli._error_text(ToolUnavailable("boom")) == "boom"
 
@@ -622,8 +622,8 @@ def test_cli_other_errors_unchanged() -> None:
 
 @pytest.mark.parametrize("country", ["us", ""])
 def test_unpatched_ipatool_refused_before_lock_purchase_and_journal(tmp_path: Path, country) -> None:
-    from apprestore_core.license_gate import NEEDS_PATCHED_IPATOOL_TEXT, is_needs_patched, run_with_free_license
-    from apprestore_core.license_guard import read_counts
+    from apprevive_core.license_gate import NEEDS_PATCHED_IPATOOL_TEXT, is_needs_patched, run_with_free_license
+    from apprevive_core.license_guard import read_counts
 
     journal = tmp_path / "j.jsonl"
     calls: list[str] = []
@@ -653,8 +653,8 @@ def test_unpatched_ipatool_refused_before_lock_purchase_and_journal(tmp_path: Pa
 
 
 def test_preflight_goes_through_license_guard_before_the_lock(tmp_path: Path, monkeypatch) -> None:
-    from apprestore_core import license_guard as lg
-    from apprestore_core.license_journal import PreflightBlocked, acquire_and_record
+    from apprevive_core import license_guard as lg
+    from apprevive_core.license_journal import PreflightBlocked, acquire_and_record
 
     seen = {}
     real = lg.acquire_and_record
@@ -675,12 +675,12 @@ def test_preflight_goes_through_license_guard_before_the_lock(tmp_path: Path, mo
 
 
 def test_tools_preflight_is_makss_client(monkeypatch, tmp_path: Path) -> None:
-    from apprestore_core import tools as tools_module
-    from apprestore_core.tools import AppRestoreTools
+    from apprevive_core import tools as tools_module
+    from apprevive_core.tools import AppReviveTools
 
     monkeypatch.undo()  # the real method, not the conftest stub
     monkeypatch.setattr(tools_module, "resolve_tool", lambda name: None)
-    AppRestoreTools._caps_clients.clear()
-    t = AppRestoreTools()
+    AppReviveTools._caps_clients.clear()
+    t = AppReviveTools()
     assert t.license_preflight()  # no binary: not allowed
     assert t.ipatool_capabilities() is None

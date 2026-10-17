@@ -1,4 +1,4 @@
-// Theme.qml — токены AppRestore 4b. Синглтон: в qmldir — "singleton Theme 1.0 Theme.qml".
+// Theme.qml — токены AppRevive 4b. Синглтон: в qmldir — "singleton Theme 1.0 Theme.qml".
 // Источник: design/spec/tokens.json (из CSS концептов 4b). Значения — логические px.
 //
 // Правила (часть 1, §1.5):

@@ -19,9 +19,9 @@ from pathlib import Path
 
 import pytest
 
-import apprestore_core.ipatool_api as api
-from apprestore_core.command import SECRET_ENV_NAMES, Runner, child_env
-from apprestore_gui import purchases as pm
+import apprevive_core.ipatool_api as api
+from apprevive_core.command import SECRET_ENV_NAMES, Runner, child_env
+from apprevive_gui import purchases as pm
 
 SECRET = "pw-Secret-123"
 ROOT = Path(__file__).resolve().parents[1]
@@ -71,7 +71,7 @@ def _fake(tmp_path: Path, *, patched: bool) -> str:
 def secret_env(monkeypatch: pytest.MonkeyPatch):
     for name in SECRET_ENV_NAMES:
         monkeypatch.setenv(name, SECRET)
-    from apprestore_core import ipatool_caps
+    from apprevive_core import ipatool_caps
 
     ipatool_caps.reset_cache()
     yield
@@ -111,7 +111,7 @@ def test_runner_cli_and_tools_path(tmp_path: Path) -> None:
 @posix_only
 def test_keychain_runner_patched_ipatool_uses_stdin(tmp_path: Path) -> None:
     pytest.importorskip("PySide6")
-    from apprestore_gui.auth_pty import KeychainRunner
+    from apprevive_gui.auth_pty import KeychainRunner
 
     script = _fake(tmp_path, patched=True)
     seen: list[str] = []
@@ -128,7 +128,7 @@ def test_keychain_runner_patched_ipatool_uses_stdin(tmp_path: Path) -> None:
 @posix_only
 def test_keychain_runner_stop_when_and_timeout_on_stdin_path(tmp_path: Path) -> None:
     pytest.importorskip("PySide6")
-    from apprestore_gui.auth_pty import run_stdin_command
+    from apprevive_gui.auth_pty import run_stdin_command
 
     slow = tmp_path / "slow"
     slow.write_text(
@@ -145,7 +145,7 @@ def test_keychain_runner_stop_when_and_timeout_on_stdin_path(tmp_path: Path) -> 
 def test_one_capability_probe_for_the_whole_app(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """KeychainRunner and the ipatool_api runner share ipatool_caps' cache."""
 
-    from apprestore_core import ipatool_caps
+    from apprevive_core import ipatool_caps
 
     calls: list[list[str]] = []
 
@@ -165,7 +165,7 @@ def test_one_capability_probe_for_the_whole_app(tmp_path: Path, monkeypatch: pyt
 @posix_only
 def test_hidden_terminal_path_keychain_runner(tmp_path: Path) -> None:
     pytest.importorskip("PySide6")
-    from apprestore_gui.auth_pty import KeychainRunner
+    from apprevive_gui.auth_pty import KeychainRunner
 
     script = _fake(tmp_path, patched=False)
     result = KeychainRunner(lambda: SECRET).run([script, "--format", "json", "auth", "info"], timeout=20)
@@ -230,11 +230,11 @@ def test_stdin_support_is_detected_from_help(tmp_path: Path) -> None:
 def test_no_direct_environ_copies_in_launch_code() -> None:
     """All child envs go through command.child_env (one place)."""
 
-    for rel in ("apprestore_core/command.py", "apprestore_gui/auth_pty.py", "apprestore_gui/purchases.py",
-                "apprestore_core/tools.py", "apprestore_gui/selftest.py"):
+    for rel in ("apprevive_core/command.py", "apprevive_gui/auth_pty.py", "apprevive_gui/purchases.py",
+                "apprevive_core/tools.py", "apprevive_gui/selftest.py"):
         text = (ROOT / rel).read_text(encoding="utf-8")
         copies = re.findall(r"os\.environ\.copy\(\)|dict\(os\.environ\)", text)
-        allowed = 1 if rel == "apprestore_core/command.py" else 0  # inside child_env
+        allowed = 1 if rel == "apprevive_core/command.py" else 0  # inside child_env
         assert len(copies) == allowed, rel
 
 
@@ -270,7 +270,7 @@ def test_no_secure_method_falls_back_to_hidden_terminal_client(tmp_path: Path) -
     checker.join(5)
     assert views[-1].state == "alive"
 
-    from apprestore_core.purchases_cache import PurchasesCache
+    from apprevive_core.purchases_cache import PurchasesCache
 
     pviews: list = []
     loader = pm.PurchasesLoader(PurchasesCache(tmp_path), lambda: Primary(), pviews.append, fallback_factory=lambda: Fallback())

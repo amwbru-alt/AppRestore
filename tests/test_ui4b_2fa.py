@@ -85,8 +85,8 @@ def qapp():
 
 @pytest.fixture
 def fake(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
-    from apprestore_core.command import SECRET_ENV_NAMES
-    from apprestore_gui import auth_pty
+    from apprevive_core.command import SECRET_ENV_NAMES
+    from apprevive_gui import auth_pty
 
     record = tmp_path / "spawned.jsonl"
     tool = tmp_path / "ipatool"
@@ -114,7 +114,7 @@ def _logins(rows: list[dict]) -> list[list[str]]:
 
 
 def _no_secrets(rows: list[dict], *secrets: str) -> None:
-    from apprestore_core.command import SECRET_ENV_NAMES
+    from apprevive_core.command import SECRET_ENV_NAMES
 
     assert rows
     for row in rows:
@@ -138,13 +138,13 @@ def _wait(qapp, cond, timeout: float = 20.0) -> None:
 
 
 def test_login_argv_has_no_email_password_or_non_interactive() -> None:
-    from apprestore_gui.auth_pty import login_argv
+    from apprevive_gui.auth_pty import login_argv
 
     assert login_argv("/opt/ipatool") == ["/opt/ipatool", "auth", "login"]
 
 
 def test_prompts_are_maxs_verbatim() -> None:
-    from apprestore_gui import auth_pty
+    from apprevive_gui import auth_pty
 
     assert auth_pty.PROMPT_APPLE_ID == "enter Apple ID (email address or phone number): "
     assert auth_pty.PROMPT_PASSWORD == "enter password: "
@@ -152,7 +152,7 @@ def test_prompts_are_maxs_verbatim() -> None:
 
 
 def test_scrubber_drops_echo_to_end_of_line_across_chunks() -> None:
-    from apprestore_gui.auth_pty import PromptScrubber
+    from apprevive_gui.auth_pty import PromptScrubber
 
     sc = PromptScrubber()
     chunks = ["enter pass", "word: ", "Apple-Pa", "ss-31415\n", "enter 2FA co", "de: 12", "3456", "\napple did not",
@@ -172,8 +172,8 @@ def test_scrubber_drops_echo_to_end_of_line_across_chunks() -> None:
     ],
 )
 def test_did_not_complete_verification_is_two_factor_rejected(text: str) -> None:
-    from apprestore_core.ipatool_api import ErrorCode, classify_error
-    from apprestore_gui.auth_pty import WRONG_CODE_TEXT, _explain_login_failure, is_two_factor_rejected
+    from apprevive_core.ipatool_api import ErrorCode, classify_error
+    from apprevive_gui.auth_pty import WRONG_CODE_TEXT, _explain_login_failure, is_two_factor_rejected
 
     assert classify_error(text) is ErrorCode.TWO_FACTOR_REJECTED
     assert is_two_factor_rejected(text)
@@ -183,7 +183,7 @@ def test_did_not_complete_verification_is_two_factor_rejected(text: str) -> None
 
 
 def test_auth_code_required_is_not_relogin() -> None:
-    from apprestore_core.ipatool_api import ErrorCode, classify_error
+    from apprevive_core.ipatool_api import ErrorCode, classify_error
 
     assert classify_error("auth code is required") is ErrorCode.AUTH_CODE_REQUIRED
 
@@ -210,7 +210,7 @@ def _scan_for_secrets(root: Path, *secrets: str) -> None:
 
 @pytest.mark.parametrize(("code", "ok"), [pytest.param(GOOD, True, id="good"), pytest.param(OLD, False, id="old")])
 def test_apple_login_thread_one_process_code_into_same_terminal(qapp, fake, code, ok, tmp_path) -> None:
-    from apprestore_gui.auth_pty import WRONG_CODE_TEXT, AppleLogin
+    from apprevive_gui.auth_pty import WRONG_CODE_TEXT, AppleLogin
 
     job = AppleLogin(EMAIL, PASSWORD, "", "")
     asked: list[str] = []
@@ -240,7 +240,7 @@ def test_apple_login_thread_one_process_code_into_same_terminal(qapp, fake, code
 
 
 def _session(qapp, monkeypatch, tmp_path: Path):
-    from apprestore_gui import quick_session as qs
+    from apprevive_gui import quick_session as qs
 
     home = tmp_path / "home"
     home.mkdir()
@@ -273,7 +273,7 @@ def _session(qapp, monkeypatch, tmp_path: Path):
 
 
 def test_4b_session_need_code_then_signed_in_one_spawn_one_code(qapp, fake, monkeypatch, tmp_path, caplog, capfd) -> None:
-    from apprestore_gui.ui4b.qt_bridge import signin_view
+    from apprevive_gui.ui4b.qt_bridge import signin_view
 
     caplog.set_level(logging.DEBUG)
     s = _session(qapp, monkeypatch, tmp_path)
@@ -306,8 +306,8 @@ def test_4b_session_need_code_then_signed_in_one_spawn_one_code(qapp, fake, monk
 
 
 def test_4b_old_code_back_to_password_form_no_relaunch(qapp, fake, monkeypatch, tmp_path, caplog, capfd) -> None:
-    from apprestore_gui.auth_pty import CODE_HINT, WRONG_CODE_TEXT
-    from apprestore_gui.ui4b.qt_bridge import signin_view
+    from apprevive_gui.auth_pty import CODE_HINT, WRONG_CODE_TEXT
+    from apprevive_gui.ui4b.qt_bridge import signin_view
 
     caplog.set_level(logging.DEBUG)
     s = _session(qapp, monkeypatch, tmp_path)
@@ -344,15 +344,15 @@ def test_4b_old_code_back_to_password_form_no_relaunch(qapp, fake, monkeypatch, 
 
 
 def test_code_texts_are_nikas() -> None:
-    from apprestore_gui.auth_pty import CODE_HINT, WRONG_CODE_TEXT
-    from apprestore_gui.ui4b.qt_bridge import signin_view
+    from apprevive_gui.auth_pty import CODE_HINT, WRONG_CODE_TEXT
+    from apprevive_gui.ui4b.qt_bridge import signin_view
 
     v = signin_view(open_=True, phase="need_code", status="", email=EMAIL, relogin=False)
     assert CODE_HINT == "Код не пришёл? На iPhone: Настройки → ваше имя → Вход и безопасность → Получить код проверки"
     assert v["hint"] == CODE_HINT and v["codePlaceholder"] == "Код из 6 цифр"
     assert WRONG_CODE_TEXT == ("Код не подошёл или устарел, и Apple завершила вход. "
                                "Введите пароль ещё раз и возьмите самый свежий код.")
-    root = Path(__file__).resolve().parents[1] / "apprestore_gui"
+    root = Path(__file__).resolve().parents[1] / "apprevive_gui"
     for path in [*(root / "ui4b").rglob("*.py"), *(root / "qml4b").rglob("*.qml"), root / "auth_pty.py"]:
         text = path.read_text(encoding="utf-8")
         assert "Отмена» и войдите ещё раз" not in text, path.name
@@ -365,7 +365,7 @@ def test_no_login_relaunch_paths_in_source() -> None:
 
     import re
 
-    from apprestore_gui import quick_session
+    from apprevive_gui import quick_session
 
     src = Path(quick_session.__file__).read_text(encoding="utf-8")
     starts = re.findall(r"AppleLogin\((.{0,20})", src)
@@ -383,7 +383,7 @@ def test_sign_in_sheet_code_rules_in_qml() -> None:
     """No auto-submit on the 6th digit; submit only with six digits; the field is
     cleared after submit, on a new prompt and on any exit; locked while busy."""
 
-    from apprestore_gui import quick_session
+    from apprevive_gui import quick_session
 
     qml = (Path(quick_session.__file__).parent / "qml4b" / "components" / "SignInSheet.qml").read_text(encoding="utf-8")
     assert "onTextEdited" not in qml

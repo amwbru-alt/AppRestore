@@ -1,5 +1,5 @@
 name: Сообщить об ошибке
-description: Воспроизводимая ошибка AppRestore без чувствительных данных
+description: Воспроизводимая ошибка AppRevive без чувствительных данных
 title: "[Bug]: "
 body:
   - type: markdown
@@ -22,8 +22,8 @@ body:
   - type: input
     id: version
     attributes:
-      label: Версия AppRestore
-      description: Вывод `apprestore --version`.
+      label: Версия AppRevive
+      description: Вывод `apprevive --version`.
       placeholder: "0.2.0"
     validations:
       required: true
@@ -77,6 +77,6 @@ body:
     attributes:
       label: Очищенная диагностика
       description: |
-        Приложите вывод `apprestore doctor` после удаления UDID, email,
+        Приложите вывод `apprevive doctor` после удаления UDID, email,
         локальных путей и других персональных данных.
       render: shell

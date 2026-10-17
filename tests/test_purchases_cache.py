@@ -11,8 +11,8 @@ from pathlib import Path
 
 import pytest
 
-from apprestore_core.ipatool_api import Purchase
-from apprestore_core.purchases_cache import (
+from apprevive_core.ipatool_api import Purchase
+from apprevive_core.purchases_cache import (
     SALT_BYTES,
     CachedPurchase,
     PurchasesCache,
@@ -162,7 +162,7 @@ def test_missing_or_damaged_salt_makes_old_cache_foreign(tmp_path: Path, damage:
 @pytest.mark.skipif(os.name == "nt", reason="POSIX permissions")
 def test_wider_existing_folders_are_tightened(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("HOME", str(tmp_path))
-    app = tmp_path / ".apprestore"
+    app = tmp_path / ".apprevive"
     purchases = app / "purchases"
     purchases.mkdir(parents=True)
     os.chmod(app, 0o755)

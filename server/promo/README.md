@@ -85,7 +85,7 @@ https://sv-bz.ru/apprevive/redeem.php
 
 Если выбрали другой сайт/путь, перед запуском из исходников задайте
 `APPREVIVE_PROMO_API_URL`. Для распространяемого приложения измените
-`PROMO_API_URL` в `apprestore_core/restoration_codes.py` и пересоберите `.app`/
+`PROMO_API_URL` в `apprevive_core/restoration_codes.py` и пересоберите `.app`/
 `.exe`. На каждом компьютере MySQL настраивать не нужно.
 
 Связь приложения с API по-прежнему использует HTTPS: на сайте должна быть

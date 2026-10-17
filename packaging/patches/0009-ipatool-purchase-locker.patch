@@ -297,7 +297,7 @@ index 0000000..37096ce
 +}
 +
 +func lockerStatusPath() string {
-+	return os.TempDir() + string(os.PathSeparator) + "apprestore-locker-status.json"
++	return os.TempDir() + string(os.PathSeparator) + "apprevive-locker-status.json"
 +}
 +
 +func decodeLockerPayload(body []byte) (any, error) {

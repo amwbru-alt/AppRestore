@@ -73,7 +73,7 @@ def read_source(path: Path | None) -> bytes:
     else:
         request = urllib.request.Request(
             SOURCE_URL,
-            headers={"User-Agent": "AppRestore-wheel-rebuilder/1"},
+            headers={"User-Agent": "AppRevive-wheel-rebuilder/1"},
         )
         with urllib.request.urlopen(request, timeout=30) as response:
             final_url = urlsplit(response.geturl())
@@ -216,7 +216,7 @@ def normalize_wheel(raw_wheel: Path) -> bytes:
 
 def build_wheel(source_payload: bytes) -> bytes:
     validate_toolchain()
-    with tempfile.TemporaryDirectory(prefix="AppRestore-hexdump-build-") as raw:
+    with tempfile.TemporaryDirectory(prefix="AppRevive-hexdump-build-") as raw:
         temporary = Path(raw)
         source_root = temporary / "source"
         wheel_root = temporary / "wheel"

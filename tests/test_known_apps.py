@@ -7,16 +7,16 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from apprestore_core.catalog import search_app_catalogs, search_itunes_apps
-from apprestore_core.cli import _resolve_missing_targets
-from apprestore_core.known_apps import (
+from apprevive_core.catalog import search_app_catalogs, search_itunes_apps
+from apprevive_core.cli import _resolve_missing_targets
+from apprevive_core.known_apps import (
     load_known_apps,
     parse_app_store_id,
     remember_known_app,
 )
-from apprestore_core.models import MissingApp
-from apprestore_core.service import AppRestoreService
-from apprestore_core.web_discovery import _candidate_ids_from_html
+from apprevive_core.models import MissingApp
+from apprevive_core.service import AppReviveService
+from apprevive_core.web_discovery import _candidate_ids_from_html
 
 
 class ParseStoreIdTests(unittest.TestCase):
@@ -80,10 +80,10 @@ class ResolveMissingTargetsTests(unittest.TestCase):
 
 class DownloadByStoreIdTests(unittest.TestCase):
     def test_restore_missing_uses_store_only_path(self) -> None:
-        service = AppRestoreService.__new__(AppRestoreService)
+        service = AppReviveService.__new__(AppReviveService)
         service.restore_by_store_id = mock.Mock(return_value="installed X 1.0")  # type: ignore[method-assign]
         app = MissingApp("", "X", store_id="6472732558", source="manual")
-        status = AppRestoreService.restore_missing(service, "UDID", app)
+        status = AppReviveService.restore_missing(service, "UDID", app)
         self.assertEqual(status, "installed X 1.0")
         service.restore_by_store_id.assert_called_once_with("UDID", "6472732558")
 
@@ -100,7 +100,7 @@ class ItunesSearchTests(unittest.TestCase):
             ]
         }
         with mock.patch(
-            "apprestore_core.catalog._http_json",
+            "apprevive_core.catalog._http_json",
             return_value=payload,
         ):
             apps = search_itunes_apps("Homuz", limit=5, countries=("ru",))
@@ -128,7 +128,7 @@ class ItunesSearchTests(unittest.TestCase):
             return None
 
         with mock.patch(
-            "apprestore_core.catalog._http_json",
+            "apprevive_core.catalog._http_json",
             side_effect=fake_http,
         ):
             apps = search_app_catalogs("GoneApp", limit=5)
@@ -138,7 +138,7 @@ class ItunesSearchTests(unittest.TestCase):
 
     def test_domclick_alias_returns_dklik_hint(self) -> None:
         with mock.patch(
-            "apprestore_core.catalog._http_json",
+            "apprevive_core.catalog._http_json",
             return_value={"results": []},
         ):
             apps = search_app_catalogs("домклик", limit=5)
@@ -150,7 +150,7 @@ class ItunesSearchTests(unittest.TestCase):
 
     def test_sber_alias_returns_online_hint(self) -> None:
         with mock.patch(
-            "apprestore_core.catalog._http_json",
+            "apprevive_core.catalog._http_json",
             return_value={"results": []},
         ):
             apps = search_app_catalogs("сбер", limit=5)
@@ -173,7 +173,7 @@ class ItunesSearchTests(unittest.TestCase):
 class StoreIdSearchTests(unittest.TestCase):
     def test_bare_store_id_stays_installable_when_catalogs_miss_it(self) -> None:
         with mock.patch(
-            "apprestore_core.catalog.lookup_itunes_app_by_store_id",
+            "apprevive_core.catalog.lookup_itunes_app_by_store_id",
             return_value=None,
         ):
             apps = search_app_catalogs("6744154094", limit=5)
@@ -190,7 +190,7 @@ class StoreIdSearchTests(unittest.TestCase):
             "source": "itunes-lookup",
         }
         with mock.patch(
-            "apprestore_core.catalog.lookup_itunes_app_by_store_id",
+            "apprevive_core.catalog.lookup_itunes_app_by_store_id",
             return_value=looked,
         ):
             apps = search_app_catalogs(

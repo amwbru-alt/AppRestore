@@ -25,11 +25,11 @@ from PySide6.QtWidgets import QApplication  # noqa: E402
 from PySide6.QtQml import QQmlApplicationEngine  # noqa: E402
 from PySide6.QtQuickControls2 import QQuickStyle  # noqa: E402
 
-from apprestore_core.models import MissingApp, OffloadedApp  # noqa: E402
-from apprestore_gui.ui4b.fake_data import FakeIconBook  # noqa: E402
-from apprestore_gui.ui4b.qt_bridge import Restore4b, SessionSource  # noqa: E402
-from apprestore_gui.ui4b.space import DeviceSpace  # noqa: E402
-from apprestore_gui.ui4b.window import load  # noqa: E402
+from apprevive_core.models import MissingApp, OffloadedApp  # noqa: E402
+from apprevive_gui.ui4b.fake_data import FakeIconBook  # noqa: E402
+from apprevive_gui.ui4b.qt_bridge import Restore4b, SessionSource  # noqa: E402
+from apprevive_gui.ui4b.space import DeviceSpace  # noqa: E402
+from apprevive_gui.ui4b.window import load  # noqa: E402
 
 GB = 1024 ** 3
 UDID = "00008110-000A1B2C3D4E5F60"
@@ -211,7 +211,7 @@ def main() -> int:
     session = FakeQuickSession()
     source = OfflineSafeSource(session)
     # app_names.display_names stand-in (no network): answers after 1 s, like a lookup
-    from apprestore_gui.ui4b.names_lookup import NameLookup
+    from apprevive_gui.ui4b.names_lookup import NameLookup
 
     def fake_display_names(ids, *, bundle_ids=(), account_country=None, device_locale=None):
         time.sleep(1.0)
@@ -221,8 +221,8 @@ def main() -> int:
     source._names = NameLookup(fake_display_names, notify=source._namesReady.emit)
     source.online = True
     controller = Restore4b(source, onboarded=True)
-    # design concepts next to the repo checkout (only for the fake icon book); override with APPRESTORE_CONCEPTS
-    concepts = Path(os.environ.get("APPRESTORE_CONCEPTS") or Path(__file__).resolve().parents[2] / "design" / "concepts")
+    # design concepts next to the repo checkout (only for the fake icon book); override with APPREVIVE_CONCEPTS
+    concepts = Path(os.environ.get("APPREVIVE_CONCEPTS") or Path(__file__).resolve().parents[2] / "design" / "concepts")
     icons = FakeIconBook(concepts / "assets" / "icons", Path(tempfile.gettempdir()) / "ui4b-icons")
     engine = QQmlApplicationEngine()
     warnings: list[str] = []

@@ -1,6 +1,6 @@
 """Every sign-out and account-switch path deletes purchases-cache.json.
 
-The single core point is AppRestoreService.sign_out / note_account; the CLI,
+The single core point is AppReviveService.sign_out / note_account; the CLI,
 the Widgets window, GuiService and QuickSession all go through it.
 """
 
@@ -14,9 +14,9 @@ from unittest.mock import patch
 
 import pytest
 
-from apprestore_core import cli
-from apprestore_core.purchases_cache import CachedPurchase, PurchasesCache
-from apprestore_core.service import AppRestoreService
+from apprevive_core import cli
+from apprevive_core.purchases_cache import CachedPurchase, PurchasesCache
+from apprevive_core.service import AppReviveService
 
 EMAIL = "person@example.com"
 OTHER = "other@example.com"
@@ -51,8 +51,8 @@ class Tools:
         self.logins.append(email)
 
 
-def _service(home: Path, tools: Tools) -> AppRestoreService:
-    return AppRestoreService(tools=tools, library=home / "lib", cache=home / "cache")  # type: ignore[arg-type]
+def _service(home: Path, tools: Tools) -> AppReviveService:
+    return AppReviveService(tools=tools, library=home / "lib", cache=home / "cache")  # type: ignore[arg-type]
 
 
 def test_core_sign_out_deletes_cache(home: Path) -> None:
@@ -72,7 +72,7 @@ def test_core_sign_out_deletes_cache_even_if_revoke_fails(home: Path) -> None:
 def test_cli_auth_revoke_deletes_cache(home: Path) -> None:
     cache = _seed()
     tools = Tools()
-    with patch("apprestore_core.cli.AppRestoreService", side_effect=lambda **kw: _service(home, tools)), redirect_stdout(
+    with patch("apprevive_core.cli.AppReviveService", side_effect=lambda **kw: _service(home, tools)), redirect_stdout(
         io.StringIO()
     ):
         assert cli.main(["--json", "auth", "--revoke"]) == 0
@@ -93,7 +93,7 @@ pyside = pytest.importorskip  # alias for readability below
 
 def test_gui_service_revoke_and_switch(home: Path) -> None:
     pyside("PySide6")
-    from apprestore_gui.service_adapter import GuiService
+    from apprevive_gui.service_adapter import GuiService
 
     tools = Tools()
     gui = GuiService(demo_mode=True)
@@ -111,8 +111,8 @@ def test_gui_service_revoke_and_switch(home: Path) -> None:
 
 def test_widgets_window_revoke_deletes_cache(home: Path) -> None:
     pyside("PySide6")
-    from apprestore_gui.main_window import MainWindow
-    from apprestore_gui.service_adapter import GuiService
+    from apprevive_gui.main_window import MainWindow
+    from apprevive_gui.service_adapter import GuiService
 
     tools = Tools(fail=True)  # even when ipatool fails, the cache goes
     gui = GuiService(demo_mode=True)
@@ -132,7 +132,7 @@ def test_widgets_window_revoke_deletes_cache(home: Path) -> None:
 
 def test_widgets_window_login_as_other_account_deletes_cache(home: Path) -> None:
     pyside("PySide6")
-    from apprestore_gui.main_window import MainWindow
+    from apprevive_gui.main_window import MainWindow
 
     cache = _seed(EMAIL)
     seen: list[str] = []
@@ -151,8 +151,8 @@ def test_widgets_window_login_as_other_account_deletes_cache(home: Path) -> None
 
 def test_widgets_saved_keychain_without_email_uses_auth_info(home: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     pyside("PySide6")
-    from apprestore_gui import workers
-    from apprestore_gui.main_window import MainWindow
+    from apprevive_gui import workers
+    from apprevive_gui.main_window import MainWindow
 
     cache = _seed(EMAIL)
     seen: list[str] = []

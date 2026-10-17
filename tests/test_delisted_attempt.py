@@ -11,12 +11,12 @@ import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from apprestore_core import delisted_attempt, license_guard, license_journal  # noqa: E402
-from apprestore_core.license_gate import LicenseDenied, run_with_free_license  # noqa: E402
-from apprestore_core.region_probe import RegionStatus  # noqa: E402
-from apprestore_core.tools import ToolUnavailable  # noqa: E402
-from apprestore_gui.ui4b import home, licenses, region, selection  # noqa: E402
-from apprestore_gui.ui4b.catalog import ACTION_STORE, GROUP_REGION, GROUP_REMOVED, RestoreItem  # noqa: E402
+from apprevive_core import delisted_attempt, license_guard, license_journal  # noqa: E402
+from apprevive_core.license_gate import LicenseDenied, run_with_free_license  # noqa: E402
+from apprevive_core.region_probe import RegionStatus  # noqa: E402
+from apprevive_core.tools import ToolUnavailable  # noqa: E402
+from apprevive_gui.ui4b import home, licenses, region, selection  # noqa: E402
+from apprevive_gui.ui4b.catalog import ACTION_STORE, GROUP_REGION, GROUP_REMOVED, RestoreItem  # noqa: E402
 from tests.test_license_gate import STORE, Download, Lookup, Tools, _entries  # noqa: E402
 
 class PTools(Tools):
@@ -88,7 +88,7 @@ def test_picker_region_row_is_counted_as_a_download_candidate() -> None:
 
 def test_catalog_label_never_blocks_paid_purchase_or_local_ipa() -> None:
     from dataclasses import replace
-    from apprestore_gui.ui4b.catalog import ACTION_IPA
+    from apprevive_gui.ui4b.catalog import ACTION_IPA
 
     app = region.apply_statuses([item(STORE)], {STORE: RegionStatus.NOT_IN_REGION})[0]
     delisted_attempt.record_prices({STORE: 6.99})
@@ -164,7 +164,7 @@ def test_granted_records_price_source_apple_fixed_0_then_plain_download(tmp_path
 
 
 def test_region_notice_never_says_free(tmp_path) -> None:
-    from apprestore_core.license_gate import LICENSE_NOTICE, REGION_NOTICE
+    from apprevive_core.license_gate import LICENSE_NOTICE, REGION_NOTICE
 
     flagged()
     tools, notes = PTools(), []
@@ -277,7 +277,7 @@ def test_consent_line_only_when_k_has_flagged_apps() -> None:
 # -- region_probe known reference price (Макс §1.14 п.2) ------------------------------
 
 def _detailed(status, known):
-    from apprestore_core.region_probe import RegionResult
+    from apprevive_core.region_probe import RegionResult
 
     return RegionResult(status=status, known_price=known,
                         known_prices={} if known is None else {"US": known})
@@ -309,6 +309,6 @@ def test_unknown_everywhere_keeps_the_attempt_and_garbage_prices_ignored() -> No
 
 
 def test_classifier_uses_detailed_api() -> None:
-    from apprestore_core import region_probe
+    from apprevive_core import region_probe
 
     assert region.load_classifier() is region_probe.classify_region_detailed

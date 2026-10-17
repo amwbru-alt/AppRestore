@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from apprestore_gui.account_bindings import account_email, load_bindings, remember_binding
+from apprevive_gui.account_bindings import account_email, load_bindings, remember_binding
 
 
 def test_binding_remembers_an_email_for_one_device(tmp_path: Path) -> None:

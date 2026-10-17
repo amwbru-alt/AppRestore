@@ -7,7 +7,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from apprestore_core.paths import (
+from apprevive_core.paths import (
     imazing_apps_dirs,
     imazing_catalog_candidates,
     macos_system_proxy,
@@ -23,7 +23,7 @@ class WindowsPathTests(unittest.TestCase):
         }
         with (
             patch.dict(os.environ, environment, clear=False),
-            patch("apprestore_core.paths.platform.system", return_value="Windows"),
+            patch("apprevive_core.paths.platform.system", return_value="Windows"),
         ):
             app_dirs = imazing_apps_dirs()
             catalogs = imazing_catalog_candidates()
@@ -107,23 +107,23 @@ class WindowsPathTests(unittest.TestCase):
                     clear=False,
                 ),
                 patch(
-                    "apprestore_core.paths.platform.system",
+                    "apprevive_core.paths.platform.system",
                     return_value="Windows",
                 ),
                 patch(
-                    "apprestore_core.paths._windows_program_files_root",
+                    "apprevive_core.paths._windows_program_files_root",
                     return_value=program_files,
                 ),
                 patch(
-                    "apprestore_core.paths._windows_directory",
+                    "apprevive_core.paths._windows_directory",
                     return_value=system_root,
                 ),
                 patch(
-                    "apprestore_core.paths._registered_desktop_app_installer_packages",
+                    "apprevive_core.paths._registered_desktop_app_installer_packages",
                     return_value=[package_name],
                 ),
                 patch(
-                    "apprestore_core.paths._microsoft_authenticode_valid",
+                    "apprevive_core.paths._microsoft_authenticode_valid",
                     return_value=True,
                 ) as signature_check,
             ):
@@ -167,21 +167,21 @@ class WindowsPathTests(unittest.TestCase):
                     {"SystemRoot": str(root / "Windows")},
                     clear=False,
                 ),
-                patch("apprestore_core.paths.platform.system", return_value="Windows"),
+                patch("apprevive_core.paths.platform.system", return_value="Windows"),
                 patch(
-                    "apprestore_core.paths._windows_program_files_root",
+                    "apprevive_core.paths._windows_program_files_root",
                     return_value=program_files,
                 ),
                 patch(
-                    "apprestore_core.paths._windows_directory",
+                    "apprevive_core.paths._windows_directory",
                     return_value=root / "Windows",
                 ),
                 patch(
-                    "apprestore_core.paths._registered_desktop_app_installer_packages",
+                    "apprevive_core.paths._registered_desktop_app_installer_packages",
                     return_value=[package_name],
                 ),
                 patch(
-                    "apprestore_core.paths._microsoft_authenticode_valid",
+                    "apprevive_core.paths._microsoft_authenticode_valid",
                     return_value=False,
                 ),
             ):
@@ -210,9 +210,9 @@ class MacOSProxyTests(unittest.TestCase):
             stdout=self._SCUTIL_OUTPUT,
         )
         with (
-            patch("apprestore_core.paths.platform.system", return_value="Darwin"),
-            patch("apprestore_core.paths.shutil.which", return_value="/usr/sbin/scutil"),
-            patch("apprestore_core.paths.subprocess.run", return_value=completed),
+            patch("apprevive_core.paths.platform.system", return_value="Darwin"),
+            patch("apprevive_core.paths.shutil.which", return_value="/usr/sbin/scutil"),
+            patch("apprevive_core.paths.subprocess.run", return_value=completed),
         ):
             result = macos_system_proxy()
 
@@ -231,16 +231,16 @@ class MacOSProxyTests(unittest.TestCase):
             stdout=disabled_output,
         )
         with (
-            patch("apprestore_core.paths.platform.system", return_value="Darwin"),
-            patch("apprestore_core.paths.shutil.which", return_value="/usr/sbin/scutil"),
-            patch("apprestore_core.paths.subprocess.run", return_value=completed),
+            patch("apprevive_core.paths.platform.system", return_value="Darwin"),
+            patch("apprevive_core.paths.shutil.which", return_value="/usr/sbin/scutil"),
+            patch("apprevive_core.paths.subprocess.run", return_value=completed),
         ):
             self.assertIsNone(macos_system_proxy())
 
     def test_non_macos_platform_never_shells_out(self) -> None:
         with (
-            patch("apprestore_core.paths.platform.system", return_value="Linux"),
-            patch("apprestore_core.paths.subprocess.run") as run,
+            patch("apprevive_core.paths.platform.system", return_value="Linux"),
+            patch("apprevive_core.paths.subprocess.run") as run,
         ):
             self.assertIsNone(macos_system_proxy())
         run.assert_not_called()

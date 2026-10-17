@@ -14,10 +14,10 @@ pytest.importorskip("PySide6")
 
 from PySide6.QtWidgets import QApplication
 
-from apprestore_core.region_probe import RegionStatus
-from apprestore_gui.ui4b import frequent
-from apprestore_gui.ui4b.fake_data import FakeSource
-from apprestore_gui.ui4b.qt_bridge import Restore4b
+from apprevive_core.region_probe import RegionStatus
+from apprevive_gui.ui4b import frequent
+from apprevive_gui.ui4b.fake_data import FakeSource
+from apprevive_gui.ui4b.qt_bridge import Restore4b
 
 REPO = Path(__file__).resolve().parents[1]
 
@@ -31,7 +31,7 @@ def _b3f869a() -> list[dict]:
     """POPULAR_APPS exactly as in commit b3f869a (Eugene's decision 10.10)."""
 
     try:
-        src = subprocess.run(["git", "show", "b3f869a:apprestore_gui/popular_apps.py"], cwd=REPO,
+        src = subprocess.run(["git", "show", "b3f869a:apprevive_gui/popular_apps.py"], cwd=REPO,
                              capture_output=True, text=True, encoding="utf-8", check=True).stdout
     except (OSError, subprocess.CalledProcessError):
         pytest.skip("b3f869a is not in this checkout")
@@ -57,11 +57,11 @@ def test_data_file_has_no_icons_colours_letters_or_sites() -> None:
     raw = json.loads(frequent.DATA.read_text(encoding="utf-8"))
     for row in raw["apps"]:
         assert set(row) <= {"track_id", "name", "detail", "developer", "developer_source"}
-    assert "ICON_SITES" not in (REPO / "apprestore_gui" / "ui4b" / "frequent.py").read_text(encoding="utf-8")
+    assert "ICON_SITES" not in (REPO / "apprevive_gui" / "ui4b" / "frequent.py").read_text(encoding="utf-8")
 
 
 def test_developer_only_from_trusted_data() -> None:
-    from apprestore_core import delisted_search as ds
+    from apprevive_core import delisted_search as ds
 
     builtin = {str(e.track_id): e.developer for e in ds.BUILTIN}
     raw = json.loads(frequent.DATA.read_text(encoding="utf-8"))["apps"]
@@ -128,7 +128,7 @@ def test_frequent_row_goes_only_through_the_gate(qapp, tmp_path) -> None:
     consent first, then license_gate (preflight, limits, journal). No purchase
     happens before the choice, and none outside run_with_free_license."""
 
-    from apprestore_core.license_guard import read_counts
+    from apprevive_core.license_guard import read_counts
     from tests.test_ui4b_qml import _gated_source, wait
 
     source, journal, bought, notes = _gated_source(tmp_path, scenario="missing")
@@ -151,28 +151,28 @@ def test_frequent_row_goes_only_through_the_gate(qapp, tmp_path) -> None:
 
 
 def test_no_official_word_for_these_rows() -> None:
-    from apprestore_gui.ui4b import find
+    from apprevive_gui.ui4b import find
 
-    text = frequent.DATA.read_text(encoding="utf-8") + (REPO / "apprestore_gui" / "ui4b" / "frequent.py").read_text(
+    text = frequent.DATA.read_text(encoding="utf-8") + (REPO / "apprevive_gui" / "ui4b" / "frequent.py").read_text(
         encoding="utf-8") + str(find.FREQUENT_TITLE)
     assert "официальн" not in text.casefold()
 
 
 def test_find_icons_use_the_book_then_a_site_mark() -> None:
-    sheet = (REPO / "apprestore_gui" / "qml4b" / "components" / "FindSheet.qml").read_text(encoding="utf-8")
+    sheet = (REPO / "apprevive_gui" / "qml4b" / "components" / "FindSheet.qml").read_text(encoding="utf-8")
     assert "storeId: r.storeId" in sheet  # AppIcon → iconBook, else the placeholder square
-    icon = (REPO / "apprestore_gui" / "qml4b" / "components" / "AppIcon.qml").read_text(encoding="utf-8")
+    icon = (REPO / "apprevive_gui" / "qml4b" / "components" / "AppIcon.qml").read_text(encoding="utf-8")
     assert "iconPlaceholder" in icon
     # The site list stays out of the shelf data. Only the window asks for it,
     # and only after Apple's artwork.
-    for path in (REPO / "apprestore_gui" / "ui4b").glob("*.py"):
+    for path in (REPO / "apprevive_gui" / "ui4b").glob("*.py"):
         if path.name == "window.py":
             continue
         assert "ICON_SITES" not in path.read_text(encoding="utf-8"), path
 
 
 def test_window_queues_find_icons_ahead_of_the_home_list() -> None:
-    src = (REPO / "apprestore_gui" / "ui4b" / "window.py").read_text(encoding="utf-8")
+    src = (REPO / "apprevive_gui" / "ui4b" / "window.py").read_text(encoding="utf-8")
     assert "controller.finder.changed.connect(queue_icons)" in src
     assert "ICON_SITES.get(store_id, \"\")" in src
     assert "consider_async(find, front=True)" in src

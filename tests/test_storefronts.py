@@ -3,9 +3,9 @@ from __future__ import annotations
 import json
 from unittest.mock import patch
 
-from apprestore_core.models import CommandResult
-from apprestore_core.storefronts import account_country, country_from_storefront
-from apprestore_core.tools import AppRestoreTools
+from apprevive_core.models import CommandResult
+from apprevive_core.storefronts import account_country, country_from_storefront
+from apprevive_core.tools import AppReviveTools
 
 
 def test_storefront_ids_map_to_lookup_country() -> None:
@@ -35,14 +35,14 @@ class _Runner:
 
 
 def test_tools_account_country_uses_auth_info_json() -> None:
-    tools = AppRestoreTools(_Runner(json.dumps({"email": "a@b.c", "storeFront": "143469-16,29", "success": True})))  # type: ignore[arg-type]
-    with patch("apprestore_core.tools.resolve_tool", return_value="ipatool"), patch.object(
-        AppRestoreTools, "_ipatool_env", return_value={}
+    tools = AppReviveTools(_Runner(json.dumps({"email": "a@b.c", "storeFront": "143469-16,29", "success": True})))  # type: ignore[arg-type]
+    with patch("apprevive_core.tools.resolve_tool", return_value="ipatool"), patch.object(
+        AppReviveTools, "_ipatool_env", return_value={}
     ):
         assert tools.account_country() == "ru"
 
 
-# Exact lines from AppRestore's ipatool build (cde7d00 + packaging/patches/
+# Exact lines from AppRevive's ipatool build (cde7d00 + packaging/patches/
 # ipatool-auth-info-country.patch), `auth info --format json`.
 _PATCHED_AUTH_INFO = (
     '{"level":"info","name":"A","email":"a@b.c","storeFront":"143441-1,34",'
@@ -55,9 +55,9 @@ _NO_SESSION = (
 
 
 def _tools(stdout: str, returncode: int = 0) -> str:
-    tools = AppRestoreTools(_Runner(stdout, returncode))  # type: ignore[arg-type]
-    with patch("apprestore_core.tools.resolve_tool", return_value="ipatool"), patch.object(
-        AppRestoreTools, "_ipatool_env", return_value={}
+    tools = AppReviveTools(_Runner(stdout, returncode))  # type: ignore[arg-type]
+    with patch("apprevive_core.tools.resolve_tool", return_value="ipatool"), patch.object(
+        AppReviveTools, "_ipatool_env", return_value={}
     ):
         return tools.account_country()
 

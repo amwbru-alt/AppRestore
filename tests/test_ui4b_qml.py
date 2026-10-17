@@ -15,10 +15,10 @@ from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtQuick import QQuickItem
 from PySide6.QtWidgets import QApplication
 
-from apprestore_gui.ui4b.fake_data import FakeIconBook, FakeSource
-from apprestore_gui.ui4b.qt_bridge import PickerModel, Restore4b, SessionSource
-from apprestore_gui.ui4b.space import DeviceSpace
-from apprestore_gui.ui4b.window import load, qml_path
+from apprevive_gui.ui4b.fake_data import FakeIconBook, FakeSource
+from apprevive_gui.ui4b.qt_bridge import PickerModel, Restore4b, SessionSource
+from apprevive_gui.ui4b.space import DeviceSpace
+from apprevive_gui.ui4b.window import load, qml_path
 
 SCENARIOS = (
     "unpatched",
@@ -232,8 +232,8 @@ def test_session_source_uses_gated_quick_session_calls(qapp) -> None:
 
 
 def test_old_quick_window_still_available() -> None:
-    from apprestore_gui import app as app_module
-    from apprestore_gui.quick_window import qml_path as legacy_qml
+    from apprevive_gui import app as app_module
+    from apprevive_gui.quick_window import qml_path as legacy_qml
 
     assert legacy_qml().is_file()
     import inspect
@@ -388,7 +388,7 @@ def test_picker_offline_folds_groups_and_allows_only_offloaded(qapp) -> None:
 
 
 def test_session_source_rechecks_read_only_when_network_returns(qapp) -> None:
-    from apprestore_gui.ui4b.qt_bridge import SessionSource
+    from apprevive_gui.ui4b.qt_bridge import SessionSource
 
     import time
 
@@ -415,8 +415,8 @@ def test_session_source_rechecks_read_only_when_network_returns(qapp) -> None:
 
 
 def test_signin_view_states() -> None:
-    from apprestore_gui.auth_pty import WRONG_CODE_TEXT
-    from apprestore_gui.ui4b.qt_bridge import code_digits, signin_view
+    from apprevive_gui.auth_pty import WRONG_CODE_TEXT
+    from apprevive_gui.ui4b.qt_bridge import code_digits, signin_view
 
     v = signin_view(open_=True, phase="out", status="", email="", relogin=False)
     assert v["title"] == "Вход в Apple ID" and not v["emailReadOnly"]
@@ -556,7 +556,7 @@ def test_second_phone_and_saved_account_are_on_the_screen(qapp) -> None:
 def _gated_source(tmp_path, scenario="consent", paid=()):
     """FakeSource whose install_store goes through the real license_gate (fake ipatool)."""
 
-    from apprestore_core.license_gate import run_with_free_license
+    from apprevive_core.license_gate import run_with_free_license
 
     journal = tmp_path / "licenses_acquired.jsonl"
     source = FakeSource(scenario)
@@ -569,7 +569,7 @@ def _gated_source(tmp_path, scenario="consent", paid=()):
 
     class Tools:
         def license_preflight(self):
-            from apprestore_core.license_gate import NEEDS_PATCHED_IPATOOL_TEXT
+            from apprevive_core.license_gate import NEEDS_PATCHED_IPATOOL_TEXT
 
             return NEEDS_PATCHED_IPATOOL_TEXT if source.missing_patches() else None
 
@@ -604,7 +604,7 @@ def _gated_source(tmp_path, scenario="consent", paid=()):
 
 
 def _run_restore(qapp, tmp_path):
-    from apprestore_core.license_guard import read_counts
+    from apprevive_core.license_guard import read_counts
 
     source, journal, bought, notes = _gated_source(tmp_path)
     controller = Restore4b(source)
@@ -632,7 +632,7 @@ def test_smoke12_17_continue_notice_then_plus_k_in_read_counts(qapp, tmp_path) -
 
 
 def test_smoke14_paid_never_enters_k_or_purchase(qapp, tmp_path) -> None:
-    from apprestore_gui.ui4b.fake_data import removed_items
+    from apprevive_gui.ui4b.fake_data import removed_items
 
     paid_id = removed_items()[0].store_id  # Сбер: not on the account, price 2.99
     source, journal, bought, notes = _gated_source(tmp_path, paid=(paid_id,))
@@ -664,7 +664,7 @@ def test_smoke5_no_password_or_code_in_ui_state(qapp) -> None:
 
 
 def test_session_source_minus128_is_not_a_relogin_in_4b(qapp) -> None:
-    from apprestore_core.license_gate import STORE_MISMATCH_TEXT
+    from apprevive_core.license_gate import STORE_MISMATCH_TEXT
 
     session = FakeSession()
     session.sessionRelogin = True
@@ -678,7 +678,7 @@ def test_session_source_minus128_is_not_a_relogin_in_4b(qapp) -> None:
 
 
 def test_smoke9_offloaded_only_never_touches_the_license_journal(qapp, tmp_path) -> None:
-    from apprestore_gui.ui4b.catalog import GROUP_OFFLOADED
+    from apprevive_gui.ui4b.catalog import GROUP_OFFLOADED
 
     source, journal, bought, notes = _gated_source(tmp_path, scenario="picker")
     source.owned = set()  # nothing on the account: still no license for offloaded ones
@@ -721,7 +721,7 @@ def test_smoke5_no_secrets_in_logs_or_terminal(qapp, caplog, capsys) -> None:
 
     from pathlib import Path
 
-    root = Path(__file__).resolve().parents[1] / "apprestore_gui"
+    root = Path(__file__).resolve().parents[1] / "apprevive_gui"
     files = [root / "auth_pty.py", root / "quick_session.py", root / "purchases.py", *(root / "ui4b").rglob("*.py")]
     secret = ("password", "passphrase", "secret", "cookie", "token", "code")
     bad = []
@@ -744,8 +744,8 @@ def test_unpatched_ipatool_no_consent_owned_go_marked_listed(qapp, tmp_path) -> 
     """Смоук #12 on an old ipatool: no purchase, empty journal, read_counts same;
     owned/offloaded go as usual; the rest says «Нужен дополнительный компонент»."""
 
-    from apprestore_gui.ui4b.component import COMPONENT_NOTE, DETAILS_LINK, HOWTO_LINK, QUIET_LINE
-    from apprestore_gui.ui4b.fake_data import removed_items
+    from apprevive_gui.ui4b.component import COMPONENT_NOTE, DETAILS_LINK, HOWTO_LINK, QUIET_LINE
+    from apprevive_gui.ui4b.fake_data import removed_items
 
     source, journal, bought, notes = _gated_source(tmp_path, scenario="unpatched")
     controller = Restore4b(source)
@@ -778,8 +778,8 @@ def test_unpatched_ipatool_no_consent_owned_go_marked_listed(qapp, tmp_path) -> 
 
 
 def test_unpatched_gate_refuses_even_if_called_directly(qapp, tmp_path) -> None:
-    from apprestore_core.license_gate import NEEDS_PATCHED_IPATOOL_TEXT
-    from apprestore_gui.ui4b.fake_data import removed_items
+    from apprevive_core.license_gate import NEEDS_PATCHED_IPATOOL_TEXT
+    from apprevive_gui.ui4b.fake_data import removed_items
 
     source, journal, bought, notes = _gated_source(tmp_path, scenario="unpatched")
     settled = []
@@ -792,7 +792,7 @@ def test_unpatched_gate_refuses_even_if_called_directly(qapp, tmp_path) -> None:
 
 
 def test_needs_component_nothing_returnable_offers_howto_button(qapp, tmp_path) -> None:
-    from apprestore_gui.ui4b.component import HOWTO_LINK
+    from apprevive_gui.ui4b.component import HOWTO_LINK
 
     source = FakeSource("unpatched")
     source.owned = set()  # nothing on the account, nothing offloaded
@@ -809,8 +809,8 @@ def test_needs_component_nothing_returnable_offers_howto_button(qapp, tmp_path) 
 
 
 def test_needs_component_hides_region_and_skips_region_probe(qapp) -> None:
-    from apprestore_gui.ui4b.catalog import GROUP_REGION
-    from apprestore_gui.ui4b.component import COMPONENT_NOTE
+    from apprevive_gui.ui4b.catalog import GROUP_REGION
+    from apprevive_gui.ui4b.component import COMPONENT_NOTE
 
     source = FakeSource("region")
     source.patches = ("0001",)
@@ -840,8 +840,8 @@ def test_needs_component_hides_region_and_skips_region_probe(qapp) -> None:
 
 
 def test_needs_patched_mid_run_switches_home_to_needs_component(qapp) -> None:
-    from apprestore_core.license_gate import NEEDS_PATCHED_IPATOOL_TEXT
-    from apprestore_gui.ui4b.component import COMPONENT_NOTE
+    from apprevive_core.license_gate import NEEDS_PATCHED_IPATOOL_TEXT
+    from apprevive_gui.ui4b.component import COMPONENT_NOTE
 
     source = FakeSource("missing")
     source.owned = set()  # unknown to the GUI that the binary is old
@@ -938,9 +938,9 @@ def test_account_sheet_and_confirmation_load_without_warnings(qapp) -> None:
 def test_needs_component_details_list_only_what_capabilities_lack(caps, missing) -> None:
     from types import SimpleNamespace
 
-    from apprestore_core.ipatool_api import Capabilities
-    from apprestore_gui.ui4b import component
-    from apprestore_gui.ui4b.qt_bridge import SessionSource
+    from apprevive_core.ipatool_api import Capabilities
+    from apprevive_gui.ui4b import component
+    from apprevive_gui.ui4b.qt_bridge import SessionSource
 
     tools = SimpleNamespace(license_preflight=lambda: "needs", ipatool_capabilities=lambda: Capabilities(**caps))
     src = SessionSource.__new__(SessionSource)

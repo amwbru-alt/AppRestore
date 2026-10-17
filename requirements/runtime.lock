@@ -1077,7 +1077,7 @@ pylzss==0.3.4 \
 pymobiledevice3==10.1.0 \
     --hash=sha256:010e31193043243cf9f92f69bf33f9146c9c9baf1b53f66202164115780565b1 \
     --hash=sha256:abc5c3edd063b6d3c8e8fba05c9202ec8b267b3e3918b7e22fd9a42fda054b35
-    # via apprestore (pyproject.toml)
+    # via apprevive (pyproject.toml)
 pyreadline3==3.5.6 ; sys_platform == 'win32' \
     --hash=sha256:61e53218b99656091ddb077df9e71f25850e72e030b6183b39c9b7e6e4f4a9bf \
     --hash=sha256:8449b734232e42a5dcd74048e39b60db2839a4c38cf3ae2bf7707d58b5389c0d

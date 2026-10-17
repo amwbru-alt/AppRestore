@@ -1,6 +1,6 @@
 # Сторонние компоненты
 
-AppRestore использует или устанавливает следующие сторонние проекты. Их собственные лицензии и уведомления сохраняют силу.
+AppRevive использует или устанавливает следующие сторонние проекты. Их собственные лицензии и уведомления сохраняют силу.
 
 ## pymobiledevice3 10.1.0
 
@@ -52,13 +52,13 @@ faf98ef8067f1ef4783123d00561b4ece10dc7419631eb9555d88a1da2f61f3f  macos-arm64
 - Проект: <https://github.com/unicorn-engine/unicorn>
 - Лицензия upstream: GNU General Public License 2.0.
 
-AppRestore не распространяет Unicorn. Библиотеку скачивает сам `ipatool` при
+AppRevive не распространяет Unicorn. Библиотеку скачивает сам `ipatool` при
 первом входе в Apple ID, сверяет по своим SHA-256 и кладёт в пользовательский
 кэш (`%LOCALAPPDATA%\ipatool\unicorn` / `~/Library/Caches/ipatool/unicorn`).
 
 ## Apple
 
-Apple, iPhone, iOS, App Store и iTunes — товарные знаки Apple Inc. AppRestore не является продуктом Apple и не аффилирован с Apple Inc.
+Apple, iPhone, iOS, App Store и iTunes — товарные знаки Apple Inc. AppRevive не является продуктом Apple и не аффилирован с Apple Inc.
 
 
 ## Standard application ID list — ipatool-webGUI

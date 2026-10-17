@@ -2,8 +2,8 @@ import threading
 import pytest
 
 pytest.importorskip('PySide6')
-from apprestore_core.restoration_codes import RestorationAccess, RestorationCredits
-from apprestore_gui.restoration_codes import PromoDialog, PromoController
+from apprevive_core.restoration_codes import RestorationAccess, RestorationCredits
+from apprevive_gui.restoration_codes import PromoDialog, PromoController
 
 
 def test_dialog_rejects_missing_code_then_redeems_in_background(qtbot, tmp_path):
@@ -11,7 +11,7 @@ def test_dialog_rejects_missing_code_then_redeems_in_background(qtbot, tmp_path)
     def activate(code, token, request_id):
         network_threads.append(threading.get_ident())
         if code != 'GOOD':
-            from apprestore_core.restoration_codes import RestorationCodeError
+            from apprevive_core.restoration_codes import RestorationCodeError
             raise RestorationCodeError('Код не найден или уже использован.')
     credits = RestorationCredits(tmp_path / 'credits.sqlite3', activate=activate)
     dialog = PromoDialog(credits)

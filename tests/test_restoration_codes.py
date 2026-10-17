@@ -6,7 +6,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 import pytest
-from apprestore_core.restoration_codes import RestorationAccess, RestorationCredits, RestorationCodeError, activate_promo
+from apprevive_core.restoration_codes import RestorationAccess, RestorationCredits, RestorationCodeError, activate_promo
 
 
 def allow(*codes):
@@ -157,7 +157,7 @@ def test_insecure_api_url_is_rejected_before_sending_code(monkeypatch):
 
 def test_default_ssl_context_gets_bundled_roots(monkeypatch):
     import ssl
-    from apprestore_core.restoration_codes import promo_ssl_context
+    from apprevive_core.restoration_codes import promo_ssl_context
     monkeypatch.setattr(ssl,'create_default_context',lambda:ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT))
     context=promo_ssl_context()
     assert context.check_hostname and context.verify_mode == ssl.CERT_REQUIRED
@@ -165,10 +165,10 @@ def test_default_ssl_context_gets_bundled_roots(monkeypatch):
 
 
 def test_core_native_restore_is_gated_before_any_device_action(tmp_path,monkeypatch):
-    from apprestore_core.service import AppRestoreService
-    from apprestore_core.models import OffloadedApp,RedownloadRequestState
+    from apprevive_core.service import AppReviveService
+    from apprevive_core.models import OffloadedApp,RedownloadRequestState
     tools=SimpleNamespace(device_request_redownload=Mock(return_value=RedownloadRequestState.COMPLETED))
-    core=AppRestoreService(tools,cache=tmp_path/'cache',library=tmp_path/'ipas')
+    core=AppReviveService(tools,cache=tmp_path/'cache',library=tmp_path/'ipas')
     monkeypatch.setattr(core,'_wait_for_native_redownload',lambda *a:None)
     monkeypatch.setattr(core,'_remember_app_best_effort',lambda **kw:None)
     store=RestorationCredits(tmp_path/'credits.sqlite3')

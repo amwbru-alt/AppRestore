@@ -13,12 +13,12 @@ from pathlib import Path
 
 import pytest
 
-from apprestore_core import license_guard, license_journal
-from apprestore_core import tools as tools_module
-from apprestore_core.command import CommandError
-from apprestore_core.license_gate import run_with_free_license
-from apprestore_core.license_journal import PurchaseRefused, acquire_and_record
-from apprestore_core.tools import AppRestoreTools, ToolUnavailable
+from apprevive_core import license_guard, license_journal
+from apprevive_core import tools as tools_module
+from apprevive_core.command import CommandError
+from apprevive_core.license_gate import run_with_free_license
+from apprevive_core.license_journal import PurchaseRefused, acquire_and_record
+from apprevive_core.tools import AppReviveTools, ToolUnavailable
 
 STORE = "1234567890"
 MISSING = f"store={STORE} without --purchase: license is required"
@@ -42,7 +42,7 @@ class _QuickTools:
         return "us"
 
     def purchase_license(self, store_id: str, *, grant: object) -> dict:
-        from apprestore_core.purchase_grant import require_grant
+        from apprevive_core.purchase_grant import require_grant
 
         require_grant(grant, store_id)
         self.licensed = True
@@ -72,7 +72,7 @@ def test_hung_purchase_is_killed_journaled_uncertain_and_frees_the_lock(
     script.chmod(0o755)
     monkeypatch.setattr(tools_module, "PURCHASE_TIMEOUT_SECONDS", 1.0)
     monkeypatch.setattr(tools_module, "resolve_tool", lambda name: str(script))
-    tools = AppRestoreTools()
+    tools = AppReviveTools()
     monkeypatch.setattr(tools, "_ipatool_env", lambda: {})
     monkeypatch.setattr(tools, "account_country", lambda: "us")
     journal = tmp_path / "licenses_acquired.jsonl"

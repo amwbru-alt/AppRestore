@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from apprestore_gui.ui4b.history import ACTION, ID_ACTION, history_view, name_for_store_id, parse_store_id
+from apprevive_gui.ui4b.history import ACTION, ID_ACTION, history_view, name_for_store_id, parse_store_id
 
 
 def test_history_lists_every_purchase_newest_first() -> None:

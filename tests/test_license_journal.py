@@ -15,8 +15,8 @@ import json
 import threading
 from pathlib import Path
 
-from apprestore_core import license_guard, license_journal
-from apprestore_core.license_guard import read_counts, record_void
+from apprevive_core import license_guard, license_journal
+from apprevive_core.license_guard import read_counts, record_void
 
 FIXED = dt.datetime(2026, 10, 10, 12, 0, 0, tzinfo=dt.timezone.utc)
 

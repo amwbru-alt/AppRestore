@@ -8,7 +8,7 @@ import urllib.request
 import pytest
 
 try:
-    from apprestore_core import region_probe as rp
+    from apprevive_core import region_probe as rp
 except ImportError:
     import region_probe as rp
 RegionProbe, RegionStatus = rp.RegionProbe, rp.RegionStatus
@@ -463,7 +463,7 @@ def test_detailed_same_requests_and_headers_as_classify():
 def test_max_known_price_contract_with_license_guard(tmp_path):
     """Контракт для Димы: price = max(известных) -> платное отказ, None -> путь §1.14."""
     try:
-        from apprestore_core import license_guard as lg
+        from apprevive_core import license_guard as lg
     except ImportError:
         import license_guard as lg
     store = FakeStore({"DE": set(), "US": {2}, "RU": set()}, prices={"US": {2: 1.99}})

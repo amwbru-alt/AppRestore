@@ -4,8 +4,8 @@ import pytest
 
 pytest.importorskip("PySide6")
 
-from apprestore_core.models import Device, InstalledApp, IpaMetadata, OffloadedApp
-from apprestore_gui.quick_session import library_card, offloaded_card, phone_card
+from apprevive_core.models import Device, InstalledApp, IpaMetadata, OffloadedApp
+from apprevive_gui.quick_session import library_card, offloaded_card, phone_card
 
 
 @pytest.mark.parametrize(
@@ -16,8 +16,8 @@ def test_store_failure_tracks_the_operation_not_just_the_error_text(
     monkeypatch: pytest.MonkeyPatch, acquire: bool, purchase_started: bool, attempts: int, phase: str
 ) -> None:
     from types import SimpleNamespace
-    from apprestore_gui import quick_session as qs
-    from apprestore_gui.errors import StoreOperationError
+    from apprevive_gui import quick_session as qs
+    from apprevive_gui.errors import StoreOperationError
 
     calls = []
     core = SimpleNamespace(
@@ -48,7 +48,7 @@ def test_reread_of_the_same_phone_keeps_the_offloaded_list(monkeypatch: pytest.M
     pytest.importorskip("PySide6.QtWidgets")
     from PySide6.QtWidgets import QApplication
 
-    from apprestore_gui import quick_session as qs
+    from apprevive_gui import quick_session as qs
 
     QApplication.instance() or QApplication([])
     monkeypatch.setattr(qs, "load_bindings", lambda: {})

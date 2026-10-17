@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from apprestore_gui.account_vault import (
+from apprevive_gui.account_vault import (
     forget_session,
     has_session,
     next_account_step,

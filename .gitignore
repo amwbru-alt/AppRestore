@@ -48,3 +48,6 @@ server/promo/private/config.php
 
 # Local direct-MySQL credentials
 mysql.json
+
+# Temporary local test output
+pytest-of-root/

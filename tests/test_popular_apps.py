@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import unittest
 
-from apprestore_gui.popular_apps import POPULAR_APPS
+from apprevive_gui.popular_apps import POPULAR_APPS
 
 
 class PopularAppsTests(unittest.TestCase):

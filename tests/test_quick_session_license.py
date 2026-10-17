@@ -14,12 +14,12 @@ import pytest
 
 pytest.importorskip("PySide6")
 
-from apprestore_core.models import DeviceAppState, InstalledApp  # noqa: E402
-from apprestore_core.service import AppRestoreService  # noqa: E402
-from apprestore_core.tools import InstallRequestState, ToolUnavailable  # noqa: E402
-from apprestore_core import license_gate  # noqa: E402
-from apprestore_core.license_gate import LICENSE_NOTICE, LicenseDenied  # noqa: E402
-from apprestore_gui.quick_session import QuickSession  # noqa: E402
+from apprevive_core.models import DeviceAppState, InstalledApp  # noqa: E402
+from apprevive_core.service import AppReviveService  # noqa: E402
+from apprevive_core.tools import InstallRequestState, ToolUnavailable  # noqa: E402
+from apprevive_core import license_gate  # noqa: E402
+from apprevive_core.license_gate import LICENSE_NOTICE, LicenseDenied  # noqa: E402
+from apprevive_gui.quick_session import QuickSession  # noqa: E402
 from tests.helpers import make_ipa  # noqa: E402
 
 STORE = "1234567890"
@@ -42,7 +42,7 @@ class StoreTools:
         return self.country
 
     def purchase_license(self, store_id, *, grant) -> dict:
-        from apprestore_core.purchase_grant import require_grant
+        from apprevive_core.purchase_grant import require_grant
 
         require_grant(grant, store_id)
         self.purchases.append(str(store_id))
@@ -78,7 +78,7 @@ class Emitter:
 @pytest.fixture()
 def env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     journal = tmp_path / "licenses_acquired.jsonl"
-    monkeypatch.setenv("APPRESTORE_LICENSE_JOURNAL", str(journal))
+    monkeypatch.setenv("APPREVIVE_LICENSE_JOURNAL", str(journal))
     price = {"value": 0.0}
     monkeypatch.setattr(
         license_gate,
@@ -88,15 +88,15 @@ def env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
             "country": (countries or ("ru",))[0],
         },
     )
-    with patch("apprestore_core.service.lookup_itunes_store_id", return_value=None), patch(
-        "apprestore_core.service.remember_known_app"
+    with patch("apprevive_core.service.lookup_itunes_store_id", return_value=None), patch(
+        "apprevive_core.service.remember_known_app"
     ):
         yield SimpleNamespace(tmp=tmp_path, journal=journal, price=price)
 
 
 def _session(env, *, owned: bool = False):
     tools = StoreTools(make_ipa(env.tmp / "good.ipa"), owned=owned)
-    core = AppRestoreService(tools=tools, library=env.tmp / "lib", cache=env.tmp / "cache")  # type: ignore[arg-type]
+    core = AppReviveService(tools=tools, library=env.tmp / "lib", cache=env.tmp / "cache")  # type: ignore[arg-type]
 
     def download_to_library(app, *, acquire_license: bool = False):
         assert acquire_license is False, "GUI must never ask the core to acquire"
@@ -170,7 +170,7 @@ def test_save_copy_goes_through_the_same_gate(env) -> None:
 
 
 def test_shelf_probe_thread_uses_read_only_probe(env, monkeypatch: pytest.MonkeyPatch) -> None:
-    import apprestore_gui.quick_session as qs
+    import apprevive_gui.quick_session as qs
 
     seen: list[str] = []
     monkeypatch.setattr(qs, "probe_store", lambda _tools, store_id: seen.append(store_id) or "not-owned")
@@ -184,4 +184,4 @@ def test_shelf_probe_thread_uses_read_only_probe(env, monkeypatch: pytest.Monkey
     )
     QuickSession._probe_shelf(fake)
     assert seen == [STORE]
-    assert "not-owned" in (env.tmp / "apprestore-shelf-check.txt").read_text(encoding="utf-8")
+    assert "not-owned" in (env.tmp / "apprevive-shelf-check.txt").read_text(encoding="utf-8")

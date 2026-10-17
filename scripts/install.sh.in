@@ -1,25 +1,25 @@
 #!/usr/bin/env bash
-# Generated AppRestore bootstrap for macOS. Do not edit dist/install.sh directly.
+# Generated AppRevive bootstrap for macOS. Do not edit dist/install.sh directly.
 
 set -euo pipefail
 umask 077
 PATH='/usr/bin:/bin:/usr/sbin:/sbin'
 export PATH
 
-APPRESTORE_VERSION=@@APPRESTORE_VERSION_SH@@
-DEFAULT_ARCHIVE_URL=@@APPRESTORE_ARCHIVE_URL_SH@@
-EXPECTED_ARCHIVE_SHA256=@@APPRESTORE_ARCHIVE_SHA256_SH@@
-ARCHIVE_ROOT="AppRestore-$APPRESTORE_VERSION"
+APPREVIVE_VERSION=@@APPREVIVE_VERSION_SH@@
+DEFAULT_ARCHIVE_URL=@@APPREVIVE_ARCHIVE_URL_SH@@
+EXPECTED_ARCHIVE_SHA256=@@APPREVIVE_ARCHIVE_SHA256_SH@@
+ARCHIVE_ROOT="AppRevive-$APPREVIVE_VERSION"
 TEMP_ROOT=""
 SYSTEM_TEMP_PARENT=""
 
 die() {
-  printf '%s\n' "AppRestore bootstrap: $*" >&2
+  printf '%s\n' "AppRevive bootstrap: $*" >&2
   exit 1
 }
 
 warn() {
-  printf '%s\n' "AppRestore bootstrap warning: $*" >&2
+  printf '%s\n' "AppRevive bootstrap warning: $*" >&2
 }
 
 canonical_directory() {
@@ -46,7 +46,7 @@ temp_root_is_safe_for_cleanup() {
   [[ -d "$TEMP_ROOT" && ! -L "$TEMP_ROOT" ]] || return 1
   leaf="${TEMP_ROOT##*/}"
   case "$leaf" in
-    AppRestore-bootstrap.????????*) ;;
+    AppRevive-bootstrap.????????*) ;;
     *) return 1 ;;
   esac
   resolved_root="$(canonical_directory "$TEMP_ROOT")" || return 1
@@ -160,11 +160,11 @@ main() {
     command -v "$command" >/dev/null 2>&1 || die "не найдена команда: $command"
   done
 
-  archive_url="${APPRESTORE_BOOTSTRAP_ARCHIVE_URL:-$DEFAULT_ARCHIVE_URL}"
+  archive_url="${APPREVIVE_BOOTSTRAP_ARCHIVE_URL:-$DEFAULT_ARCHIVE_URL}"
   case "$archive_url" in
     https://*) curl_protocol='=https' ;;
     http://127.0.0.1:*|http://localhost:*)
-      [[ -n "${APPRESTORE_BOOTSTRAP_ARCHIVE_URL:-}" ]] || die \
+      [[ -n "${APPREVIVE_BOOTSTRAP_ARCHIVE_URL:-}" ]] || die \
         "HTTP разрешён только для локального test override"
       curl_protocol='=http,https'
       ;;
@@ -172,14 +172,14 @@ main() {
   esac
 
   SYSTEM_TEMP_PARENT="$(system_temp_parent)"
-  TEMP_ROOT="$(mktemp -d "$SYSTEM_TEMP_PARENT/AppRestore-bootstrap.XXXXXXXX")"
+  TEMP_ROOT="$(mktemp -d "$SYSTEM_TEMP_PARENT/AppRevive-bootstrap.XXXXXXXX")"
   trap cleanup EXIT
   trap 'exit 129' HUP
   trap 'exit 130' INT
   trap 'exit 143' TERM
   temp_root_is_safe_for_cleanup || die \
     "mktemp вернул небезопасный временный каталог"
-  archive="$TEMP_ROOT/AppRestore-$APPRESTORE_VERSION-source.zip"
+  archive="$TEMP_ROOT/AppRevive-$APPREVIVE_VERSION-source.zip"
 
   curl \
     --fail \

@@ -14,13 +14,13 @@ from tests.test_release_bootstrap import _copy_release_inputs, _serve_directory
 
 ROOT = Path(__file__).resolve().parents[1]
 INSTALLER = ROOT / "install-macos.sh"
-LAUNCHER = ROOT / "apprestore.sh"
+LAUNCHER = ROOT / "apprevive.sh"
 BOOTSTRAP_TEMPLATE = ROOT / "scripts" / "install.sh.in"
 README = ROOT / "README.md"
 
 PRIMARY_COMMAND = (
     'curl -fsSL '
-    'https://github.com/J3ckJ/AppRestore/releases/latest/download/install.sh '
+    'https://github.com/amwbru-alt/AppRestore/releases/latest/download/install.sh '
     '| /bin/bash && export PATH="$HOME/.local/bin:$PATH"'
 )
 PATH_LINE = 'export PATH="$HOME/.local/bin:$PATH"'
@@ -81,14 +81,14 @@ if [[ "${1:-}" == "-m" && "${2:-}" == "venv" ]]; then
   exit 0
 fi
 if [[ "${1:-}" == "-m" && "${2:-}" == "pip" ]]; then
-  if [[ "${APPRESTORE_TEST_PIP_FAIL:-}" == "1" ]]; then
+  if [[ "${APPREVIVE_TEST_PIP_FAIL:-}" == "1" ]]; then
     exit 23
   fi
   exit 0
 fi
-if [[ "${1:-}" == "-m" && "${2:-}" == "apprestore_core.cli" ]]; then
+if [[ "${1:-}" == "-m" && "${2:-}" == "apprevive_core.cli" ]]; then
   [[ "$isolated" == true ]] || exit 86
-  if [[ "${APPRESTORE_REQUIRE_SCRUB:-}" == "1" ]] &&
+  if [[ "${APPREVIVE_REQUIRE_SCRUB:-}" == "1" ]] &&
     [[ -n "${PYTHONPATH:-}" || -n "${PYTHONHOME:-}" ||
       -n "${PYTHONSTARTUP:-}" ]]; then
     exit 87
@@ -96,7 +96,7 @@ if [[ "${1:-}" == "-m" && "${2:-}" == "apprestore_core.cli" ]]; then
   if [[ "${3:-}" == "--version" ]]; then
     printf '%s\\n' '0.4.0'
   else
-    printf '%s\\n' 'APPRESTORE_MENU_OK'
+    printf '%s\\n' 'APPREVIVE_MENU_OK'
   fi
   exit 0
 fi
@@ -133,7 +133,7 @@ exit 64
     (fake_bin / "rm").write_text(
         """#!/usr/bin/env bash
 set -eu
-if [[ "${APPRESTORE_TEST_BACKUP_CLEANUP_FAIL:-}" == "1" ]]; then
+if [[ "${APPREVIVE_TEST_BACKUP_CLEANUP_FAIL:-}" == "1" ]]; then
   for argument in "$@"; do
     case "$argument" in
       *"/.venv-backup."*"/venv") exit 91 ;;
@@ -153,7 +153,7 @@ exec /bin/rm "$@"
             "HOME": str(home),
             "SHELL": "/bin/zsh",
             "PATH": f"{fake_bin}:/usr/bin:/bin",
-            "APPRESTORE_TEST_BIN": str(fake_bin),
+            "APPREVIVE_TEST_BIN": str(fake_bin),
         }
     )
     return home, environment
@@ -171,8 +171,8 @@ def _write_networkless_test_installer(
     installer = installer.replace(
         safe_path,
         safe_path
-        + 'if [[ -n "${APPRESTORE_TEST_BIN:-}" ]]; then\n'
-        + '  PATH="$APPRESTORE_TEST_BIN:$PATH"\n'
+        + 'if [[ -n "${APPREVIVE_TEST_BIN:-}" ]]; then\n'
+        + '  PATH="$APPREVIVE_TEST_BIN:$PATH"\n'
         + "  export PATH\n"
         + "fi\n",
         1,
@@ -227,9 +227,9 @@ def _run_payload(environment: dict[str, str]) -> subprocess.CompletedProcess[str
 def test_documented_macos_contract_is_two_commands() -> None:
     readme = README.read_text(encoding="utf-8")
     assert PRIMARY_COMMAND in readme
-    assert "el-system-tools.j3ckj.chatgpt.site/install/apprestore.ps1" not in readme
+    assert "el-system-tools.j3ckj.chatgpt.site/install/apprevive.ps1" not in readme
     assert re.search(
-        re.escape(PRIMARY_COMMAND) + r"\napprestore(?:\n|$)",
+        re.escape(PRIMARY_COMMAND) + r"\napprevive(?:\n|$)",
         readme,
     )
 
@@ -240,7 +240,7 @@ def test_launcher_clears_only_an_interactive_terminal_without_exec() -> None:
     assert "printf '\\033[2J\\033[H'" in launcher
     assert re.search(r"(?m)^\s*clear(?:\s|$)", launcher) is None
     assert "unset PYTHONPATH PYTHONHOME PYTHONSTARTUP" in launcher
-    assert 'exec "$python" -X utf8 -I -m apprestore_core.cli' in launcher
+    assert 'exec "$python" -X utf8 -I -m apprevive_core.cli' in launcher
 
 
 def test_payload_installer_is_user_space_and_transactional() -> None:
@@ -249,9 +249,9 @@ def test_payload_installer_is_user_space_and_transactional() -> None:
     safe_path = "PATH='/usr/bin:/bin:/usr/sbin:/sbin'\nexport PATH"
     assert safe_path in installer
     assert installer.index(safe_path) < installer.index('SCRIPT_DIR="$(cd ')
-    assert '$HOME/Library/Application Support/AppRestore' in installer
+    assert '$HOME/Library/Application Support/AppRevive' in installer
     assert '$HOME/.local/bin' in installer
-    assert 'APPRESTORE_VERSION="0.4.0"' in installer
+    assert 'APPREVIVE_VERSION="0.4.0"' in installer
     assert f"path_line='{PATH_LINE}'" in installer
     assert "install_pinned_python \"$VENV_STAGING\"" in installer
     assert "VENV_STAGING" in installer
@@ -263,17 +263,17 @@ def test_payload_installer_is_user_space_and_transactional() -> None:
     assert "prepare_install_directories" in installer
     assert (
         'installed_version="$("$python" -X utf8 -I -m '
-        'apprestore_core.cli --version)"'
+        'apprevive_core.cli --version)"'
     ) in installer
-    assert "exec %q -X utf8 -I -m apprestore_core.cli" in installer
+    assert "exec %q -X utf8 -I -m apprevive_core.cli" in installer
     assert "unset PYTHONPATH PYTHONHOME PYTHONSTARTUP" in installer
-    assert "$VENV_DIR/bin/apprestore" not in installer
-    assert 'VENV_MARKER_NAME=".apprestore-managed"' in installer
+    assert "$VENV_DIR/bin/apprevive" not in installer
+    assert 'VENV_MARKER_NAME=".apprevive-managed"' in installer
     assert "venv_is_managed" in installer
     assert "grep -Fqx" in installer
     assert "INSTALL_COMPLETE=true" in installer
     assert 'installed_version="$("$COMMAND_PATH" --version)"' in installer
-    assert '[[ "$installed_version" == "$APPRESTORE_VERSION" ]]' in installer
+    assert '[[ "$installed_version" == "$APPREVIVE_VERSION" ]]' in installer
     assert 'IPATOOL_VERSION="2.6.0"' in installer
     assert "576bde4baf04365fcdea46eb7f3e5bb6" in installer
     assert "faf98ef8067f1ef4783123d00561b4ec" in installer
@@ -326,11 +326,11 @@ def test_bootstrap_pins_archive_and_rejects_unsafe_zip_shapes() -> None:
 
     safe_path = "PATH='/usr/bin:/bin:/usr/sbin:/sbin'\nexport PATH"
     assert safe_path in bootstrap
-    assert bootstrap.index(safe_path) < bootstrap.index("APPRESTORE_VERSION=")
-    assert "@@APPRESTORE_ARCHIVE_URL_SH@@" in bootstrap
-    assert "@@APPRESTORE_ARCHIVE_SHA256_SH@@" in bootstrap
-    assert "APPRESTORE_BOOTSTRAP_ARCHIVE_URL" in bootstrap
-    assert "APPRESTORE_BOOTSTRAP_ARCHIVE_SHA" not in bootstrap
+    assert bootstrap.index(safe_path) < bootstrap.index("APPREVIVE_VERSION=")
+    assert "@@APPREVIVE_ARCHIVE_URL_SH@@" in bootstrap
+    assert "@@APPREVIVE_ARCHIVE_SHA256_SH@@" in bootstrap
+    assert "APPREVIVE_BOOTSTRAP_ARCHIVE_URL" in bootstrap
+    assert "APPREVIVE_BOOTSTRAP_ARCHIVE_SHA" not in bootstrap
     assert "installer_count" in bootstrap
     assert "duplicate target" in bootstrap
     assert "max_entry_bytes=8388608" in bootstrap
@@ -342,7 +342,7 @@ def test_bootstrap_pins_archive_and_rejects_unsafe_zip_shapes() -> None:
     assert "getconf DARWIN_USER_TEMP_DIR" in bootstrap
     assert "temp_root_is_safe_for_cleanup" in bootstrap
     assert '[[ -d "$TEMP_ROOT" && ! -L "$TEMP_ROOT" ]]' in bootstrap
-    assert "AppRestore-bootstrap.????????*" in bootstrap
+    assert "AppRevive-bootstrap.????????*" in bootstrap
     assert 'resolved_parent" == "$SYSTEM_TEMP_PARENT' in bootstrap
     assert '/bin/rm -rf -- "$TEMP_ROOT"' in bootstrap
     assert "небезопасный временный путь сохранён без удаления" in bootstrap
@@ -372,7 +372,7 @@ def test_bootstrap_cleanup_preserves_a_symlinked_temp_root(
     outside.mkdir()
     sentinel = outside / "sentinel.txt"
     sentinel.write_text("preserve", encoding="utf-8")
-    linked = tmp_path / "AppRestore-bootstrap.abcdefgh"
+    linked = tmp_path / "AppRevive-bootstrap.abcdefgh"
     linked.symlink_to(outside, target_is_directory=True)
 
     result = subprocess.run(
@@ -393,7 +393,7 @@ def test_bootstrap_cleanup_preserves_a_symlinked_temp_root(
     sys.platform != "darwin",
     reason="macOS installer E2E requires the native shell and filesystem",
 )
-def test_payload_installs_apprestore_for_the_same_terminal_path(
+def test_payload_installs_apprevive_for_the_same_terminal_path(
     tmp_path: Path,
 ) -> None:
     home, environment = _fake_macos_environment(tmp_path)
@@ -405,23 +405,23 @@ def test_payload_installs_apprestore_for_the_same_terminal_path(
         f"{home / '.local' / 'bin'}:{environment['PATH']}"
     )
     shadow = tmp_path / "cwd-shadow"
-    (shadow / "apprestore_core").mkdir(parents=True)
-    (shadow / "apprestore_core" / "cli.py").write_text(
+    (shadow / "apprevive_core").mkdir(parents=True)
+    (shadow / "apprevive_core" / "cli.py").write_text(
         "raise SystemExit('cwd shadow executed')\n",
         encoding="utf-8",
     )
     current_environment.update(
         {
-            "APPRESTORE_REQUIRE_SCRUB": "1",
+            "APPREVIVE_REQUIRE_SCRUB": "1",
             "PYTHONPATH": str(shadow),
             "PYTHONHOME": str(shadow),
             "PYTHONSTARTUP": str(shadow / "startup.py"),
         }
     )
-    resolved = shutil.which("apprestore", path=current_environment["PATH"])
-    assert resolved == str(home / ".local" / "bin" / "apprestore")
+    resolved = shutil.which("apprevive", path=current_environment["PATH"])
+    assert resolved == str(home / ".local" / "bin" / "apprevive")
     launched = subprocess.run(
-        ["apprestore", "--version"],
+        ["apprevive", "--version"],
         cwd=shadow,
         env=current_environment,
         capture_output=True,
@@ -433,7 +433,7 @@ def test_payload_installs_apprestore_for_the_same_terminal_path(
     assert launched.stdout.strip() == "0.4.0"
     assert PATH_LINE in (home / ".zprofile").read_text(encoding="utf-8").splitlines()
     assert not list(
-        (home / "Library" / "Application Support" / "AppRestore").glob(
+        (home / "Library" / "Application Support" / "AppRevive").glob(
             ".venv-*"
         )
     )
@@ -447,15 +447,15 @@ def test_failed_first_install_rolls_back_venv_and_command(
     tmp_path: Path,
 ) -> None:
     home, environment = _fake_macos_environment(tmp_path)
-    environment["APPRESTORE_TEST_PIP_FAIL"] = "1"
+    environment["APPREVIVE_TEST_PIP_FAIL"] = "1"
 
     result = _run_payload(environment)
     assert result.returncode != 0
 
-    app_support = home / "Library" / "Application Support" / "AppRestore"
+    app_support = home / "Library" / "Application Support" / "AppRevive"
     assert not (app_support / "venv").exists()
     assert not list(app_support.glob(".venv-*"))
-    assert not (home / ".local" / "bin" / "apprestore").exists()
+    assert not (home / ".local" / "bin" / "apprevive").exists()
 
 
 @pytest.mark.skipif(
@@ -469,17 +469,17 @@ def test_failed_update_restores_previous_working_venv(
     first = _run_payload(environment)
     assert first.returncode == 0, first.stdout + first.stderr
 
-    environment["APPRESTORE_TEST_PIP_FAIL"] = "1"
+    environment["APPREVIVE_TEST_PIP_FAIL"] = "1"
     failed_update = _run_payload(environment)
     assert failed_update.returncode != 0
 
     current_environment = environment.copy()
-    current_environment.pop("APPRESTORE_TEST_PIP_FAIL")
+    current_environment.pop("APPREVIVE_TEST_PIP_FAIL")
     current_environment["PATH"] = (
         f"{home / '.local' / 'bin'}:{environment['PATH']}"
     )
     launched = subprocess.run(
-        ["apprestore", "--version"],
+        ["apprevive", "--version"],
         env=current_environment,
         capture_output=True,
         text=True,
@@ -488,7 +488,7 @@ def test_failed_update_restores_previous_working_venv(
     )
     assert launched.returncode == 0, launched.stdout + launched.stderr
     assert launched.stdout.strip() == "0.4.0"
-    app_support = home / "Library" / "Application Support" / "AppRestore"
+    app_support = home / "Library" / "Application Support" / "AppRevive"
     assert not list(app_support.glob(".venv-*"))
 
 
@@ -503,22 +503,22 @@ def test_orphaned_backup_is_recovered_before_new_staging(
     first = _run_payload(environment)
     assert first.returncode == 0, first.stdout + first.stderr
 
-    app_support = home / "Library" / "Application Support" / "AppRestore"
+    app_support = home / "Library" / "Application Support" / "AppRevive"
     live = app_support / "venv"
     backup = app_support / ".venv-backup.interrupted"
     backup.mkdir()
     live.rename(backup / "venv")
 
-    environment["APPRESTORE_TEST_PIP_FAIL"] = "1"
+    environment["APPREVIVE_TEST_PIP_FAIL"] = "1"
     failed_update = _run_payload(environment)
     assert failed_update.returncode != 0
     assert live.is_dir()
     assert not (backup / "venv").exists()
 
     launch_environment = environment.copy()
-    launch_environment.pop("APPRESTORE_TEST_PIP_FAIL")
+    launch_environment.pop("APPREVIVE_TEST_PIP_FAIL")
     launched = subprocess.run(
-        [str(home / ".local" / "bin" / "apprestore"), "--version"],
+        [str(home / ".local" / "bin" / "apprevive"), "--version"],
         env=launch_environment,
         capture_output=True,
         text=True,
@@ -537,7 +537,7 @@ def test_unmarked_existing_venv_is_refused_without_modification(
     tmp_path: Path,
 ) -> None:
     home, environment = _fake_macos_environment(tmp_path)
-    venv = home / "Library" / "Application Support" / "AppRestore" / "venv"
+    venv = home / "Library" / "Application Support" / "AppRevive" / "venv"
     venv.mkdir(parents=True)
     sentinel = venv / "do-not-delete.txt"
     sentinel.write_text("unowned", encoding="utf-8")
@@ -557,11 +557,11 @@ def test_marker_substring_does_not_claim_foreign_command(
     tmp_path: Path,
 ) -> None:
     home, environment = _fake_macos_environment(tmp_path)
-    command = home / ".local" / "bin" / "apprestore"
+    command = home / ".local" / "bin" / "apprevive"
     command.parent.mkdir(parents=True)
     foreign_content = (
         "#!/bin/sh\n"
-        "echo 'prefix # Managed by AppRestore install-macos.sh suffix'\n"
+        "echo 'prefix # Managed by AppRevive install-macos.sh suffix'\n"
     )
     command.write_text(foreign_content, encoding="utf-8", newline="\n")
     command.chmod(0o755)
@@ -570,7 +570,7 @@ def test_marker_substring_does_not_claim_foreign_command(
 
     assert result.returncode != 0
     assert command.read_text(encoding="utf-8") == foreign_content
-    app_support = home / "Library" / "Application Support" / "AppRestore"
+    app_support = home / "Library" / "Application Support" / "AppRevive"
     assert not (app_support / "venv").exists()
 
 
@@ -585,16 +585,16 @@ def test_backup_cleanup_failure_keeps_successful_new_install(
     first = _run_payload(environment)
     assert first.returncode == 0, first.stdout + first.stderr
 
-    environment["APPRESTORE_TEST_BACKUP_CLEANUP_FAIL"] = "1"
+    environment["APPREVIVE_TEST_BACKUP_CLEANUP_FAIL"] = "1"
     update = _run_payload(environment)
 
     assert update.returncode == 0, update.stdout + update.stderr
-    app_support = home / "Library" / "Application Support" / "AppRestore"
+    app_support = home / "Library" / "Application Support" / "AppRevive"
     backups = list(app_support.glob(".venv-backup.*"))
     assert len(backups) == 1
     assert (backups[0] / "venv").is_dir()
     launched = subprocess.run(
-        [str(home / ".local" / "bin" / "apprestore"), "--version"],
+        [str(home / ".local" / "bin" / "apprevive"), "--version"],
         env=environment,
         capture_output=True,
         text=True,
@@ -642,14 +642,14 @@ def test_real_moved_venv_launches_through_final_python_module(
     assert install.returncode == 0, install.stdout + install.stderr
     staging.rename(live)
 
-    wrapper = tmp_path / "apprestore"
+    wrapper = tmp_path / "apprevive"
     wrapper.write_text(
         (
             "#!/usr/bin/env bash\n"
             "set -euo pipefail\n"
             "unset PYTHONPATH PYTHONHOME PYTHONSTARTUP\n"
             f"exec {shlex_quote(str(live / 'bin' / 'python'))} "
-            '-X utf8 -I -m apprestore_core.cli "$@"\n'
+            '-X utf8 -I -m apprevive_core.cli "$@"\n'
         ),
         encoding="utf-8",
         newline="\n",
@@ -687,7 +687,7 @@ def test_generated_bootstrap_installs_then_command_launches(
     )
     assert build.returncode == 0, build.stdout + build.stderr
 
-    archive = release_root / "dist" / "AppRestore-0.4.0-source.zip"
+    archive = release_root / "dist" / "AppRevive-0.4.0-source.zip"
     bootstrap = release_root / "dist" / "install.sh"
     assert archive.is_file()
     assert bootstrap.is_file()
@@ -697,7 +697,7 @@ def test_generated_bootstrap_installs_then_command_launches(
     runtime_temp.mkdir()
     environment["TMPDIR"] = str(runtime_temp)
     with _serve_directory(release_root / "dist") as base_url:
-        environment["APPRESTORE_BOOTSTRAP_ARCHIVE_URL"] = (
+        environment["APPREVIVE_BOOTSTRAP_ARCHIVE_URL"] = (
             f"{base_url}/{archive.name}"
         )
         installed = subprocess.run(
@@ -710,14 +710,14 @@ def test_generated_bootstrap_installs_then_command_launches(
             check=False,
         )
     assert installed.returncode == 0, installed.stdout + installed.stderr
-    assert not list(runtime_temp.glob("AppRestore-bootstrap.*"))
+    assert not list(runtime_temp.glob("AppRevive-bootstrap.*"))
 
     launch_environment = environment.copy()
     launch_environment["PATH"] = (
         f"{home / '.local' / 'bin'}:{environment['PATH']}"
     )
     launched = subprocess.run(
-        ["apprestore", "--version"],
+        ["apprevive", "--version"],
         env=launch_environment,
         capture_output=True,
         text=True,

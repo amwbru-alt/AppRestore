@@ -1,4 +1,4 @@
-"""Смоук п.18: «Выйти» from the 4b window (QuickSession.signOut → AppRestoreService
+"""Смоук п.18: «Выйти» from the 4b window (QuickSession.signOut → AppReviveService
 sign_out). Every path — ok, «session already revoked», an error — deletes the
 session copy and purchases-cache.json; the license journal stays byte for byte,
 the icon cache is not touched."""
@@ -12,7 +12,7 @@ import pytest
 
 pytest.importorskip("PySide6")
 
-from apprestore_gui import quick_session as qs  # noqa: E402
+from apprevive_gui import quick_session as qs  # noqa: E402
 
 EMAIL = "person@example.com"
 
@@ -37,7 +37,7 @@ class Service:
             raise RuntimeError("no session: already revoked")
         if self.fail == "error":
             raise OSError("ipatool crashed")
-        from apprestore_core.purchases_cache import forget_purchases_cache
+        from apprevive_core.purchases_cache import forget_purchases_cache
 
         forget_purchases_cache()  # what core.sign_out does
 
@@ -52,11 +52,11 @@ def test_sign_out_deletes_session_and_purchases_cache_keeps_journal_and_icons(
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
     monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "xdg-cache"))
-    monkeypatch.delenv("APPRESTORE_LICENSE_JOURNAL", raising=False)
-    from apprestore_core.license_guard import default_journal_path
-    from apprestore_core.purchases_cache import CachedPurchase, PurchasesCache
-    from apprestore_gui.account_vault import vault_path, vault_root
-    from apprestore_gui.icons_cache import default_cache_dir
+    monkeypatch.delenv("APPREVIVE_LICENSE_JOURNAL", raising=False)
+    from apprevive_core.license_guard import default_journal_path
+    from apprevive_core.purchases_cache import CachedPurchase, PurchasesCache
+    from apprevive_gui.account_vault import vault_path, vault_root
+    from apprevive_gui.icons_cache import default_cache_dir
 
     cache = PurchasesCache()
     cache.save(cache.account_key(EMAIL), [CachedPurchase(1, "com.example.a", "A", "")])
@@ -67,7 +67,7 @@ def test_sign_out_deletes_session_and_purchases_cache_keeps_journal_and_icons(
     journal.parent.mkdir(parents=True, exist_ok=True)
     journal.write_bytes(b'{"id":"1","time":"2026-10-10T17:00:00Z","track_id":"1","status":"acquired"}\n')
     before = journal.read_bytes()
-    from apprestore_core.license_guard import read_counts
+    from apprevive_core.license_guard import read_counts
 
     counts = read_counts(journal_path=journal)
     icons = default_cache_dir()

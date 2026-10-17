@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from apprestore_core.ipa_index import (
+from apprevive_core.ipa_index import (
     SCHEMA_VERSION,
     IpaIndex,
     IpaIndexClosedError,
@@ -17,8 +17,8 @@ from apprestore_core.ipa_index import (
     IpaIndexSchemaError,
     normalize_ipa_path,
 )
-from apprestore_core.ipa import scan_ipas
-from apprestore_core.models import IpaMetadata
+from apprevive_core.ipa import scan_ipas
+from apprevive_core.models import IpaMetadata
 
 
 def _record(
@@ -250,7 +250,7 @@ def test_scan_ipas_protects_a_concurrent_row_created_during_walk(
             size=observed.st_size,
         )
 
-    monkeypatch.setattr("apprestore_core.ipa.read_ipa_metadata", fake_metadata)
+    monkeypatch.setattr("apprevive_core.ipa.read_ipa_metadata", fake_metadata)
 
     metadata, errors = scan_ipas([tmp_path], index=first)
 

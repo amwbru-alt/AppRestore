@@ -1,7 +1,7 @@
 """Frozen (PyInstaller) runtime: device discovery must not spawn ``sys.executable -m``.
 
-In a frozen bundle ``sys.executable`` is AppRestore.exe.  The old code ran
-``AppRestore.exe -I -m pymobiledevice3 usbmux list``: the GUI's argparse
+In a frozen bundle ``sys.executable`` is AppRevive.exe.  The old code ran
+``AppRevive.exe -I -m pymobiledevice3 usbmux list``: the GUI's argparse
 rejected ``-I`` and the GUI reported "no iPhone" although the phone was
 connected.
 """
@@ -15,12 +15,12 @@ from dataclasses import dataclass
 
 import pytest
 
-from apprestore_core import frozen
-from apprestore_core.command import windows_creationflags
-from apprestore_core.models import CommandResult
-from apprestore_core.tools import AppRestoreTools
+from apprevive_core import frozen
+from apprevive_core.command import windows_creationflags
+from apprevive_core.models import CommandResult
+from apprevive_core.tools import AppReviveTools
 
-FAKE_EXE = r"C:\Users\someone\Downloads\AppRestore-windows\AppRestore.exe"
+FAKE_EXE = r"C:\Users\someone\Downloads\AppRevive-windows\AppRevive.exe"
 
 
 @dataclass
@@ -107,12 +107,12 @@ def fake_pmd3(monkeypatch: pytest.MonkeyPatch) -> dict[str, list]:
 def frozen_windows(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(sys, "frozen", True, raising=False)
     monkeypatch.setattr(sys, "executable", FAKE_EXE)
-    monkeypatch.setattr("apprestore_core.tools.platform.system", lambda: "Windows")
+    monkeypatch.setattr("apprevive_core.tools.platform.system", lambda: "Windows")
 
 
 def test_frozen_list_udids_is_in_process(frozen_windows, fake_pmd3) -> None:
     runner = _ExplodingRunner()
-    tools = AppRestoreTools(runner=runner)  # type: ignore[arg-type]
+    tools = AppReviveTools(runner=runner)  # type: ignore[arg-type]
 
     assert tools.list_udids() == ["00008110-000A1B2C3D4E5F60"]
     assert runner.calls == []
@@ -121,7 +121,7 @@ def test_frozen_list_udids_is_in_process(frozen_windows, fake_pmd3) -> None:
 
 def test_frozen_device_info_is_in_process(frozen_windows, fake_pmd3) -> None:
     runner = _ExplodingRunner()
-    tools = AppRestoreTools(runner=runner)  # type: ignore[arg-type]
+    tools = AppReviveTools(runner=runner)  # type: ignore[arg-type]
 
     device = tools.device_info("00008110-000A1B2C3D4E5F60")
     assert device.name == "Eugene's iPhone"
@@ -131,11 +131,11 @@ def test_frozen_device_info_is_in_process(frozen_windows, fake_pmd3) -> None:
 
 
 def test_frozen_service_devices_never_calls_sys_executable_m(frozen_windows, fake_pmd3) -> None:
-    from apprestore_core.service import AppRestoreService
+    from apprevive_core.service import AppReviveService
 
     runner = _ExplodingRunner()
-    service = AppRestoreService.__new__(AppRestoreService)
-    service.tools = AppRestoreTools(runner=runner)  # type: ignore[arg-type]
+    service = AppReviveService.__new__(AppReviveService)
+    service.tools = AppReviveTools(runner=runner)  # type: ignore[arg-type]
 
     devices = service.devices()
     assert [d.udid for d in devices] == ["00008110-000A1B2C3D4E5F60"]
@@ -144,7 +144,7 @@ def test_frozen_service_devices_never_calls_sys_executable_m(frozen_windows, fak
 
 
 def test_frozen_pymobiledevice3_command_uses_dispatcher(frozen_windows, fake_pmd3) -> None:
-    command = AppRestoreTools()._pymobiledevice3_cmd("apps", "list")
+    command = AppReviveTools()._pymobiledevice3_cmd("apps", "list")
     assert command[0] == FAKE_EXE
     assert command[1] == frozen.RUN_MODULE_FLAG
     assert command[2:] == ["pymobiledevice3", "apps", "list"]
@@ -154,16 +154,16 @@ def test_frozen_pymobiledevice3_command_uses_dispatcher(frozen_windows, fake_pmd
 
 def test_unfrozen_command_still_uses_interpreter(monkeypatch, fake_pmd3) -> None:
     monkeypatch.delattr(sys, "frozen", raising=False)
-    monkeypatch.setattr("apprestore_core.tools.platform.system", lambda: "Windows")
-    command = AppRestoreTools()._pymobiledevice3_cmd("usbmux", "list")
+    monkeypatch.setattr("apprevive_core.tools.platform.system", lambda: "Windows")
+    command = AppReviveTools()._pymobiledevice3_cmd("usbmux", "list")
     assert command[:4] == [sys.executable, "-I", "-m", "pymobiledevice3"]
 
 
 def test_frozen_doctor_detail_names_bundle(frozen_windows, fake_pmd3, monkeypatch) -> None:
     monkeypatch.setattr(
-        "apprestore_core.tools.package_metadata.version", lambda name: "10.1.0"
+        "apprevive_core.tools.package_metadata.version", lambda name: "10.1.0"
     )
-    tools = AppRestoreTools()
+    tools = AppReviveTools()
     monkeypatch.setattr(tools, "_ipatool_check", lambda exe: (True, "ok"))
     monkeypatch.setattr(tools, "_apple_mobile_device_service", lambda: (True, "running"))
     monkeypatch.setattr(tools, "_apple_usbmux_port", lambda: (True, "listening"))
@@ -189,7 +189,7 @@ def test_parse_dispatch(argv, expected) -> None:
 
 
 def test_dispatch_runs_pymobiledevice3_main(fake_pmd3, monkeypatch) -> None:
-    monkeypatch.setattr(sys, "argv", ["AppRestore.exe"])
+    monkeypatch.setattr(sys, "argv", ["AppRevive.exe"])
     code = frozen.maybe_dispatch([frozen.RUN_MODULE_FLAG, "pymobiledevice3", "usbmux", "list"])
     assert code == 0
     assert fake_pmd3["main_argv"] == [["pymobiledevice3", "usbmux", "list"]]
@@ -203,9 +203,9 @@ def test_dispatch_refuses_arbitrary_modules(capsys) -> None:
 
 
 def test_gui_entry_dispatches_before_qt(fake_pmd3, monkeypatch) -> None:
-    from apprestore_gui import app
+    from apprevive_gui import app
 
-    monkeypatch.setattr(sys, "argv", ["AppRestore.exe"])
+    monkeypatch.setattr(sys, "argv", ["AppRevive.exe"])
     assert app.main(["-I", "-m", "pymobiledevice3", "version"]) == 0
     assert fake_pmd3["main_argv"] == [["pymobiledevice3", "version"]]
 
@@ -223,7 +223,7 @@ def test_winpty_import_name() -> None:
     import ast
     from pathlib import Path
 
-    source = (Path(__file__).parents[1] / "apprestore_gui" / "auth_pty.py").read_text(encoding="utf-8")
+    source = (Path(__file__).parents[1] / "apprevive_gui" / "auth_pty.py").read_text(encoding="utf-8")
     tree = ast.parse(source)
     imported = {
         node.module
@@ -238,7 +238,7 @@ def test_bundle_ipatool_pins_match_installers() -> None:
     import importlib.util
     from pathlib import Path
 
-    from apprestore_core.tools import IPATOOL_VERSION, IPATOOL_WINDOWS_AMD64_ARCHIVE_SHA256
+    from apprevive_core.tools import IPATOOL_VERSION, IPATOOL_WINDOWS_AMD64_ARCHIVE_SHA256
 
     root = Path(__file__).parents[1]
     spec = importlib.util.spec_from_file_location("fetch_ipatool", root / "packaging" / "fetch_ipatool.py")
@@ -254,9 +254,9 @@ def test_bundle_ipatool_pins_match_installers() -> None:
 
 
 def test_windowed_app_without_console_gets_null_streams(monkeypatch):
-    """Double-clicked AppRestore.exe has sys.stdout=None; imports must not crash."""
+    """Double-clicked AppRevive.exe has sys.stdout=None; imports must not crash."""
 
-    from apprestore_core import frozen
+    from apprevive_core import frozen
 
     monkeypatch.setattr(sys, "stdout", None)
     monkeypatch.setattr(sys, "__stdout__", None)
@@ -270,7 +270,7 @@ def test_windowed_app_without_console_gets_null_streams(monkeypatch):
 
 
 def test_gui_entry_repairs_streams_before_dispatch(monkeypatch):
-    from apprestore_gui import app
+    from apprevive_gui import app
 
     seen = {}
 
@@ -279,6 +279,6 @@ def test_gui_entry_repairs_streams_before_dispatch(monkeypatch):
         return 0
 
     monkeypatch.setattr(sys, "stdout", None)
-    monkeypatch.setattr("apprestore_core.frozen.maybe_dispatch", fake_dispatch)
-    assert app.main(["--apprestore-run-module", "pymobiledevice3", "version"]) == 0
+    monkeypatch.setattr("apprevive_core.frozen.maybe_dispatch", fake_dispatch)
+    assert app.main(["--apprevive-run-module", "pymobiledevice3", "version"]) == 0
     assert seen["stdout"] is not None

@@ -13,15 +13,15 @@ from PySide6.QtCore import QCoreApplication, QEvent, QObject  # noqa: E402
 from PySide6.QtQml import QQmlApplicationEngine  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
-from apprestore_gui.ui4b import files as Fv  # noqa: E402
-from apprestore_gui.ui4b.catalog import GROUP_OFFLOADED, GROUP_REMOVED, RestoreItem  # noqa: E402
-from apprestore_gui.ui4b.fake_data import FakeIconBook, FakeSource  # noqa: E402
-from apprestore_gui.ui4b.home import STATE_DONE, HomeInput, home_view, link_action  # noqa: E402
-from apprestore_gui.ui4b.qt_bridge import Restore4b  # noqa: E402
-from apprestore_gui.ui4b.queue import RestoreQueue  # noqa: E402
-from apprestore_gui.ui4b.window import load  # noqa: E402
+from apprevive_gui.ui4b import files as Fv  # noqa: E402
+from apprevive_gui.ui4b.catalog import GROUP_OFFLOADED, GROUP_REMOVED, RestoreItem  # noqa: E402
+from apprevive_gui.ui4b.fake_data import FakeIconBook, FakeSource  # noqa: E402
+from apprevive_gui.ui4b.home import STATE_DONE, HomeInput, home_view, link_action  # noqa: E402
+from apprevive_gui.ui4b.qt_bridge import Restore4b  # noqa: E402
+from apprevive_gui.ui4b.queue import RestoreQueue  # noqa: E402
+from apprevive_gui.ui4b.window import load  # noqa: E402
 
-QML = Path(__file__).resolve().parents[1] / "apprestore_gui" / "qml4b"
+QML = Path(__file__).resolve().parents[1] / "apprevive_gui" / "qml4b"
 
 
 @pytest.fixture(scope="module")
@@ -115,7 +115,7 @@ def test_cta_row_visible_after_loading_then_many(qapp) -> None:
 
 def test_files_link_opens_the_sheet_ipa_link_still_picks_a_file() -> None:
     assert link_action("Файлы IPA") == "files"
-    from apprestore_gui.ui4b.home import IPA_LINK
+    from apprevive_gui.ui4b.home import IPA_LINK
 
     assert link_action(IPA_LINK) == "ipa"
 
@@ -211,19 +211,19 @@ def test_phone_tile_label_is_one_line_elided_at_grid_step() -> None:
 def test_ipa_sheet_where_line_comes_from_the_real_scanned_folders(tmp_path, monkeypatch) -> None:
     """Ника: «Нашли на этом компьютере: …» — only folders the scan really uses."""
 
-    from apprestore_core.paths import ipa_search_roots
+    from apprevive_core.paths import ipa_search_roots
 
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.setenv("USERPROFILE", str(tmp_path))
-    monkeypatch.delenv("APPRESTORE_EXTRA_IPA_DIRS", raising=False)
+    monkeypatch.delenv("APPREVIVE_EXTRA_IPA_DIRS", raising=False)
     lib = tmp_path / "lib"
     roots = Fv.labelled_roots(ipa_search_roots(lib))
     labels = [label for label, _ in roots]
-    assert labels[0] == "AppRestore" and "iMazing" in labels and "«Загрузках»" in labels and "iTunes" in labels
+    assert labels[0] == "AppRevive" and "iMazing" in labels and "«Загрузках»" in labels and "iTunes" in labels
     a = str(lib / "A.ipa")
     b = str(tmp_path / "Downloads" / "B.ipa")
-    assert Fv.where_line([a, b], roots) == "Нашли на этом компьютере: в папке AppRestore и «Загрузках»"
-    assert Fv.where_line([], roots).startswith("Ищем на этом компьютере: в папке AppRestore, iMazing")
+    assert Fv.where_line([a, b], roots) == "Нашли на этом компьютере: в папке AppRevive и «Загрузках»"
+    assert Fv.where_line([], roots).startswith("Ищем на этом компьютере: в папке AppRevive, iMazing")
     v = Fv.files_view(open_=True, mode="list", library=[], export=[], note="", busy=False, connected=True)
     assert v["close"] == "Готово"
 

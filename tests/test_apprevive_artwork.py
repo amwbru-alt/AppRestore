@@ -10,9 +10,9 @@ pytest.importorskip('PySide6')
 from PySide6.QtCore import QBuffer,QIODevice
 from PySide6.QtGui import QImage,QColor
 from PySide6.QtWidgets import QApplication,QTableWidget
-from apprestore_gui.icons_cache import ArtworkCache, ArtworkLoader
-from apprestore_gui.main_window import MainWindow,AppCell
-from apprestore_gui.service_adapter import GuiService
+from apprevive_gui.icons_cache import ArtworkCache, ArtworkLoader
+from apprevive_gui.main_window import MainWindow,AppCell
+from apprevive_gui.service_adapter import GuiService
 
 
 @pytest.fixture(scope='module')
@@ -39,7 +39,7 @@ def wait(qapp,condition):
 def test_negative_lookup_expires_and_old_permanent_miss_is_retried(tmp_path,monkeypatch):
     cache=ArtworkCache(tmp_path)
     calls=[];clock=[1000.0]
-    monkeypatch.setattr('apprestore_gui.icons_cache.time.time',lambda:clock[0])
+    monkeypatch.setattr('apprevive_gui.icons_cache.time.time',lambda:clock[0])
     def get(url):
         calls.append(url)
         return b'{"results":[]}' if len(calls)==1 else response()
@@ -95,7 +95,7 @@ def test_widget_cell_repaints_after_download_without_resetting_selection(tmp_pat
     monkeypatch.setattr(cache,'_http_get',get)
     with patch.object(MainWindow,'refresh_device'):
         win=MainWindow(GuiService(demo_mode=True),cache)
-    from apprestore_core.models import MissingApp
+    from apprevive_core.models import MissingApp
     from PySide6.QtCore import Qt
     app=MissingApp('com.example.app','Пример',store_id='10000000')
     table=win.pages['install'].findChild(QTableWidget,'install_table')

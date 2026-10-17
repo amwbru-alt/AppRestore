@@ -1,5 +1,5 @@
 From 329215620c68271b3a7d8ab2e4466bacc6980145 Mon Sep 17 00:00:00 2001
-From: AppRestore <apprestore@localhost>
+From: AppRevive <apprevive@localhost>
 Date: Sat, 10 Oct 2026 18:04:28 +0300
 Subject: [PATCH 2/2] feat(purchases): add --all to list the whole purchase
  history in one call

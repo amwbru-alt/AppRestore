@@ -5,7 +5,7 @@ Used by both .github/workflows/gui-build.yml (branch builds) and
 zip that the in-app updater will later download.
 
 Steps: bundle pinned ipatool -> (macOS) ad-hoc re-sign -> run --self-test ->
-check version -> zip as AppRestore-GUI-Windows.zip / AppRestore-GUI-macOS.zip
+check version -> zip as AppRevive-GUI-Windows.zip / AppRevive-GUI-macOS.zip
 -> unpack the zip with the updater's own code and run --update-health-check
 on the unpacked copy.
 
@@ -29,7 +29,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "packaging"))
 
-from apprestore_gui.updater import ASSET_BY_PLATFORM, HEALTH_FLAG, extract_zip  # noqa: E402
+from apprevive_gui.updater import ASSET_BY_PLATFORM, HEALTH_FLAG, extract_zip  # noqa: E402
 from fetch_ipatool import current_asset, install_archive, install_license  # noqa: E402
 
 
@@ -67,12 +67,12 @@ def main() -> int:
         return 2
 
     if sys.platform == "win32":
-        app = dist / "AppRestore"
-        binary_rel = Path("AppRestore") / "AppRestore.exe"
+        app = dist / "AppRevive"
+        binary_rel = Path("AppRevive") / "AppRevive.exe"
         tool_dir = app
     else:
-        app = dist / "AppRestore.app"
-        binary_rel = Path("AppRestore.app") / "Contents" / "MacOS" / "AppRestore"
+        app = dist / "AppRevive.app"
+        binary_rel = Path("AppRevive.app") / "Contents" / "MacOS" / "AppRevive"
         tool_dir = app / "Contents" / "MacOS"
     binary = dist / binary_rel
     if not binary.is_file():
@@ -91,13 +91,13 @@ def main() -> int:
         # Apple's own tool must accept the generated .icns.
         with tempfile.TemporaryDirectory() as tmp:
             run(
-                ["iconutil", "-c", "iconset", str(ROOT / "packaging" / "icons" / "AppRestore.icns"),
-                 "-o", str(Path(tmp) / "AppRestore.iconset")],
+                ["iconutil", "-c", "iconset", str(ROOT / "packaging" / "icons" / "AppRevive.icns"),
+                 "-o", str(Path(tmp) / "AppRevive.iconset")],
                 check=True,
             )
-            print("iconset:", sorted(p.name for p in (Path(tmp) / "AppRestore.iconset").iterdir()))
-        if not (app / "Contents" / "Resources" / "AppRestore.icns").is_file():
-            print("AppRestore.icns is missing from the bundle", file=sys.stderr)
+            print("iconset:", sorted(p.name for p in (Path(tmp) / "AppRevive.iconset").iterdir()))
+        if not (app / "Contents" / "Resources" / "AppRevive.icns").is_file():
+            print("AppRevive.icns is missing from the bundle", file=sys.stderr)
             return 1
         # Adding ipatool invalidates PyInstaller's ad-hoc signature.
         run(["codesign", "--force", "--deep", "--sign", "-", str(app)], check=True)
@@ -111,7 +111,7 @@ def main() -> int:
         print(f"self-test failed (exit {result.returncode})", file=sys.stderr)
         return 1
     version = next(
-        (c["detail"]["apprestore"] for c in report["checks"] if c["name"] == "metadata" and c["ok"]),
+        (c["detail"]["apprevive"] for c in report["checks"] if c["name"] == "metadata" and c["ok"]),
         "",
     )
     if args.expect_version and version != args.expect_version:
@@ -129,7 +129,7 @@ def main() -> int:
         )
 
     # Unpack exactly like the in-app updater does and health-check the copy.
-    with tempfile.TemporaryDirectory(prefix="apprestore-unpack-") as tmp:
+    with tempfile.TemporaryDirectory(prefix="apprevive-unpack-") as tmp:
         extract_zip(target, Path(tmp))
         unpacked = Path(tmp) / binary_rel
         if not unpacked.is_file():

@@ -1,4 +1,4 @@
-# AppRestore 4b · Спецификация, часть 3: онбординг
+# AppRevive 4b · Спецификация, часть 3: онбординг
 
 База — `variant-4b-onboarding.html` (`src/onboard.py`), рендеры `variant-4b-onboarding-1…4.png`, `-onboarding-all.png`. Модель — `ui4b/onboarding.py` (`Onboarding.step()`, `stepper()`), свойства `Restore4b.onboardingStep`, `stepper`, `scanCaption`, `scanEta`, `scanFraction`, `scanFound`; слоты `onboardingStart()`, `onboardingLater()`. Сетка, шрифты, кнопки, телефон — как на главном (часть 1). Типографика macOS/Windows — часть 2, §7.
 

@@ -1,4 +1,4 @@
-from apprestore_gui.missing_demo import missing_demo_apps
+from apprevive_gui.missing_demo import missing_demo_apps
 
 
 def test_missing_demo_is_a_choice_not_a_handful() -> None:

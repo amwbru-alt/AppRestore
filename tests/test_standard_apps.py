@@ -1,5 +1,5 @@
-from apprestore_gui.ui4b.standard_apps import standard_apps
-from apprestore_gui.ui4b.history import history_view
+from apprevive_gui.ui4b.standard_apps import standard_apps
+from apprevive_gui.ui4b.history import history_view
 
 
 def test_bundled_list_has_valid_unique_ids_and_names():
@@ -37,8 +37,8 @@ def test_signed_out_does_not_show_previous_account_or_catalog():
 
 def test_standard_restore_forwards_exact_id_and_name(qapp=None):
     from PySide6.QtWidgets import QApplication
-    from apprestore_gui.ui4b.fake_data import FakeSource
-    from apprestore_gui.ui4b.qt_bridge import Restore4b
+    from apprevive_gui.ui4b.fake_data import FakeSource
+    from apprevive_gui.ui4b.qt_bridge import Restore4b
     app = QApplication.instance() or QApplication([])
     source = FakeSource('empty')
     source.signed_in = True

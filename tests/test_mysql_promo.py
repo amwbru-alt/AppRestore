@@ -2,8 +2,8 @@ import hashlib
 from unittest.mock import MagicMock
 import pytest
 import pymysql
-from apprestore_core import mysql_promo
-from apprestore_core.restoration_codes import RestorationCodeError, RestorationCredits
+from apprevive_core import mysql_promo
+from apprevive_core.restoration_codes import RestorationCodeError, RestorationCredits
 
 
 def connection(receipts, deleted=1):

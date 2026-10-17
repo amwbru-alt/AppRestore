@@ -44,7 +44,7 @@ Windows: создайте `%USERPROFILE%\.apprevive\mysql.json` с тем же �
 
 ```bash
 .venv-build/bin/python -m pip install . -r requirements/gui-build.txt
-.venv-build/bin/python -m PyInstaller packaging/apprestore-gui.spec --noconfirm --clean
+.venv-build/bin/python -m PyInstaller packaging/apprevive-gui.spec --noconfirm --clean
 ```
 
 Настройки лежат вне .app/.exe и сохраняются при обновлении. Первое восстановление бесплатно; активация одного кода добавляет одно восстановление. Баланс и первоначальный подарок хранятся локально, не привязаны к Apple ID. Реальное соединение с вашим MySQL необходимо проверить с Mac: среда разработки не имеет доступного DNS до вашего сервера.

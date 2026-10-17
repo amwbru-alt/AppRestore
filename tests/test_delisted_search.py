@@ -10,7 +10,7 @@ import urllib.request
 import pytest
 
 try:
-    from apprestore_core import delisted_search as ds
+    from apprevive_core import delisted_search as ds
 except ImportError:
     import delisted_search as ds
 
@@ -477,7 +477,7 @@ def test_module_does_not_touch_account_code():
 def test_logs_have_counts_only(caplog):
     fa = two_apps_archive()
     s, _ = mk(fa)
-    with caplog.at_level(logging.DEBUG, logger="apprestore.delisted_search"):
+    with caplog.at_level(logging.DEBUG, logger="apprevive.delisted_search"):
         s.search("Демо Банк", storefronts=("ru",), allow_network=True)
         s.search("Сириус")
     text = caplog.text.lower()
