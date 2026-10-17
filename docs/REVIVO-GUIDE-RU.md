@@ -236,10 +236,13 @@ python packaging/package_gui.py --out gui-dist --expect-version 0.4.0 --ipatool-
 ```
 
 Для Intel замените `macos-arm64` на `macos-amd64`.
-Результат: `gui-dist/ReVivo-GUI-macOS.zip` с `ReVivo.app`.
+Результат: `gui-dist/ReVivo-GUI-macOS.zip` с `ReVivo.app` и
+`gui-dist/ReVivo-macOS.dmg` для установки перетаскиванием в Программы.
 Упаковщик выполняет ad-hoc подпись, self-test и проверку распакованного приложения.
-Developer ID/notarization автоматически не подключены; для публичного выпуска
-нужны ваши сертификаты и отдельная настройка подписи.
+Developer ID/notarization не подключены: создание DMG не требует ключей Apple,
+но формат DMG не убирает предупреждение Gatekeeper. При первом запуске может
+потребоваться разрешение в Конфиденциальность и безопасность → Всё равно открыть.
+Подробнее: [установка DMG и ограничения Gatekeeper](REVIVO-MACOS-DMG-RU.md).
 
 ### GitHub Actions
 

@@ -44,6 +44,7 @@ ROOT_FILES = [
     "docs/RELEASING.md",
     "docs/REVIVO-GUIDE-RU.md",
     "docs/REVIVO-NETWORK-AUDIT-RU.md",
+    "docs/REVIVO-MACOS-DMG-RU.md",
     "install-macos.sh",
     "install-windows.ps1",
     "LICENSE",

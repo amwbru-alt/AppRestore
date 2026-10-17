@@ -4,6 +4,11 @@ on:
   push:
     branches: [gui]
   workflow_dispatch:
+  pull_request:
+    paths:
+      - "packaging/**"
+      - "apprestore_gui/**"
+      - ".github/workflows/gui-build.yml"
 
 permissions:
   contents: read
@@ -108,4 +113,6 @@ jobs:
           path: |
             gui-dist/ReVivo-GUI-macOS.zip
             gui-dist/ReVivo-GUI-macOS.zip.sha256
+            gui-dist/ReVivo-macOS.dmg
+            gui-dist/ReVivo-macOS.dmg.sha256
           if-no-files-found: error

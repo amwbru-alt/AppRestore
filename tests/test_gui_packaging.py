@@ -64,8 +64,8 @@ def test_release_builds_both_gui_apps_and_publishes_them_with_checksums():
     assert "      - gui-windows\n" in publish and "      - gui-macos\n" in publish
     assert 'gui_windows="ReVivo-GUI-Windows.zip"' in publish
     assert 'gui_macos="ReVivo-GUI-macOS.zip"' in publish
-    assert '== 6 ]]' in publish
-    assert 'sha256sum "$gui_windows" "$gui_macos" >> SHA256SUMS.txt' in publish
+    assert '== 7 ]]' in publish
+    assert 'sha256sum "$gui_windows" "$gui_macos" "$gui_dmg" >> SHA256SUMS.txt' in publish
     assert "sha256sum -c SHA256SUMS.txt" in publish
     upload = publish[publish.index('gh release upload "$tag"'):publish.index('gh release edit "$tag"')]
     assert '"${ASSET_DIR}/${gui_windows}"' in upload

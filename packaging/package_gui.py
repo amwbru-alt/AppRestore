@@ -7,7 +7,8 @@ zip that the in-app updater will later download.
 Steps: bundle pinned ipatool -> (macOS) ad-hoc re-sign -> run --self-test ->
 check version -> zip as ReVivo-GUI-Windows.zip / ReVivo-GUI-macOS.zip
 -> unpack the zip with the updater's own code and run --update-health-check
-on the unpacked copy.
+on the unpacked copy. macOS also produces a verified drag-to-Applications DMG;
+it is not notarized and does not bypass Gatekeeper.
 
     python packaging/package_gui.py --out gui-dist --ipatool-archive ARCHIVE
         [--expect-version 0.4.0]
@@ -31,6 +32,7 @@ sys.path.insert(0, str(ROOT / "packaging"))
 
 from apprestore_gui.updater import ASSET_BY_PLATFORM, HEALTH_FLAG, extract_zip  # noqa: E402
 from fetch_ipatool import current_asset, install_archive, install_license  # noqa: E402
+from make_dmg import DMG_NAME, make_dmg  # noqa: E402
 
 
 def run(cmd: list[str], **kw) -> subprocess.CompletedProcess:
@@ -143,6 +145,13 @@ def main() -> int:
     digest = hashlib.sha256(target.read_bytes()).hexdigest()
     (out / f"{asset}.sha256").write_text(f"{digest}  {asset}\n", encoding="utf-8")
     print(f"{asset}: {target.stat().st_size} bytes, sha256 {digest}, version {version}")
+    if sys.platform == "darwin":
+        dmg = out / DMG_NAME
+        make_dmg(app, dmg)
+        dmg_digest = hashlib.sha256(dmg.read_bytes()).hexdigest()
+        (out / f"{DMG_NAME}.sha256").write_text(f"{dmg_digest}  {DMG_NAME}\n", encoding="utf-8")
+        print(f"{DMG_NAME}: sha256 {dmg_digest}; not notarized, first-launch approval may be required")
+
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as fh:
             fh.write(f"* `{asset}` {version}: sha256 `{digest}`\n")
