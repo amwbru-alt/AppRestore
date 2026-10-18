@@ -270,7 +270,7 @@ Item {
                     lineHeight: 15 * 1.6
                     text: (ui.searchNote ? ui.searchNote + "<br>" : "")
                           + "<font color='" + Theme.ink + "'><b>Нет того, что искали?</b></font> "
-                          + "Покажем недоступные приложения из истории этого Apple ID."
+                          + "Откроем всю историю покупок этого Apple ID."
                 }
                 Rectangle {
                     width: storeLabel.implicitWidth + 36
@@ -279,7 +279,7 @@ Item {
                     color: "transparent"
                     border.width: 1
                     border.color: Theme.ink
-                    T { id: storeLabel; anchors.centerIn: parent; token: "link"; font.weight: 600; text: "Удалённые из App Store" }
+                    T { id: storeLabel; anchors.centerIn: parent; token: "link"; font.weight: 600; text: "Восстановить из истории" }
                     MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: ui.openHistory() }
                 }
                 // App Store / purchases results: «Поставить» goes the usual way (space, consent, gate)

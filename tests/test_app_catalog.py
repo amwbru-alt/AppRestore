@@ -36,7 +36,7 @@ def test_remote_catalog_falls_back_and_survives_restart(tmp_path, monkeypatch):
 
 
 def test_history_keeps_purchase_and_uses_database_icon():
-    view = history_view([dict(trackId='492224193', name='Account title')], signed_in=True, statuses={'492224193': 'delisted'},
+    view = history_view([dict(trackId='492224193', name='Account title')], signed_in=True,
                         catalog=[dict(trackId='492224193', name='Curated', iconUrl='https://example.org/x.png')])
     assert len(view['rows']) == 1
     assert view['rows'][0]['name'] == 'Account title'

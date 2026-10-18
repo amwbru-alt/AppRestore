@@ -757,7 +757,7 @@ def test_unpatched_ipatool_no_consent_owned_go_marked_listed(qapp, tmp_path) -> 
     home = controller.home
     assert home["state"] == "needs_component" and home["number"] == 4 and home["cta"] == "Выбрать и вернуть"
     assert home["fine"] == QUIET_LINE and HOWTO_LINK in home["fine"]
-    assert home["links"] == ["Удалённые из App Store", DETAILS_LINK]
+    assert home["links"] == ["Восстановить из истории", DETAILS_LINK]
     assert "удалены из App Store" in home["lead"] and "уже на вашем Apple ID" in home["lead"]
     assert "ipatool" not in home["fine"] + home["lead"]  # technical words only behind «Подробнее»
     controller.link(DETAILS_LINK)
@@ -954,12 +954,9 @@ def test_needs_component_details_list_only_what_capabilities_lack(caps, missing)
 def test_history_store_id_starts_the_usual_restore(qapp) -> None:
     source = FakeSource("empty")
     source.signed_in = True
-    source.account_email = "owner@example.com"
-    source.find_statuses = {"492224193": "delisted"}
     source.purchase_rows = lambda: [{"trackId": "492224193", "name": "СберБанк"}]
     controller = Restore4b(source, onboarded=True)
     controller.openHistory()
-    wait(qapp, lambda: bool(controller.history["rows"]))
     controller.restoreByStoreId("не id")
     assert controller.history["open"] is True
     assert controller.history["idNote"]

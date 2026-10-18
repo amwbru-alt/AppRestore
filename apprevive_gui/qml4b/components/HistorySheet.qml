@@ -42,16 +42,6 @@ Item {
                 Accessible.name: text
                 MouseArea { anchors.fill: parent; anchors.margins: -8; cursorShape: Qt.PointingHandCursor; onClicked: ui.closeHistory() }
             }
-            T {
-                anchors.right: parent.right
-                anchors.rightMargin: 148
-                anchors.verticalCenter: parent.verticalCenter
-                token: "sheetLink"
-                text: "Обновить"
-                Accessible.role: Accessible.Button
-                Accessible.name: text
-                MouseArea { anchors.fill: parent; anchors.margins: -8; cursorShape: Qt.PointingHandCursor; onClicked: ui.refreshHistory() }
-            }
             Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.line }
         }
 
@@ -95,7 +85,7 @@ Item {
 
         Item {
             id: byId
-            visible: !!root.h.signedIn && !!root.h.allowManualId
+            visible: !!root.h.signedIn
             x: Theme.listPadX
             y: sbox.y + sbox.height + (visible ? 10 : 0)
             width: parent.width - 2 * Theme.listPadX

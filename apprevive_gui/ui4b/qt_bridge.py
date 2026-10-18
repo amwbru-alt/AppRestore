@@ -45,7 +45,6 @@ from apprevive_gui.ui4b.licenses import (
 from apprevive_gui.ui4b.licenses import candidates as license_candidates
 from apprevive_gui.ui4b.home import STATE_APPLE_REJECTED, STATE_DONE, STATE_STORE_MISMATCH, HomeInput, PhoneApp, home_view, link_action
 from apprevive_gui.ui4b.standard_apps import standard_apps
-from apprevive_gui.ui4b.history_probe import HistoryProbe
 from apprevive_gui.ui4b.history import ID_BAD, history_view, name_for_store_id, parse_store_id
 from apprevive_gui.ui4b.journal import journal_view
 from apprevive_gui.ui4b.region import apply_statuses, load_classifier
@@ -797,13 +796,10 @@ class Restore4b(QObject):
         self._files_open = False
         self._files_mode = "list"
         self._files_chosen: set[str] = set()
-        self.history_probe = HistoryProbe(self)
-        self.history_probe.changed.connect(self._refresh)
         self.catalog_provider = None
         self._history_open = False
         self._history_query = ""
         self._history_id_note = ""
-        self._history_auto_identity = ""
         self._history_account = ""
         self.flow = RestoreFlow(source, self._refresh)
         self.scan = ScanCounter()
@@ -882,7 +878,6 @@ class Restore4b(QObject):
         self._patches_missing = tuple(self.source.missing_patches()) or (
             ("?",) if self.flow.component_blocked else ()
         )
-        self._probe_history()
         items = self.source.items()
         if self._patches_missing:
             items = component.mark(items, self.source.owned_store_ids(), self._patches_missing)
@@ -925,16 +920,6 @@ class Restore4b(QObject):
         if self._step == 4 and not self._scan_started:
             self._scan_started = True
             self.source.start_scan()
-        identity = self._history_identity()
-        if not identity:
-            self._history_auto_identity = ""
-        elif not self._step and identity != self._history_auto_identity and not self.flow.running and not self._checking_space and not self._consent:
-            self._history_auto_identity = identity
-            self._history_open = True
-            if self.catalog_provider:
-                self.catalog_provider.refresh()
-            self._load_history(force=True)
-            self._probe_history(force=True)
         queue = self.flow.queue if self.flow.queue.entries else None
         self._home = home_view(
             HomeInput(
@@ -947,7 +932,7 @@ class Restore4b(QObject):
                 space=src.space(),
                 queue=queue,
                 done_dismissed=self._done_dismissed,
-                phone_apps=(),
+                phone_apps=src.phone_apps(),
                 region_name=src.region_name,
                 relogin=bool(src.relogin or self.flow.needs_signin),
                 store_problem=self.flow.store_problem,
@@ -1485,32 +1470,6 @@ class Restore4b(QObject):
         elif action == "journal":
             self.openJournal()
 
-    def _history_identity(self):
-        email = str(self.source.account_email or "").strip().lower()
-        return email + "|" + str(self.source.region_name or "") if self.source.signed_in and email else ""
-
-    def _probe_history(self, *, force=False):
-        source = self.source
-        identity = self._history_identity()
-        items = source.purchase_rows() if source.signed_in and self._history_open else []
-        ids = [str(item.get("trackId") or item.get("track_id") or "") for item in items]
-        self.history_probe.update(identity, ids, source.store_statuses, online=bool(source.online), force=force)
-
-    def _history_installed_ids(self):
-        # Keep offloaded placeholders, but hide fully installed applications.
-        if not self.source.connected:
-            return set()
-        offloaded = [item for item in self.source.items() if item.group == "offloaded"]
-        offloaded_ids = {item.store_id for item in offloaded if item.store_id}
-        offloaded_bundles = {item.bundle_id for item in offloaded if item.bundle_id}
-        present = [app for app in self.source.phone_apps() if app.store_id not in offloaded_ids and app.bundle_id not in offloaded_bundles]
-        ids = {str(app.store_id) for app in present if app.store_id}
-        bundles = {app.bundle_id for app in present if app.bundle_id}
-        for item in self.source.purchase_rows():
-            if (item.get("bundleId") or item.get("bundle_id")) in bundles:
-                ids.add(str(item.get("trackId") or item.get("track_id") or ""))
-        return ids
-
     @Property("QVariantMap", notify=changed)
     def history(self) -> dict[str, object]:
         if not self._history_open:
@@ -1532,9 +1491,6 @@ class Restore4b(QObject):
             query=self._history_query,
             id_note=self._history_id_note,
             catalog=self.catalog_provider.items() if self.catalog_provider else standard_apps(),
-            statuses=self.history_probe.statuses if self.history_probe.identity == self._history_identity() else {},
-            checking=self.history_probe.pending,
-            installed_ids=self._history_installed_ids(),
         )
         view["open"] = self._history_open
         view["query"] = self._history_query
@@ -1548,16 +1504,7 @@ class Restore4b(QObject):
         self._history_query = ""
         self._history_id_note = ""
         self._load_history(force=True)
-        self._probe_history(force=True)
         self._refresh()
-
-    @Slot()
-    def refreshHistory(self):
-        if self._history_open:
-            self._history_id_note = ""
-            self._load_history(force=True)
-            self._probe_history(force=True)
-            self._refresh()
 
     @Slot()
     def closeHistory(self) -> None:
@@ -1573,14 +1520,8 @@ class Restore4b(QObject):
 
     @Slot(str, str)
     def restoreFromHistory(self, store_id: str, name: str) -> None:
-        if self.flow.running or not self.source.signed_in or not str(store_id or "").strip():
+        if self.flow.running or not str(store_id or "").strip():
             return
-        allowed = {str(row["storeId"]): row for row in self.history.get("rows", [])}
-        if store_id not in allowed:
-            self._history_id_note = "Выберите подтверждённое приложение из списка."
-            self._refresh()
-            return
-        name = str(allowed[store_id]["name"])
         self._history_open = False
         self._history_query = ""
         self._history_id_note = ""
