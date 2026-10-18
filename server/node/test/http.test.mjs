@@ -43,3 +43,14 @@ test('HTTPS mode is optional, but does not trust remote forwarded headers blindl
   assert.equal((await post(url)).status, 426);
   assert.equal((await fetch(url + '/health')).status, 200);
 });
+
+test('account routes pass only validated JSON to account service', async t => {
+  const calls = [];
+  const accounts = Object.fromEntries(['balance', 'reserve', 'finish', 'redeem'].map(name => [name, async body => { calls.push(name); return { status: 'ok', account_id: body.account_id }; }]));
+  const { url } = await api(t, { accounts });
+  for (const name of Object.keys(accounts)) {
+    const response = await fetch(url + '/v2/account/' + name, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ account_id: 'a'.repeat(64) }) });
+    assert.equal(response.status, 200);
+  }
+  assert.deepEqual(calls, ['balance', 'reserve', 'finish', 'redeem']);
+});

@@ -179,8 +179,15 @@ class PromoController(QObject):
 
 
 def enable_restoration_codes(service, parent=None) -> PromoController:
-    controller = PromoController(RestorationCredits(data_dir() / "restoration-credits.sqlite3"), parent)
-    access = RestorationAccess(controller.credits, controller.request_code, controller.notify)
+    from apprevive_core.account_credits import AccountCredits, AccountAccess
+    from apprevive_gui.account_bindings import account_email
+
+    def verified_email():
+        # Read the active authenticated ipatool session, not editable UI text.
+        return account_email(service.core.tools.ipatool_auth_info())
+
+    controller = PromoController(AccountCredits(data_dir() / "server-operations.sqlite3", verified_email), parent)
+    access = AccountAccess(controller.credits, controller.request_code, controller.notify)
     service.restoration_access = access
     service.core.restoration_access = access
     return controller

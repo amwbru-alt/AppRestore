@@ -3,9 +3,9 @@ name: Node API tests
 on:
   push:
     branches: [codex/apprevive-icons, main]
-    paths: ['server/node/**', 'server/promo/schema.sql', '.github/workflows/node-api.yml']
+    paths: ['server/node/**', 'server/promo/*.sql', '.github/workflows/node-api.yml']
   pull_request:
-    paths: ['server/node/**', 'server/promo/schema.sql', '.github/workflows/node-api.yml']
+    paths: ['server/node/**', 'server/promo/*.sql', '.github/workflows/node-api.yml']
   workflow_dispatch:
 
 permissions:

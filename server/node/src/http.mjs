@@ -18,7 +18,7 @@ async function jsonBody(req) {
   try { return JSON.parse(Buffer.concat(parts).toString('utf8')); }
   catch { throw new ApiError(400, 'invalid_json'); }
 }
-export function createApi(service, { requireHttps = true, redemptionLimit = 20, now = Date.now } = {}) {
+export function createApi(service, { requireHttps = true, redemptionLimit = 20, now = Date.now, accounts = null } = {}) {
   const attempts = new Map();
   let lastPrune = 0;
   const server = http.createServer(async (req, res) => {
@@ -27,7 +27,7 @@ export function createApi(service, { requireHttps = true, redemptionLimit = 20, 
       if (path === '/health' && req.method === 'GET') return reply(res, 200, { status: 'ok' });
       if (requireHttps && !(req.socket.encrypted || loopback(req.socket.remoteAddress) && req.headers['x-forwarded-proto'] === 'https')) throw new ApiError(426, 'https_required');
       if (path === '/v1/catalog' && req.method === 'GET') return reply(res, 200, await service.catalog());
-      if (path === '/v1/redeem' && req.method === 'POST') {
+      if ((path === '/v1/redeem' || path.startsWith('/v2/account/')) && req.method === 'POST') {
         const time = now();
         if (time - lastPrune > 60000) {
           for (const [key, value] of attempts) if (value.until <= time) attempts.delete(key);
@@ -40,6 +40,13 @@ export function createApi(service, { requireHttps = true, redemptionLimit = 20, 
           entry = { count: 0, until: time + 60000 }; attempts.set(ip, entry);
         }
         if (++entry.count > redemptionLimit) throw new ApiError(429, 'rate_limited');
+        if (path.startsWith('/v2/account/')) {
+          const methods = { balance: 'balance', redeem: 'redeem', reserve: 'reserve', finish: 'finish' };
+          const key = path.slice('/v2/account/'.length);
+          const method = Object.hasOwn(methods, key) ? methods[key] : null;
+          if (!accounts || !method) throw new ApiError(404, 'not_found');
+          return reply(res, 200, await accounts[method](await jsonBody(req)));
+        }
         return reply(res, 200, await service.redeem(await jsonBody(req)));
       }
       throw new ApiError(['/v1/catalog', '/v1/redeem'].includes(path) ? 405 : 404, 'not_found');
