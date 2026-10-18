@@ -73,6 +73,14 @@ Sheet {
             text: root.s.updateStatus || ""
         }
         Item { width: 1; height: 24 }
+        Cta {
+            objectName: "openPartners"
+            secondary: true; compact: true
+            text: "Партнёрская программа"
+            enabledLook: !!root.s.cleanupEnabled
+            onClicked: ui.openPartners()
+        }
+        Item { width: 1; height: 24 }
         T { token: "group"; text: "Очистка данных" }
         Item { width: 1; height: 12 }
         Cta {

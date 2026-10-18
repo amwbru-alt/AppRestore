@@ -1,6 +1,7 @@
+import { PartnerService } from './partners.mjs';
 import { randomBytes } from 'node:crypto';
 import { createDatabase } from './db.mjs';
-import { safeIcon } from './service.mjs';
+import { safeIcon, ApiError } from './service.mjs';
 
 async function syncIcons(pool) {
   const [rows] = await pool.execute("SELECT store_id FROM apprevive_app_catalog WHERE icon_url='' AND enabled=1");
@@ -36,7 +37,13 @@ async function syncIcons(pool) {
 let pool;
 try {
   pool = createDatabase();
-  if (process.argv[2] === 'sync-icons') await syncIcons(pool);
+  if (process.argv[2] === 'record-purchase') {
+    const [buyer_id, count, amount, payment_reference] = process.argv.slice(3);
+    const result = await new PartnerService(pool).recordPurchase({ buyer_id, quantity: Number(count), amount_kopecks: Number(amount), payment_reference });
+    console.log(JSON.stringify(result, null, 2));
+  } else if (process.argv[2] === 'refund-order') {
+    console.log(JSON.stringify(await new PartnerService(pool).refund(process.argv[3]), null, 2));
+  } else if (process.argv[2] === 'sync-icons') await syncIcons(pool);
   else if (process.argv[2] === 'add-codes') {
     const count = Number(process.argv[3] || 1);
     if (!Number.isInteger(count) || count < 1 || count > 1000) throw new Error('Invalid count');
@@ -45,6 +52,6 @@ try {
       await pool.execute('INSERT INTO apprevive_promo_codes (code) VALUES (?)', [Buffer.from(code)]);
       console.log(code); // Administrator terminal only; never exposed through HTTP.
     }
-  } else throw new Error('Use sync-icons or add-codes [1..1000]');
-} catch { console.error('Catalog/code operation failed. Check command, environment and database.'); process.exitCode = 1; }
+  } else throw new Error('Use sync-icons, add-codes [1..1000], record-purchase BUYER_ID COUNT KOPECKS PAYMENT_ID, or refund-order PAYMENT_ID');
+} catch (error) { console.error(error instanceof ApiError ? 'Operation rejected: ' + error.code : 'Catalog/code operation failed. Check command, environment and database.'); process.exitCode = 1; }
 finally { if (pool) await pool.end(); }

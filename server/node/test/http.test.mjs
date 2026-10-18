@@ -54,3 +54,18 @@ test('account routes pass only validated JSON to account service', async t => {
   }
   assert.deepEqual(calls, ['balance', 'reserve', 'finish', 'redeem']);
 });
+
+test('public partner API exposes profile/bind only, never purchase or refund commands', async t => {
+  const calls = [];
+  const partners = { profile: async body => ({ status: 'ok', account_id: body.account_id }), bind: async body => { calls.push(body); return { status: 'bound' }; }, recordPurchase: () => assert.fail('private operation') };
+  const { url } = await api(t, { partners });
+  for (const name of ['profile', 'bind']) {
+    const result = await fetch(url + '/v2/partner/' + name, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ account_id: 'a'.repeat(64) }) });
+    assert.equal(result.status, 200);
+  }
+  for (const name of ['recordPurchase', 'refund', 'constructor']) {
+    const result = await fetch(url + '/v2/partner/' + name, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    assert.equal(result.status, 404);
+  }
+  assert.equal(calls.length, 1);
+});

@@ -326,6 +326,9 @@ class SourceBase(QObject):
         """QuickSession.signOut → AppReviveService.sign_out (revoke, session copy
         and purchases-cache.json deleted; license journal and icon cache stay)."""
 
+    def open_partners(self) -> None:
+        pass
+
     def clear_local_data(self, kind: str) -> str:
         raise RuntimeError("Очистка недоступна в демонстрационном режиме.")
 
@@ -754,6 +757,15 @@ class SessionSource(SourceBase):
     def sign_out(self) -> None:
         self._names.clear()  # names looked up for this Apple ID's storefront
         self.session.signOut()
+
+    def open_partners(self) -> None:
+        from apprevive_gui.partners import PartnerDialog
+        dialog = getattr(self, "_partner_dialog", None)
+        if dialog is not None and dialog.isVisible():
+            dialog.raise_()
+            return
+        self._partner_dialog = PartnerDialog(self.session)
+        self._partner_dialog.show()
 
     def clear_local_data(self, kind: str) -> str:
         self._names.clear()
@@ -1696,6 +1708,11 @@ class Restore4b(QObject):
         self._cleanup_kind = ""
         self._settings_open = False
         self._refresh()
+
+    @Slot()
+    def openPartners(self) -> None:
+        if not self.flow.running:
+            self.source.open_partners()
 
     @Slot(str)
     def askCleanup(self, kind: str) -> None:

@@ -25,8 +25,10 @@ def account_id(email: str) -> str:
     return hashlib.sha256(('apprevive-account-v1:' + email).encode()).hexdigest()
 
 
-def api_call(method: str, body: dict) -> dict:
-    url = api_base_url() + '/v2/account/' + method
+def api_call(method: str, body: dict, *, namespace="account") -> dict:
+    if namespace not in ("account", "partner"):
+        raise ValueError("Unknown API namespace")
+    url = api_base_url() + "/v2/" + namespace + "/" + method
     request = urllib.request.Request(url, data=json.dumps(body).encode(), headers={
         'Content-Type': 'application/json', 'Accept': 'application/json', 'User-Agent': 'AppRevive/0.4',
     }, method='POST')
@@ -46,6 +48,9 @@ def api_call(method: str, body: dict) -> dict:
                     422: 'Код не найден или уже использован другим аккаунтом.',
                     404: 'Обновите Node.js API на сервере: учёт Apple ID пока недоступен.',
                     429: 'Слишком много запросов. Подождите минуту.'}
+        if namespace == "partner":
+            messages.update({409: 'Пригласивший уже закреплён, покупка уже записана или указан собственный код.',
+                             422: 'Партнёрский код не найден.', 404: 'Обновите API и импортируйте таблицы партнёрской программы.'})
         raise RestorationCodeError(messages.get(exc.code, 'Не удалось проверить серверный баланс. Повторите позже.')) from exc
     except (OSError, ValueError) as exc:
         raise RestorationCodeError('Не удалось проверить серверный баланс. Проверьте интернет и повторите.') from exc
