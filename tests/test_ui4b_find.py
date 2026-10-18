@@ -316,13 +316,14 @@ def test_settings_archive_switch_persists_and_updates_check(qapp) -> None:
     assert failed.settings["updateStatus"].startswith("Не удалось проверить обновления")
 
 
-def test_windows_settings_link_and_mac_menu_in_qml() -> None:
+def test_shared_settings_link_and_mac_menu_in_qml() -> None:
     from apprevive_gui.ui4b.window import QML_DIR
 
     hero = (QML_DIR / "components" / "HomeHero.qml").read_text(encoding="utf-8")
     main = (QML_DIR / "Main.qml").read_text(encoding="utf-8")
     menu = (QML_DIR / "components" / "MacMenu.qml").read_text(encoding="utf-8")
-    assert 'Theme.isWin && (root.view.links || []).indexOf("Apple ID") >= 0 ? ["Настройки"]' in hero
+    assert '(root.view.links || []).indexOf("Настройки") < 0 ? ["Настройки"]' in hero
+    assert "Theme.isWin &&" not in hero
     assert '"Ctrl+,"' in main and "PreferencesRole" in menu and "Настройки…" in menu
 
 

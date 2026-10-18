@@ -53,6 +53,7 @@ def test_accounts_remove_all_sessions_but_keep_balance_and_config(tmp_path, monk
 
 
 def test_cleanup_refuses_busy_session():
+    pytest.importorskip("PySide6")
     from types import SimpleNamespace
     from apprevive_gui.quick_session import QuickSession
     session = SimpleNamespace(_acquire_account_change=lambda: False)

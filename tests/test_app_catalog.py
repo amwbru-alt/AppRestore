@@ -1,5 +1,7 @@
 import json
 from unittest.mock import MagicMock
+import pytest
+pytest.importorskip("PySide6.QtWidgets")
 from PySide6.QtWidgets import QApplication
 from apprevive_core.app_catalog import validate_catalog
 from apprevive_gui.app_catalog import AppCatalog
