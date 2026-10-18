@@ -13,7 +13,14 @@ Sheet {
     panelWidth: Theme.authSheetWidth
     onCancel: ui.closeSettings()
 
+    Flickable {
+        width: parent.width
+        height: Math.min(settingsContent.implicitHeight, Math.max(160, root.height - 180))
+        contentHeight: settingsContent.implicitHeight
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
     Column {
+        id: settingsContent
         width: parent.width
         spacing: 0
         // -- Поиск
@@ -65,5 +72,46 @@ Sheet {
             wrapMode: Text.WordWrap
             text: root.s.updateStatus || ""
         }
+        Item { width: 1; height: 24 }
+        T { token: "group"; text: "Очистка данных" }
+        Item { width: 1; height: 12 }
+        Cta {
+            objectName: "clearAppleAccounts"
+            secondary: true; compact: true
+            text: "Очистить аккаунты Apple"
+            enabledLook: !!root.s.cleanupEnabled
+            onClicked: ui.askCleanup("accounts")
+        }
+        Item { width: 1; height: 12 }
+        Cta {
+            objectName: "clearDownloads"
+            secondary: true; compact: true
+            text: "Удалить скачанные IPA"
+            enabledLook: !!root.s.cleanupEnabled
+            onClicked: ui.askCleanup("downloads")
+        }
+        Item { width: 1; height: 12 }
+        T {
+            width: parent.width; token: "fine"; wrapMode: Text.WordWrap
+            text: root.s.cleanupKind === "accounts"
+                ? "Удалить все сохранённые аккаунты Apple и завершить текущий вход?"
+                : root.s.cleanupKind === "downloads"
+                  ? "Навсегда удалить скачанные IPA из папки AppRevive с диска? Файлы, выбранные из других папок, сохранятся."
+                  : ""
+            visible: text !== ""
+        }
+        Row {
+            spacing: 12
+            visible: !!root.s.cleanupKind
+            Cta { objectName: "confirmCleanup"; compact: true; text: "Удалить"; onClicked: ui.confirmCleanup() }
+            Cta { compact: true; secondary: true; text: "Отмена"; onClicked: ui.cancelCleanup() }
+        }
+        T {
+            objectName: "cleanupStatus"
+            width: parent.width; token: "status"; wrapMode: Text.WordWrap
+            text: root.s.cleanupStatus || ""
+            visible: text !== ""
+        }
+    }
     }
 }

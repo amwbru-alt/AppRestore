@@ -134,9 +134,9 @@ Column {
     Item { width: 1; height: 30; visible: links.visible }
     Links {
         id: links
-        visible: (root.view.links || []).length > 0
-        // Windows: a quiet «Настройки» last, after «Apple ID» (01 §2.2); macOS has the menu
-        items: (root.view.links || []).concat(Theme.isWin && (root.view.links || []).indexOf("Apple ID") >= 0 ? ["Настройки"] : [])
+        visible: true
+        // Settings are available inside the window on every platform.
+        items: (root.view.links || []).concat((root.view.links || []).indexOf("Настройки") < 0 ? ["Настройки"] : [])
         onActivated: function(name) { root.link(name) }
     }
 }

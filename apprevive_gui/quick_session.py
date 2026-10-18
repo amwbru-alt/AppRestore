@@ -792,6 +792,40 @@ class QuickSession(QObject):
         self._on_session_view(SESSION_UNKNOWN)
         self.changed.emit()
 
+    def clear_local_data(self, kind: str) -> str:
+        """Serialize cleanup with device, purchase and authentication jobs."""
+        if kind not in ("accounts", "downloads"):
+            raise ValueError("Unknown cleanup action")
+        if not self._acquire_account_change():
+            raise RuntimeError("Дождитесь завершения текущей операции и повторите.")
+        try:
+            from apprevive_gui.cleanup import clear_accounts, clear_downloads
+
+            if kind == "accounts":
+                self.signOut()
+                with self._lock:
+                    self._bindings.clear()
+                    self._kept.clear()
+                    self._passphrases.clear()
+                    self._switch_asked = None
+                    self._return_account = ""
+                    self._pending_email = ""
+                    self._forced_email = ""
+                    self._keychain_prompted = False
+                clear_accounts()
+                text = "Сохранённые аккаунты Apple удалены. Для входа потребуется авторизация."
+            else:
+                count = clear_downloads(self.service.core.library)
+                self.service.core._local_scan_cache = None
+                with self._lock:
+                    self._library_rows = []
+                self.filesChanged.emit()
+                text = f"Удалено файлов IPA: {count}."
+            self.changed.emit()
+            return text
+        finally:
+            self._tool_lock.release()
+
     def _set_auth(self, phase: str, status: str) -> None:
         with self._lock:
             self._phase = phase

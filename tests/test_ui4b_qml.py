@@ -982,3 +982,27 @@ def test_history_sheet_lists_purchases(qapp) -> None:
     qapp.processEvents()
     assert warnings == []
 
+
+
+def test_settings_cleanup_requires_confirmation_and_renders(qapp):
+    source = FakeSource('missing')
+    calls = []
+    source.clear_local_data = lambda kind: calls.append(kind) or 'Удалено'
+    controller = Restore4b(source)
+    controller.openSettings()
+    engine, icons, warnings = open_window(qapp, controller)
+    window = engine.rootObjects()[0]
+    assert window.findChild(QQuickItem, 'clearAppleAccounts') is not None
+    assert window.findChild(QQuickItem, 'clearDownloads') is not None
+    controller.askCleanup('downloads')
+    qapp.processEvents()
+    assert calls == []
+    controller.cancelCleanup()
+    controller.confirmCleanup()
+    assert calls == []
+    controller.askCleanup('downloads')
+    controller.confirmCleanup()
+    assert calls == ['downloads']
+    assert controller.settings['cleanupStatus'] == 'Удалено'
+    assert not warnings
+    window.close()

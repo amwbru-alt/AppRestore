@@ -326,6 +326,9 @@ class SourceBase(QObject):
         """QuickSession.signOut → AppReviveService.sign_out (revoke, session copy
         and purchases-cache.json deleted; license journal and icon cache stay)."""
 
+    def clear_local_data(self, kind: str) -> str:
+        raise RuntimeError("Очистка недоступна в демонстрационном режиме.")
+
     def devices(self) -> list[dict[str, object]]:
         return []
 
@@ -752,6 +755,10 @@ class SessionSource(SourceBase):
         self._names.clear()  # names looked up for this Apple ID's storefront
         self.session.signOut()
 
+    def clear_local_data(self, kind: str) -> str:
+        self._names.clear()
+        return self.session.clear_local_data(kind)
+
 
 class Restore4b(QObject):
     """Everything the 4b QML reads. One ``changed`` signal; QML re-reads properties."""
@@ -776,6 +783,8 @@ class Restore4b(QObject):
         self._archive_search = bool(archive_search)
         self._update_check = update_check
         self._settings_open = False
+        self._cleanup_kind = ""
+        self._cleanup_text = ""
         self._update_text = ""
         self._update_busy = False
         self.finder = Find4b(
@@ -1684,7 +1693,37 @@ class Restore4b(QObject):
 
     @Slot()
     def closeSettings(self) -> None:
+        self._cleanup_kind = ""
         self._settings_open = False
+        self._refresh()
+
+    @Slot(str)
+    def askCleanup(self, kind: str) -> None:
+        if kind not in ("accounts", "downloads") or self.flow.running:
+            return
+        self._cleanup_kind = kind
+        self._cleanup_text = ""
+        self._refresh()
+
+    @Slot()
+    def cancelCleanup(self) -> None:
+        self._cleanup_kind = ""
+        self._refresh()
+
+    @Slot()
+    def confirmCleanup(self) -> None:
+        kind = self._cleanup_kind
+        self._cleanup_kind = ""
+        if kind not in ("accounts", "downloads") or self.flow.running:
+            self._refresh()
+            return
+        try:
+            self._cleanup_text = self.source.clear_local_data(kind)
+            if kind == "accounts":
+                self.flow.on_signed_out()
+                reset_attempt_session()
+        except Exception:
+            self._cleanup_text = "Очистка не завершена. Закройте текущие операции и повторите. Часть данных могла быть удалена."
         self._refresh()
 
     @Slot(bool)
@@ -1732,8 +1771,11 @@ class Restore4b(QObject):
 
     @Property("QVariantMap", notify=changed)
     def settings(self) -> dict[str, object]:
-        return settings_view(open_=self._settings_open, archive=self._archive_search,
+        view = settings_view(open_=self._settings_open, archive=self._archive_search,
                              update_text=self._update_text, update_busy=self._update_busy)
+        view.update(cleanupKind=self._cleanup_kind, cleanupStatus=self._cleanup_text,
+                    cleanupEnabled=not self.flow.running)
+        return view
 
     # -- «Apple ID» sheet (04-auth §2a): who is signed in, «Выйти» -------------------
 

@@ -401,3 +401,12 @@ Then run `apprevive`, trust the computer on the phone, use menu item **A** to
 sign in, **1** for offloaded apps, **2** for fully removed apps. Passwords stay
 inside interactive `ipatool`; AppRevive does not put them on argv. See
 `apprevive --help` and [SECURITY.md](./SECURITY.md).
+
+### Очистка в настройках
+
+Ссылка «Настройки» доступна в окне на macOS и Windows. «Очистить аккаунты Apple»
+завершает текущую сессию, удаляет сохранённые сессии Apple, привязки устройств
+и локальную историю покупок. «Удалить скачанные IPA» удаляет IPA с диска
+из библиотеки AppRevive; импортированные из других папок файлы сохраняются.
+Каждое действие требует подтверждения и недоступно во время операций.
+Настройки API и баланс восстановлений сохраняются.
