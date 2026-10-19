@@ -1,4 +1,5 @@
 import http from 'node:http';
+import { createWebsite } from './website.mjs';
 import { ApiError } from './service.mjs';
 const loopback = address => ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(address);
 
@@ -18,7 +19,7 @@ async function jsonBody(req) {
   try { return JSON.parse(Buffer.concat(parts).toString('utf8')); }
   catch { throw new ApiError(400, 'invalid_json'); }
 }
-export function createApi(service, { requireHttps = true, redemptionLimit = 20, now = Date.now, accounts = null, partners = null } = {}) {
+export function createApi(service, { requireHttps = true, redemptionLimit = 20, now = Date.now, accounts = null, partners = null, website = createWebsite() } = {}) {
   const attempts = new Map();
   let lastPrune = 0;
   const server = http.createServer(async (req, res) => {
@@ -26,6 +27,7 @@ export function createApi(service, { requireHttps = true, redemptionLimit = 20, 
       const path = new URL(req.url, 'http://internal').pathname;
       if (path === '/health' && req.method === 'GET') return reply(res, 200, { status: 'ok' });
       if (requireHttps && !(req.socket.encrypted || loopback(req.socket.remoteAddress) && req.headers['x-forwarded-proto'] === 'https')) throw new ApiError(426, 'https_required');
+      if (website && await website(req, res, path)) return;
       if (path === '/v1/catalog' && req.method === 'GET') return reply(res, 200, await service.catalog());
       if ((path === '/v1/redeem' || path.startsWith('/v2/account/') || path.startsWith('/v2/partner/')) && req.method === 'POST') {
         const time = now();

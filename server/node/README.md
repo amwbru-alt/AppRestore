@@ -192,3 +192,9 @@ SELECT account_id, credits, installations FROM apprevive_accounts;
 
 Для партнёрских кодов и учёта оплаченных заказов импортируйте также
 `server/promo/partners-schema.sql`. [Полная инструкция](../../PARTNERS.md).
+
+## Сайт на том же Node.js-сервере
+
+Главная `/` теперь отдаёт сайт AppRevive. Обновление сервера, загрузка ZIP для
+скачивания и настройка: [WEBSITE.md](../../WEBSITE.md). Отдельная сборка frontend
+и дополнительные SQL-таблицы для сайта не нужны.
