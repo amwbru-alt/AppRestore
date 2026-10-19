@@ -7,15 +7,22 @@ window.AppRevivePortal = (() => {
     mail_not_configured:'Отправка писем пока не настроена на сервере. Администратор должен подключить почтовый сервис.',
     mail_unavailable:'Почтовый сервис не принял письмо. Повторите позже или обратитесь к администратору.',
     payments_not_configured:'Приём оплаты пока не настроен.', verify_apple_email_required:'Подтвердите почту этого Apple ID.',
+    unknown_referral:'Код приглашения не найден.', self_referral:'Нельзя пригласить себя.', referral_locked:'Пригласивший уже закреплён.', purchase_already_recorded:'Пригласившего нужно указать до первой покупки.',
     apple_already_linked:'Этот Apple ID уже привязан к другому аккаунту AppRevive.',
     invalid_or_expired_token:'Ссылка недействительна или истекла. Запросите новое письмо.',
     login_as_link_requester:'Войдите в аккаунт AppRevive, из которого запрашивали привязку Apple ID.',
     invalid_code:'Код не найден или уже использован.', rate_limited:'Слишком много запросов. Повторите позже.',
     admin_required:'Недостаточно прав. Войдите как администратор.', unavailable:'Сервер временно недоступен. Повторите позже.'
   };
+  let noticeTimer;
   const notice = (text,focus=false) => {
     const box=document.getElementById('message');if(!box)return;
-    box.textContent=text;if(focus){box.tabIndex=-1;box.focus({preventScroll:true});if(box.scrollIntoView)box.scrollIntoView({block:'nearest'});}
+    clearTimeout(noticeTimer);box.hidden=!text;box.replaceChildren();box.dataset.kind=focus?'error':'info';
+    const content=document.createElement('span');content.textContent=text;
+    const close=document.createElement('button');close.type='button';close.className='notice-close';close.textContent='×';close.setAttribute('aria-label','Закрыть уведомление');
+    close.onclick=()=>{clearTimeout(noticeTimer);box.hidden=true;box.replaceChildren();};box.append(content,close);
+    if(focus){box.tabIndex=-1;box.focus({preventScroll:true});}
+    noticeTimer=setTimeout(()=>{box.hidden=true;box.replaceChildren();},focus?9000:5500);
   };
   async function request(path,body) {
     if(!window.AppReviveTransport)throw Error('Не загрузился модуль подключения. Обновите страницу.');
@@ -43,7 +50,7 @@ window.AppRevivePortal = (() => {
     if(form){form.dataset.busy='true';form.setAttribute('aria-busy','true');}
     if(button){button.disabled=true;button.textContent='Выполняем…';}
     notice('Выполняем запрос…');
-    try{await fn(event);if(document.getElementById('message')?.textContent==='Выполняем запрос…')notice('Готово.');}catch(error){notice(error.message,true);}finally{
+    try{await fn(event);if(document.getElementById('message')?.querySelector('span')?.textContent==='Выполняем запрос…')notice('Готово.');}catch(error){notice(error.message,true);}finally{
       if(form){delete form.dataset.busy;form.removeAttribute('aria-busy');}
       if(button){button.disabled=false;button.textContent=label;}
     }

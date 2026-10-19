@@ -39,6 +39,14 @@ test('production HTTP authorization, verified ownership, paid orders and payout 
  const platform=new Platform(pool,{auth,accounts,partners,payments,env:{DEV_ALLOW_INSECURE_AUTH:'true',PUBLIC_URL:'https://apprevive.example'}});
  const server=createApi(new PromoService(pool),{requireHttps:false,platform,accounts,partners});await new Promise(r=>server.listen(0,'127.0.0.1',r));t.after(()=>new Promise(r=>{server.close(r);server.closeAllConnections();}));const base='http://127.0.0.1:'+server.address().port;
  const call=(path,body,token=owner.token,extra={})=>fetch(base+path,{method:body===undefined?'GET':'POST',headers:{...(body===undefined?{}:{'Content-Type':'application/json'}),...(token?{Authorization:'Bearer '+token}:{}),...extra},...(body===undefined?{}:{body:JSON.stringify(body)})});
+ // A service user receives a stable invitation code before linking any Apple ID.
+ const partnerBefore=await (await call('/v3/partner',undefined,stranger.token)).json();
+ assert.match(partnerBefore.partner.referral_code,/^RVP-[A-F0-9]{12}$/);
+ assert.equal((await (await call('/v3/partner',undefined,stranger.token)).json()).partner.referral_code,partnerBefore.partner.referral_code);
+ assert.equal((await call('/v3/partner',undefined,'')).status,401);
+ const ownPartner=await (await call('/v3/partner')).json();
+ assert.equal((await call('/v2/partner/bind',{account_id:aid,referral_code:ownPartner.partner.referral_code})).status,409);
+
  assert.equal((await call('/v2/account/balance',{account_id:aid},'')).status,401);
  assert.equal((await call('/v2/account/balance',{account_id:other})).status,403);
  assert.equal((await call('/v2/account/balance',{account_id:aid})).status,200);

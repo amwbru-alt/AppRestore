@@ -116,6 +116,22 @@ export class AuthService {
       await db.commit(); return { status: 'verified', purpose: row.purpose };
     } catch (error) { await db.rollback(); throw error; } finally { db.release(); }
   }
+  async partnerAccount(user) {
+    const db = await this.pool.getConnection();
+    try {
+      await db.beginTransaction();
+      await db.execute('SELECT user_id FROM apprevive_users WHERE user_id=? FOR UPDATE', [user.user_id]);
+      const [mapped] = await db.execute('SELECT partner_id FROM apprevive_user_partners WHERE user_id=?', [user.user_id]);
+      let id = mapped[0]?.partner_id;
+      if (!id) {
+        // Preserve a partner code already issued to a linked Apple ID.
+        const [legacy] = await db.execute('SELECT p.account_id FROM apprevive_partners p JOIN apprevive_user_accounts a ON a.account_id=p.account_id WHERE a.user_id=? ORDER BY p.account_id LIMIT 1', [user.user_id]);
+        id = legacy[0]?.account_id || hash('apprevive-partner-user-v1:' + user.user_id);
+        await db.execute('INSERT INTO apprevive_user_partners(user_id,partner_id) VALUES (?,?)', [user.user_id, id]);
+      }
+      await db.commit(); return id;
+    } catch (error) { await db.rollback(); throw error; } finally { db.release(); }
+  }
   async requireAccount(user, account) {
     if (typeof account !== 'string' || !/^[a-f0-9]{64}$/.test(account)) throw new ApiError(400, 'invalid_account');
     if (Number(user.verified) === 1 && account === appleId(user.email)) await this.pool.execute('INSERT IGNORE INTO apprevive_user_accounts(account_id,user_id,email) VALUES (?,?,?)', [account, user.user_id, user.email]);

@@ -36,6 +36,11 @@ export class Platform {
     if (path === '/v1/redeem') throw new ApiError(410, 'update_desktop_required');
     const user = await this.auth.session(req);
     await this.auth.requireAccount(user, body.account_id);
+    if (path === '/v2/partner/bind') {
+      const code = typeof body.referral_code === 'string' ? body.referral_code.trim().toUpperCase() : '';
+      const [own] = await this.pool.execute('SELECT p.account_id FROM apprevive_partners p LEFT JOIN apprevive_user_partners u ON u.partner_id=p.account_id LEFT JOIN apprevive_user_accounts a ON a.account_id=p.account_id WHERE p.referral_code=? AND (u.user_id=? OR a.user_id=?)', [code, user.user_id, user.user_id]);
+      if (own.length) throw new ApiError(409, 'self_referral');
+    }
   }
   async audit(user, action, target) { await this.pool.execute('INSERT INTO apprevive_admin_audit(user_id,action,target) VALUES (?,?,?)', [user.user_id, action, String(target || '').slice(0,128)]); }
   async route(req, res, path, { json, reply }) {
@@ -71,6 +76,12 @@ export class Platform {
       reply(res, 200, await this.auth.logout(user)); return true;
     }
     if (path === '/v3/auth/apple' && req.method === 'POST') { this.limit('link:' + user.user_id, 5, 3600); reply(res, 200, await this.auth.requestApple(user, await json(req))); return true; }
+    if (path === '/v3/partner' && req.method === 'GET') {
+      const id = await this.auth.partnerAccount(user);
+      const partner = await this.partners.profile({ account_id: id });
+      const [payouts] = await this.pool.execute('SELECT payout_id,amount_kopecks,state,created_at FROM apprevive_payouts WHERE partner_id=? ORDER BY created_at DESC LIMIT 100', [id]);
+      reply(res, 200, { partner, ledger: partner.ledger, payouts }); return true;
+    }
     if (path === '/v3/account' && req.method === 'GET') {
       const id = query.get('account_id'); await this.auth.requireAccount(user, id);
       const balance = await this.accounts.balance({ account_id: id });
@@ -99,7 +110,8 @@ export class Platform {
         const [commissions] = await this.pool.execute('SELECT * FROM apprevive_commissions ORDER BY available_at DESC LIMIT 200');
         const [checkouts] = await this.pool.execute('SELECT * FROM apprevive_checkouts ORDER BY created_at DESC LIMIT 200');
         const [audit] = await this.pool.execute('SELECT * FROM apprevive_admin_audit ORDER BY audit_id DESC LIMIT 200');
-        reply(res, 200, { status: 'ok', users, orders, restorations, payouts, commissions, checkouts, audit }); return true;
+        const [partners] = await this.pool.execute("SELECT p.account_id,p.referral_code,u.email,COALESCE(r.invited,0) AS invited,COALESCE(o.paid_orders,0) AS paid_orders,COALESCE(o.purchased_codes,0) AS purchased_codes,COALESCE(o.revenue_kopecks,0) AS revenue_kopecks FROM apprevive_partners p LEFT JOIN apprevive_user_partners m ON m.partner_id=p.account_id LEFT JOIN apprevive_users u ON u.user_id=m.user_id LEFT JOIN (SELECT partner_id,COUNT(*) AS invited FROM apprevive_referrals GROUP BY partner_id) r ON r.partner_id=p.account_id LEFT JOIN (SELECT partner_id,COUNT(*) AS paid_orders,SUM(quantity) AS purchased_codes,SUM(amount_kopecks) AS revenue_kopecks FROM apprevive_orders WHERE state='paid' GROUP BY partner_id) o ON o.partner_id=p.account_id ORDER BY p.created_at DESC,p.account_id LIMIT 200");
+        reply(res, 200, { status: 'ok', partners, users, orders, restorations, payouts, commissions, checkouts, audit }); return true;
       }
       if (path === '/v3/admin/groups' && req.method === 'GET') {
         const [groups] = await this.pool.execute('SELECT group_id AS id,name,icon_url AS iconUrl FROM apprevive_catalog_groups WHERE enabled=1 ORDER BY name');

@@ -76,3 +76,10 @@ CREATE TABLE IF NOT EXISTS apprevive_settings (
  name VARCHAR(64) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,
  value TEXT NOT NULL
 ) ENGINE=InnoDB;
+
+-- Stable partner identity for service users, including users without an Apple ID.
+CREATE TABLE IF NOT EXISTS apprevive_user_partners (
+ user_id CHAR(32) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,
+ partner_id CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL UNIQUE,
+ FOREIGN KEY (user_id) REFERENCES apprevive_users(user_id)
+) ENGINE=InnoDB;

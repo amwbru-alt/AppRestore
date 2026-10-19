@@ -33,6 +33,7 @@ test('MySQL partner attribution and paid-order ledger', { skip: process.env.APPR
   let stats = await service.profile(inviter);
   assert.equal(stats.paid_buyers, 1); assert.equal(stats.paid_orders, 1);
   assert.equal(stats.purchased_codes, 2); assert.equal(stats.revenue_kopecks, 20000);
+  assert.equal(stats.referrals[0].purchased_codes,2);assert.equal(stats.referrals[0].buyer,buyer.account_id.slice(0,12));
   // Redemption of a purchased code is not a second purchase.
   await new AccountService(pool).redeem({ account_id: buyer.account_id, code: orders[0].unused_codes[0], request_id: 'af'.repeat(16) });
   assert.equal((await service.profile(inviter)).purchased_codes, 2);

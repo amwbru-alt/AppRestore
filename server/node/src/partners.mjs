@@ -21,9 +21,10 @@ export class PartnerService {
       const [binding] = await db.execute('SELECT p.referral_code FROM apprevive_referrals r JOIN apprevive_partners p ON p.account_id=r.partner_id WHERE r.buyer_id=?', [id]);
       const [invited] = await db.execute('SELECT COUNT(*) AS total FROM apprevive_referrals WHERE partner_id=?', [id]);
       const [paid] = await db.execute("SELECT COUNT(*) AS orders, COUNT(DISTINCT buyer_id) AS buyers, COALESCE(SUM(quantity),0) AS codes, COALESCE(SUM(amount_kopecks),0) AS revenue FROM apprevive_orders WHERE partner_id=? AND state='paid'", [id]);
+      const [referrals] = await db.execute("SELECT r.buyer_id,r.created_at,COUNT(o.order_id) AS paid_orders,COALESCE(SUM(o.quantity),0) AS purchased_codes,COALESCE(SUM(o.amount_kopecks),0) AS revenue_kopecks FROM apprevive_referrals r LEFT JOIN apprevive_orders o ON o.buyer_id=r.buyer_id AND o.partner_id=r.partner_id AND o.state='paid' WHERE r.partner_id=? GROUP BY r.buyer_id,r.created_at ORDER BY r.created_at DESC LIMIT 100", [id]);
       const policy = await readPolicy(db, this.policy);
       const ledger = await ledgerBalance(db, id);
-      return { status: 'ok', ledger, commission_rate_bps: policy.rate, hold_days: policy.days, account_id: id, referral_code: own[0].referral_code, invited_by: binding[0]?.referral_code || '',
+      return { status: 'ok', referrals: referrals.map(r => ({ buyer: r.buyer_id.slice(0,12), created_at: r.created_at, paid_orders: Number(r.paid_orders), purchased_codes: Number(r.purchased_codes), revenue_kopecks: Number(r.revenue_kopecks) })), ledger, commission_rate_bps: policy.rate, hold_days: policy.days, account_id: id, referral_code: own[0].referral_code, invited_by: binding[0]?.referral_code || '',
         invited: Number(invited[0].total), paid_buyers: Number(paid[0].buyers), paid_orders: Number(paid[0].orders),
         purchased_codes: Number(paid[0].codes), revenue_kopecks: Number(paid[0].revenue) };
     });

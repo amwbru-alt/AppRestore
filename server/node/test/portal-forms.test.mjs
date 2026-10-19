@@ -13,6 +13,7 @@ async function page(t,name='account',{allowed=true,logged=false,role='user',hash
   '/site-config':{transport:{http_auth_origin:allowed?origin:''}},
   '/v3/me':logged?{user:{email:'unit@example.test',role},accounts:[{account_id:aid,email:'unit@example.test'}]}:{status:'service_login_required'},
   ['/v3/account?account_id='+aid]:{credits:1,installations:0,history:[],partner:{referral_code:'RVP-ABCDEF123456',invited:0,paid_buyers:0,purchased_codes:0,revenue_kopecks:0},ledger:{available_kopecks:0,held_kopecks:0,paid_kopecks:0,pending_kopecks:0},payouts:[]},
+  '/v3/partner':{partner:{account_id:aid,referral_code:'RVP-ABCDEF123456',invited:0,paid_buyers:0,paid_orders:0,purchased_codes:0,revenue_kopecks:0},ledger:{available_kopecks:0,held_kopecks:0,paid_kopecks:0,pending_kopecks:0},payouts:[]},
   '/v3/orders':{orders:[],codes:[]},'/v3/status':{payments_enabled:false,commission_policy:{rate:0,days:14}},
   '/v3/admin/groups':{groups:[]},'/v3/admin/snapshot':{users:[],orders:[],restorations:[],payouts:[],commissions:[],checkouts:[],audit:[]}
  };
@@ -25,7 +26,7 @@ async function page(t,name='account',{allowed=true,logged=false,role='user',hash
  };
  for(const file of ['transport','portal',name])w.eval(await readFile(new URL('assets/'+file+'.js',root),'utf8'));
  await settle();
- return {w,calls,errors,notice:()=>w.document.getElementById('message').textContent,form:id=>w.document.getElementById(id)};
+ return {w,calls,errors,notice:()=>w.document.getElementById('message').querySelector('span')?.textContent||'',form:id=>w.document.getElementById(id)};
 }
 function fill(form,values){for(const [name,value] of Object.entries(values)){const field=form.elements.namedItem(name);if(field.type==='checkbox')field.checked=value;else field.value=value;}}
 async function submit(form){form.querySelector('button').click();await settle();}
@@ -117,4 +118,22 @@ test('landing catalog filtering, internal anchors, downloads and referral copy f
  w.document.getElementById('copy-referral').click();await settle();assert.match(w.document.getElementById('copy-status').textContent,/вручную/);
  for(const link of w.document.querySelectorAll('a[href^="#"]')){const id=link.getAttribute('href').slice(1);if(id)assert(w.document.getElementById(id),'Missing anchor '+id);}
  assert.deepEqual(errors,[]);
+});
+
+test('partner code is available without a linked Apple ID and invitation links survive login',async t=>{
+ const p=await page(t,'account',{logged:true,hash:'?ref=RVP-123456ABCDEF',override:{'/v3/me':async()=>({ok:true,status:200,json:async()=>({user:{email:'partner@example.test',role:'user'},accounts:[]})})}});
+ assert.match(p.form('partner').textContent,/RVP-ABCDEF123456/);
+ assert.match(p.form('partner').querySelector('input').value,/\/account\?ref=RVP-ABCDEF123456/);
+ assert.equal(p.form('ref-form').elements.referral_code.value,'RVP-123456ABCDEF');
+ assert(!p.calls.some(c=>c.path.startsWith('/v3/account?')));
+ assert.equal(p.errors.length,0);
+});
+test('notices expire, may be dismissed, and old timers are cancelled',async t=>{
+ const p=await page(t);const timers=new Map();let next=0;
+ p.w.setTimeout=(fn,delay)=>{timers.set(++next,{fn,delay});return next;};p.w.clearTimeout=id=>timers.delete(id);
+ p.w.AppRevivePortal.notice('First');p.w.AppRevivePortal.notice('Second');
+ assert.equal(timers.size,1);assert.equal([...timers.values()][0].delay,5500);
+ [...timers.values()][0].fn();assert(p.form('message').hidden);
+ p.w.AppRevivePortal.notice('Error',true);assert.equal(p.form('message').dataset.kind,'error');
+ p.form('message').querySelector('button').click();assert(p.form('message').hidden);assert.equal(p.notice(),'');
 });

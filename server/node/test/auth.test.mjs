@@ -40,3 +40,19 @@ test('unverified service users may log in but cannot auto-claim an Apple ID bala
  const result=await auth.login({email:'new@example.test',password:'A service test password'});assert.equal(result.status,'ok');assert.equal(linked,false);
  await assert.rejects(auth.requireAccount({user_id:'new',email:'new@example.test',verified:0},'0'.repeat(64)),e=>e.status===403);assert.equal(linked,false);
 });
+
+test('service partner identity is stable, preserves legacy codes and releases transaction locks',async()=>{
+ for(const legacy of [false,true]){
+  let mapping,commits=0,released=0;
+  const db={beginTransaction:async()=>{},commit:async()=>commits++,rollback:async()=>assert.fail('Unexpected rollback'),release:()=>released++,execute:async(sql,args)=>{
+   if(sql.includes('SELECT partner_id'))return [mapping?[{partner_id:mapping}]:[]];
+   if(sql.includes('JOIN apprevive_user_accounts'))return [legacy?[{account_id:'a'.repeat(64)}]:[]];
+   if(sql.startsWith('INSERT INTO apprevive_user_partners'))mapping=args[1];
+   return [[]];
+  }};
+  const auth=new AuthService({getConnection:async()=>db});const user={user_id:'1'.repeat(32)};
+  const first=await auth.partnerAccount(user);assert.match(first,/^[a-f0-9]{64}$/);
+  assert.equal(await auth.partnerAccount(user),first);if(legacy)assert.equal(first,'a'.repeat(64));
+  assert.equal(commits,2);assert.equal(released,2);
+ }
+});

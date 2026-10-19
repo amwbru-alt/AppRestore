@@ -53,6 +53,7 @@ fetch('/site-config').then(response => response.ok ? response.json() : Promise.r
 }).catch(() => { for (const id of ['mac-status', 'windows-status']) document.getElementById(id).textContent = 'Наличие архива проверим по кнопке скачивания.'; });
 const referral = new URLSearchParams(location.search).get('ref')?.trim().toUpperCase();
 if (referral && /^RVP-[A-F0-9]{12}$/.test(referral)) {
+  localStorage.setItem('apprevive_referral',referral);
   document.getElementById('referral').hidden = false;
   document.getElementById('referral-code').value = referral;
   document.getElementById('copy-referral').addEventListener('click', async () => {
