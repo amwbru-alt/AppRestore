@@ -22,7 +22,7 @@ test('site serves its own page and bundled assets; API continues to work', async
   assert.match(page.headers.get('content-security-policy'), /object-src 'none'/);
   const html = await page.text();
   assert(html.includes('AppRevive')); assert(html.includes('/download/macos')); assert(!html.includes('appback.ru'));
-  for (const path of ['/assets/site.css', '/assets/site.js', '/assets/onest.ttf', '/assets/apprevive.png']) {
+  for (const path of ['/assets/site.css', '/assets/site.js', '/assets/onest.ttf', '/assets/apprevive.png', '/account', '/admin', '/assets/portal.css', '/assets/account.js', '/assets/admin.js']) {
     const asset = await fetch(url + path); assert.equal(asset.status, 200); assert((await asset.arrayBuffer()).byteLength > 0);
   }
   assert.equal((await (await fetch(url + '/v1/catalog')).json()).apps.length, 1);

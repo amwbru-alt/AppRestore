@@ -95,7 +95,7 @@ cd AppRevive-build
 
 ## 2.1. Настройте публичный адрес Node.js API
 
-Теперь приложение работает через HTTP API по IP. **Данные MySQL в клиенте
+Версия 0.5.0 работает через HTTPS API. **Данные MySQL в клиенте
 не указываются и в сборку не входят.** Node.js-сервер запускается отдельно,
 реквизиты базы хранятся только в его `.env`.
 
@@ -103,15 +103,15 @@ cd AppRevive-build
 [server/node/README.md](server/node/README.md). Существующие таблицы и коды
 сохраняются; новую базу создавать не нужно.
 
-Публичный адрес уже встроен в `apprevive_core/api_settings.json` для обеих платформ:
+Для локальной сборки запишите настоящий HTTPS-адрес в `apprevive_core/api_settings.json` (пример замените своим доменом):
 
 ```json
 {
-  "base_url": "http://185.173.93.200:3000"
+  "base_url": "https://revive.example.com"
 }
 ```
 
-Менять исходники и вводить реквизиты MySQL на Mac или Windows не нужно.
+В GitHub Actions адрес задаётся repository variable `APPREVIVE_PUBLIC_API_URL` или входом `service_api_url`. Вводить реквизиты MySQL на Mac или Windows не нужно.
 Адрес автоматически входит в `.app` и `.exe` при новой сборке.
 Пошаговая инструкция через Git и Терминал — [INSTALL-GIT.md](INSTALL-GIT.md).
 
@@ -124,8 +124,8 @@ cd AppRevive-build
 До запуска приложения проверьте из Терминала:
 
 ```bash
-curl http://185.173.93.200:3000/health
-curl http://185.173.93.200:3000/v1/catalog
+curl https://revive.example.com/health
+curl https://revive.example.com/v1/catalog
 ```
 
 Первая команда должна вернуть `{"status":"ok"}`, вторая — каталог.

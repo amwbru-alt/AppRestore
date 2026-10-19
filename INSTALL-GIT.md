@@ -2,8 +2,10 @@
 
 # AppRevive: установка и сборка через Git с Mac
 
+**`revive.example.com` в командах — пример. Замените его настоящим доменом из PLATFORM.md и задайте `APPREVIVE_PUBLIC_API_URL` до сборки.**
+
 Текущая ветка — `codex/apprevive-icons`. Mac и Windows используют один
-встроенный API: **http://185.173.93.200:3000**. Пользователю приложения не
+HTTPS API, адрес которого вы задаёте перед сборкой (ниже пример): **https://revive.example.com**. Пользователю приложения не
 нужны MySQL, пароль базы, Node.js или mysql.json. Node.js работает отдельно
 на сервере; эта инструкция не запускает его на компьютерах пользователей.
 
@@ -40,13 +42,13 @@ git branch --show-current
 cat apprevive_core/api_settings.json
 ```
 
-Ожидаются `codex/apprevive-icons` и `http://185.173.93.200:3000`.
+Ожидается ветка `codex/apprevive-icons`. Перед локальной сборкой замените старый адрес в файле на ваш HTTPS-домен. Для Actions задайте переменную, как описано в PLATFORM.md.
 
 ## 2. Проверить API
 
 ```bash
-curl --max-time 10 http://185.173.93.200:3000/health
-curl --max-time 10 http://185.173.93.200:3000/v1/catalog
+curl --max-time 10 https://revive.example.com/health
+curl --max-time 10 https://revive.example.com/v1/catalog
 ```
 
 `/health` возвращает `{"status":"ok"}`, `/v1/catalog` — JSON с приложениями.
@@ -203,7 +205,7 @@ mysql.json и пароль базы пользователю не нужны. А
 `~/.apprevive/api.json` на Mac либо `%USERPROFILE%\.apprevive\api.json`
 на Windows. Они имеют приоритет над встроенным адресом. Если такой файл
 создавался раньше, измените в нём только base_url на
-`http://185.173.93.200:3000` либо переименуйте его, сохранив резервную копию.
+`https://revive.example.com` либо переименуйте его, сохранив резервную копию.
 Старый mysql.json новая версия не читает.
 
 ## 7. Ошибки сборки и скачивания

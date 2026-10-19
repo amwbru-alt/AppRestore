@@ -1,8 +1,10 @@
+> `revive.example.com` — пример адреса. Замените его своим доменом; настройка HTTPS описана в PLATFORM.md.
+
 > **Версия 0.5.0:** сначала выполните [инструкцию перехода](../../PLATFORM.md). Она заменяет приведённые ниже старые указания про HTTP, вход и ручную оплату. Для нового входа требуется HTTPS и миграция базы.
 
 # AppRevive API — Node.js + MySQL, подключение по HTTP и IP
 
-AppRevive → `http://185.173.93.200:3000` → Node.js → MySQL.
+AppRevive → `https://revive.example.com` → Node.js → MySQL.
 Домен и сертификат не обязательны. В клиенте находится только публичный адрес API. Пользователи не получают пароль или имя пользователя MySQL; Apple ID и пароль Apple в этот API не отправляются.
 HTTP не шифрует промокоды и идентификатор установки. При необходимости позже можно включить HTTPS без изменения таблиц.
 
@@ -25,9 +27,10 @@ nano .env
 В `.env` заполните реальные реквизиты **только на сервере**:
 
 ```dotenv
-HOST=0.0.0.0
+HOST=127.0.0.1
 PORT=3000
-ALLOW_HTTP=true
+ALLOW_HTTP=false
+PUBLIC_URL=https://revive.example.com
 DB_HOST=ВАШ_СЕРВЕР_MYSQL
 DB_PORT=3306
 DB_USER=ВАШ_ПОЛЬЗОВАТЕЛЬ
@@ -66,7 +69,7 @@ curl http://127.0.0.1:3000/health
 curl http://127.0.0.1:3000/v1/catalog
 ```
 
-Затем с Mac проверьте `curl --max-time 10 http://185.173.93.200:3000/health`. Ожидается `{"status":"ok"}`. `/health` проверяет процесс; подключение к MySQL проверяется при запуске сервера. Каталог проверяет запрос к таблице.
+Затем с Mac проверьте `curl --max-time 10 https://revive.example.com/health`. Ожидается `{"status":"ok"}`. `/health` проверяет процесс; подключение к MySQL проверяется при запуске сервера. Каталог проверяет запрос к таблице.
 
 Для постоянной работы на Linux можно создать службу systemd. Пример `apprevive-api.service` лежит в `deploy/`: замените пользователя и путь, установите файл в `/etc/systemd/system/`, затем выполните `sudo systemctl daemon-reload` и `sudo systemctl enable --now apprevive-api`. Путь к Node.js проверьте через `command -v node` и при необходимости измените ExecStart. Служба читает `.env` через Node.js, а не через systemd: поддерживаются те же кавычки и формат, что у `npm start`.
 
@@ -78,11 +81,11 @@ curl http://127.0.0.1:3000/v1/catalog
 
 ```json
 {
-  "base_url": "http://185.173.93.200:3000"
+  "base_url": "https://revive.example.com"
 }
 ```
 
-Адрес `http://185.173.93.200:3000` уже записан в исходниках для Mac и Windows. Этот файл с одним публичным URL входит в `.app` и `.exe`; пароль MySQL там отсутствует. Для Windows через GitHub Actions изменение URL должно быть закоммичено в выбранную ветку перед запуском сборки.
+Адрес `revive.example.com` — пример. Запишите настоящий HTTPS-домен перед локальной сборкой; в GitHub Actions используйте `APPREVIVE_PUBLIC_API_URL`. В `.app` и `.exe` входит только публичный URL; пароль MySQL там отсутствует.
 После пересборки пользователям не нужен ни `mysql.json`, ни отдельная настройка API.
 
 Для проверки без пересборки можно создать `~/.apprevive/api.json` на Mac или `%USERPROFILE%\.apprevive\api.json` на Windows с тем же JSON. Этот файл переопределяет встроенный адрес. Ещё выше приоритет `APPREVIVE_API_URL`. Изменения применяются после перезапуска приложения.
