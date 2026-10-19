@@ -1,3 +1,5 @@
+> **Текущий временный режим — HTTP:** [запуск на IP и сборка Mac/Windows](HTTP-TEMP.md). Эта инструкция заменяет прежнее обязательное требование HTTPS.
+
 <p align="center">
   <img src="packaging/icons/AppRevive-1024.png" width="112" alt="Иконка AppRevive">
 </p>

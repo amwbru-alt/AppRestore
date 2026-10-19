@@ -27,3 +27,28 @@ def api_base_url() -> str:
     except ValueError:
         raise ValueError('Некорректный порт API AppRevive.') from None
     return value
+
+
+def api_allows_http(url: str) -> bool:
+    """Allow plaintext authentication only for an explicitly configured origin."""
+    parsed = urllib.parse.urlsplit(url)
+    if parsed.scheme != 'http' or parsed.username or parsed.password:
+        return False
+    if parsed.hostname in ('127.0.0.1', 'localhost', '::1'):
+        return True
+    origin = os.environ.get('APPREVIVE_HTTP_AUTH_ORIGIN', '')
+    if not origin:
+        try:
+            settings = json.loads(Path(__file__).with_name('api_settings.json').read_text(encoding='utf-8-sig'))
+            origin = settings.get('http_auth_origin', '')
+        except (OSError, ValueError, AttributeError):
+            return False
+    if not isinstance(origin, str):
+        return False
+    allowed = urllib.parse.urlsplit(origin)
+    try:
+        return (allowed.scheme == 'http' and not allowed.username and not allowed.password
+                and allowed.path in ('', '/') and not allowed.query and not allowed.fragment
+                and (parsed.hostname, parsed.port or 80) == (allowed.hostname, allowed.port or 80))
+    except ValueError:
+        return False

@@ -4,7 +4,7 @@ import threading
 import urllib.request
 import urllib.error
 from urllib.parse import urlsplit
-from .api_config import api_base_url
+from .api_config import api_base_url, api_allows_http
 from .restoration_codes import RestorationCodeError, promo_ssl_context
 
 _lock = threading.Lock()
@@ -27,7 +27,7 @@ def set_token(value):
 def request(path, body=None):
     url = api_base_url() + path
     parsed = urlsplit(url)
-    if parsed.scheme != 'https' and parsed.hostname not in ('127.0.0.1', 'localhost', '::1'):
+    if parsed.scheme != 'https' and not api_allows_http(url):
         raise RestorationCodeError('Для аккаунта AppRevive нужен HTTPS-адрес API. Пароль не был отправлен. Настройте защищённый адрес сервиса.')
     headers = {'Accept':'application/json','User-Agent':'AppRevive/0.5'}
     current = token()

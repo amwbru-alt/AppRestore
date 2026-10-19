@@ -21,6 +21,8 @@ class ServiceDialog(QDialog):
         font=self.font();font.setFamily(load_fonts());self.setFont(font);self.setStyleSheet(STYLE)
         layout=QVBoxLayout(self);layout.setContentsMargins(24,24,24,24);layout.setSpacing(10)
         title=QLabel('Вход в AppRevive — отдельно от Apple ID.\nНе используйте здесь пароль Apple.');title.setWordWrap(True);layout.addWidget(title)
+        if api_base_url().startswith('http://'):
+            warning=QLabel('Временный режим HTTP: пароль AppRevive и сессия передаются без шифрования.');warning.setWordWrap(True);layout.addWidget(warning)
         self.email=QLineEdit();self.email.setPlaceholderText('Почта аккаунта AppRevive');self.email.setText(email);layout.addWidget(self.email)
         self.password=QLineEdit();self.password.setEchoMode(QLineEdit.EchoMode.Password);self.password.setPlaceholderText('Пароль AppRevive · минимум 12 символов');layout.addWidget(self.password)
         row=QHBoxLayout();layout.addLayout(row)

@@ -1,3 +1,4 @@
+import { httpAuthOrigin } from './transport.mjs';
 import { open, stat } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
@@ -7,6 +8,7 @@ const assets = new Map([
   ['/', ['index.html', 'text/html; charset=utf-8']],
   ['/account', ['account.html', 'text/html; charset=utf-8']],
   ['/admin', ['admin.html', 'text/html; charset=utf-8']],
+  ['/assets/transport.js', ['assets/transport.js', 'text/javascript; charset=utf-8']],
   ['/assets/portal.css', ['assets/portal.css', 'text/css; charset=utf-8']],
   ['/assets/account.js', ['assets/account.js', 'text/javascript; charset=utf-8']],
   ['/assets/admin.js', ['assets/admin.js', 'text/javascript; charset=utf-8']],
@@ -56,7 +58,7 @@ async function sendFile(req, res, file, type, filename) {
   stream.on('error', () => res.destroy()); res.on('close', () => stream.destroy()); stream.pipe(res);
   return true;
 }
-export function createWebsite({ downloadsDir = fileURLToPath(new URL('../downloads/', import.meta.url)), macUrl = process.env.DOWNLOAD_MAC_URL, windowsUrl = process.env.DOWNLOAD_WINDOWS_URL } = {}) {
+export function createWebsite({ env = process.env, downloadsDir = fileURLToPath(new URL('../downloads/', import.meta.url)), macUrl = process.env.DOWNLOAD_MAC_URL, windowsUrl = process.env.DOWNLOAD_WINDOWS_URL } = {}) {
   const platforms = { macos: { file: 'AppRevive-macOS.zip', url: external(macUrl) }, windows: { file: 'AppRevive-Windows.zip', url: external(windowsUrl) } };
   return async (req, res, path) => {
     const key = path.startsWith('/download/') ? path.slice('/download/'.length) : '';
@@ -68,7 +70,7 @@ export function createWebsite({ downloadsDir = fileURLToPath(new URL('../downloa
       const downloads = {};
       for (const [key, config] of Object.entries(platforms)) downloads[key] = Boolean(config.url) || await ready(join(downloadsDir, config.file));
       headers(res, 'application/json; charset=utf-8'); res.setHeader('Cache-Control', 'no-store');
-      res.end(req.method === 'HEAD' ? '' : JSON.stringify({ downloads })); return true;
+      res.end(req.method === 'HEAD' ? '' : JSON.stringify({ downloads, transport: { http_auth_origin: httpAuthOrigin(env) } })); return true;
     }
     if (path === '/robots.txt') { headers(res, 'text/plain; charset=utf-8'); res.end(req.method === 'HEAD' ? '' : 'User-agent: *\nAllow: /\nDisallow: /v1/\nDisallow: /v2/\nDisallow: /site-config\n'); return true; }
     if (platform) {

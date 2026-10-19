@@ -37,7 +37,7 @@ def test_preflight_stops_disconnected_device_before_credit_reservation():
 
 def test_service_password_is_never_sent_over_public_http(monkeypatch):
     from apprevive_core import service_session
-    monkeypatch.setattr(service_session,'api_base_url',lambda:'http://185.173.93.200:3000')
+    monkeypatch.setattr(service_session,'api_base_url',lambda:'http://203.0.113.50:3000')
     monkeypatch.setattr(service_session.urllib.request,'urlopen',lambda *a,**k:pytest.fail('password transmitted'))
     with pytest.raises(Exception,match='Пароль не был отправлен'):
         service_session.request('/v3/auth/login',{'email':'user@example.test','password':'secret password'})

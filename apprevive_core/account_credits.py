@@ -10,7 +10,7 @@ import urllib.request
 import urllib.error
 from urllib.parse import urlsplit
 
-from .api_config import api_base_url
+from .api_config import api_base_url, api_allows_http
 from .restoration_codes import RestorationCodeError, promo_ssl_context
 
 
@@ -30,7 +30,7 @@ def api_call(method: str, body: dict, *, namespace="account") -> dict:
         raise ValueError("Unknown API namespace")
     url = api_base_url() + "/v2/" + namespace + "/" + method
     parsed_url = urlsplit(url)
-    if parsed_url.scheme != 'https' and parsed_url.hostname not in ('127.0.0.1', 'localhost', '::1'):
+    if parsed_url.scheme != 'https' and not api_allows_http(url):
         raise RestorationCodeError('Для учёта и входа AppRevive нужен HTTPS-адрес API. Обновите настройки сервиса.')
     from .service_session import token, ServiceLoginRequired, ServiceLinkRequired
     current_token = token()

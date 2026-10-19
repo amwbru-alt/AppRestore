@@ -1,3 +1,4 @@
+import { httpAuthOrigin } from './transport.mjs';
 import { isIP } from 'node:net';
 import { ApiError } from './service.mjs';
 import { AuthService } from './auth.mjs';
@@ -14,7 +15,7 @@ export class Platform {
     this.payments = payments || new PaymentService(pool, partners); this.payouts = new PayoutService(pool, accounts); this.env = env; this.limits = new Map();
   }
   secure(req) {
-    if (this.env.DEV_ALLOW_INSECURE_AUTH !== 'true' && !(req.socket.encrypted || loopback(req.socket.remoteAddress) && req.headers['x-forwarded-proto'] === 'https')) throw new ApiError(426, 'https_required');
+    if (this.env.DEV_ALLOW_INSECURE_AUTH !== 'true' && !(httpAuthOrigin(this.env) && req.headers.host === new URL(httpAuthOrigin(this.env)).host) && !(req.socket.encrypted || loopback(req.socket.remoteAddress) && req.headers['x-forwarded-proto'] === 'https')) throw new ApiError(426, 'https_required');
     if (req.method !== 'GET' && req.method !== 'HEAD' && req.headers.origin) {
       let origin; try { origin = new URL(this.env.PUBLIC_URL).origin; } catch { throw new ApiError(503, 'public_url_not_configured'); }
       if (req.headers.origin !== origin) throw new ApiError(403, 'origin_rejected');
@@ -40,7 +41,7 @@ export class Platform {
   async route(req, res, path, { json, reply }) {
     if (!path.startsWith('/v3/')) return false;
     if (path === '/v3/status' && req.method === 'GET') {
-      reply(res, 200, { status: 'ok', payments_enabled: this.payments.provider.configured, secure_login_required: this.env.DEV_ALLOW_INSECURE_AUTH !== 'true', commission_policy: await readPolicy(this.pool) }); return true;
+      reply(res, 200, { status: 'ok', payments_enabled: this.payments.provider.configured, secure_login_required: this.env.DEV_ALLOW_INSECURE_AUTH !== 'true' && !httpAuthOrigin(this.env), commission_policy: await readPolicy(this.pool) }); return true;
     }
     this.secure(req);
     const forwarded = String(req.headers['x-real-ip'] || '');
@@ -59,7 +60,7 @@ export class Platform {
       let optionalUser = null;
       if (action === 'consume') { try { optionalUser = await this.auth.session(req); } catch (error) { if (error.status !== 401) throw error; } }
       const result = await this.auth[authActions[action]](body, optionalUser);
-      if (action === 'login') res.setHeader('Set-Cookie', `apprevive_session=${result.token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=604800${this.env.DEV_ALLOW_INSECURE_AUTH === 'true' ? '' : '; Secure'}`);
+      if (action === 'login') res.setHeader('Set-Cookie', `apprevive_session=${result.token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=604800${this.env.DEV_ALLOW_INSECURE_AUTH === 'true' || httpAuthOrigin(this.env) ? '' : '; Secure'}`);
       reply(res, 200, result); return true;
     }
     const user = await this.auth.session(req);

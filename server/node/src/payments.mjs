@@ -1,10 +1,11 @@
+import { publicLinksAllowed } from './transport.mjs';
 import { randomBytes } from 'node:crypto';
 import { ApiError } from './service.mjs';
 export function money(value) { if (typeof value !== 'string' || !/^\d{1,9}\.\d{2}$/.test(value)) throw new ApiError(502, 'invalid_payment_amount'); return Number(value.replace('.', '')); }
 export class YooKassa {
   constructor(env = process.env, http = fetch) { this.env = env; this.http = http; }
   get allowTest() { return this.env.PAYMENTS_TEST_MODE === 'true' && this.env.APP_ENV === 'staging'; }
-  get configured() { const e = this.env; return (e.PAYMENTS_TEST_MODE !== 'true' || this.allowTest) && e.PAYMENTS_ENABLED === 'true' && Boolean(e.YOOKASSA_SHOP_ID && e.YOOKASSA_SECRET_KEY && /^https:\/\//.test(e.PUBLIC_URL || '') && /^[1-9]\d?$/.test(e.PAYMENT_VAT_CODE || '')); }
+  get configured() { const e = this.env; return (e.PAYMENTS_TEST_MODE !== 'true' || this.allowTest) && e.PAYMENTS_ENABLED === 'true' && Boolean(e.YOOKASSA_SHOP_ID && e.YOOKASSA_SECRET_KEY && publicLinksAllowed(e) && /^[1-9]\d?$/.test(e.PAYMENT_VAT_CODE || '')); }
   async call(path, { body, key } = {}) {
     if (!this.configured) throw new ApiError(503, 'payments_not_configured');
     const response = await this.http('https://api.yookassa.ru/v3/' + path, { method: body ? 'POST' : 'GET', signal: AbortSignal.timeout(15000), headers: {
@@ -62,8 +63,14 @@ export class PaymentService {
     await this.ensure(row); row = await this.row(id);
     const payment = await this.provider.payment(row.provider_id); this.verify(row, payment);
     if (payment.status === 'succeeded' && payment.paid === true && row.state !== 'refunded') {
+      const refunded = payment.refunded_amount;
+      const refundedAmount = refunded ? money(refunded.value) : 0;
+      if (refundedAmount && (refunded.currency !== 'RUB' || refundedAmount !== row.amount_kopecks)) throw new ApiError(409, 'partial_refund_needs_review');
       await this.partners.recordPurchase({ buyer_id: row.account_id, quantity: row.quantity, amount_kopecks: row.amount_kopecks, payment_reference: 'yk_' + row.provider_id });
-      await this.pool.execute("UPDATE apprevive_checkouts SET state='paid' WHERE checkout_id=? AND state='pending'", [id]);
+      if (refundedAmount) {
+        await this.partners.refund('yk_' + row.provider_id);
+        await this.pool.execute("UPDATE apprevive_checkouts SET state='refunded' WHERE checkout_id=?", [id]);
+      } else await this.pool.execute("UPDATE apprevive_checkouts SET state='paid' WHERE checkout_id=? AND state='pending'", [id]);
     } else if (payment.status === 'canceled') await this.pool.execute("UPDATE apprevive_checkouts SET state='cancelled' WHERE checkout_id=? AND state='pending'", [id]);
     row = await this.row(id);
     return { status: 'ok', checkout_id: id, state: row.state, confirmation_url: row.state === 'pending' ? row.confirmation_url : '' };

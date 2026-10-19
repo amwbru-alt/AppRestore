@@ -11,3 +11,17 @@ test('test-mode money cannot issue production codes',()=>{
  assert.throws(()=>new PaymentService(null,null,new YooKassa({})).verify(row,payment),e=>e.code==='test_payment_rejected');
  assert.doesNotThrow(()=>new PaymentService(null,null,provider).verify(row,payment));
 });
+
+test('status polling reconciles full refunds without a public HTTPS webhook',async()=>{
+ let state='paid',issued=0,refunded=0;
+ const row={checkout_id:'a'.repeat(32),user_id:'u',account_id:'b'.repeat(64),provider_id:'payment-test',quantity:1,amount_kopecks:10000};
+ const payment={id:row.provider_id,status:'succeeded',paid:true,metadata:{checkout_id:row.checkout_id},amount:{currency:'RUB',value:'100.00'},refunded_amount:{currency:'RUB',value:'100.00'}};
+ const pool={execute:async sql=>{if(sql.includes("state='refunded'"))state='refunded';return [{}];}};
+ const service=new PaymentService(pool,{recordPurchase:async()=>{issued++;},refund:async()=>{refunded++;}},{payment:async()=>payment});
+ service.row=async()=>({...row,state});service.ensure=async()=>{};
+ assert.equal((await service.sync(row.checkout_id)).state,'refunded');
+ await service.sync(row.checkout_id);assert.equal(issued,1);assert.equal(refunded,1);
+ state='paid';payment.refunded_amount.value='50.00';
+ await assert.rejects(service.sync(row.checkout_id),e=>e.code==='partial_refund_needs_review');
+ assert.equal(issued,1);
+});

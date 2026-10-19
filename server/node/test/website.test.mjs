@@ -58,3 +58,11 @@ test('operator may configure direct HTTP or HTTPS download URLs', async t => {
   const response = await fetch(url + '/download/macos', { redirect: 'manual' }); assert.equal(response.status, 302);
   assert.equal(response.headers.get('location'), 'https://downloads.example.org/AppRevive.zip');
 });
+
+test('website exposes explicit HTTP transport settings and serves the shared transport script', async t => {
+  const { url }=await setup(t,{env:{ALLOW_HTTP:'true',ALLOW_HTTP_AUTH:'true',PUBLIC_URL:'http://185.173.93.200:3000'}});
+  const config=await (await fetch(url+'/site-config')).json();
+  assert.equal(config.transport.http_auth_origin,'http://185.173.93.200:3000');
+  assert.equal((await fetch(url+'/assets/transport.js')).status,200);
+  for(const page of ['/account','/admin'])assert.match(await (await fetch(url+page)).text(),/transport\.js.*(?:account|admin)\.js/);
+});

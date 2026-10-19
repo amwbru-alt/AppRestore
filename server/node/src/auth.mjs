@@ -1,3 +1,4 @@
+import { publicLinksAllowed } from './transport.mjs';
 import { randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
 import { ApiError, hash } from './service.mjs';
@@ -23,7 +24,7 @@ export async function verifyPassword(password, stored) {
   return /^[a-f0-9]{128}$/.test(parts[2] || '') && timingSafeEqual(key, Buffer.from(parts[2], 'hex'));
 }
 export async function sendMail({ email, purpose, token }, env = process.env) {
-  if (!env.RESEND_API_KEY || !env.MAIL_FROM || !env.PUBLIC_URL?.startsWith('https://')) throw new ApiError(503, 'mail_not_configured');
+  if (!env.RESEND_API_KEY || !env.MAIL_FROM || !publicLinksAllowed(env)) throw new ApiError(503, 'mail_not_configured');
   const url = new URL('/account', env.PUBLIC_URL); url.hash = new URLSearchParams({ token, purpose }).toString();
   const labels = { verify: 'Подтверждение почты AppRevive', reset: 'Сброс пароля AppRevive', apple: 'Привязка Apple ID к AppRevive' };
   const response = await fetch('https://api.resend.com/emails', { method: 'POST', signal: AbortSignal.timeout(15000), headers: { Authorization: 'Bearer ' + env.RESEND_API_KEY, 'Content-Type': 'application/json' },

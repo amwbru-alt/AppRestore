@@ -1,11 +1,11 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const labels = { https_required:'Для входа нужен HTTPS. Откройте защищённый адрес сервиса.', service_login_required:'Войдите в AppRevive.', login_failed_or_unverified:'Неверные данные или почта ещё не подтверждена.', password_min_12:'Пароль AppRevive должен содержать от 12 символов.', mail_not_configured:'Отправка писем на сервере пока не настроена.', mail_unavailable:'Не удалось отправить письмо. Повторите позже.', payments_not_configured:'Приём оплаты ещё не настроен администратором.', verify_apple_email_required:'Подтвердите почту этого Apple ID.', apple_already_linked:'Этот Apple ID уже привязан к другому аккаунту сервиса.', invalid_or_expired_token:'Ссылка недействительна или истекла. Запросите новое письмо.', login_as_link_requester:'Войдите в аккаунт AppRevive, из которого запрашивали привязку Apple ID.', invalid_code:'Код не найден или уже использован.', rate_limited:'Слишком много запросов. Повторите позже.' };
-const insecure = location.protocol !== 'https:' && !['localhost','127.0.0.1','[::1]'].includes(location.hostname);
-for (const button of document.querySelectorAll('[data-secure]')) button.disabled = insecure;
+const plaintext = location.protocol !== 'https:';
+AppReviveTransport.ready.then(allowed => { for (const button of document.querySelectorAll('[data-secure]')) button.disabled = !allowed; if(plaintext) message(allowed ? 'Временный режим HTTP: пароль AppRevive и сессия передаются без шифрования.' : 'Вход по HTTP не включён на сервере.'); });
 const message = text => { $('message').textContent = text; };
 async function api(path, body) {
-  if(insecure) throw Error('Для входа нужен HTTPS. Пароль не отправлен. Откройте защищённый адрес сервиса.');
+  await AppReviveTransport.requireAllowed();
   const response = await fetch(path, { credentials:'same-origin', headers: body === undefined ? {} : {'Content-Type':'application/json'}, method: body === undefined ? 'GET':'POST', ...(body === undefined ? {} : {body:JSON.stringify(body)}) });
   const result = await response.json(); if (!response.ok) throw Error(labels[result.status] || 'Запрос не выполнен: ' + result.status); return result;
 }
@@ -26,10 +26,10 @@ $('resend').onclick=run(async()=>{await api('/v3/auth/resend',{email:$('reset-fo
 $('apple-form').onsubmit=run(async event=>{await api('/v3/auth/apple',Object.fromEntries(new FormData(event.target)));message('Откройте письмо на почте Apple ID. Для подтверждения войдите в этот же аккаунт AppRevive.');});
 $('accounts').onchange=run(refreshAccount);$('refresh').onclick=run(refresh);
 $('logout').onclick=run(async()=>{await api('/v3/auth/logout',{});profile=null;$('cabinet').hidden=true;$('auth').hidden=false;message('Вы вышли.');});
-$('buy-form').onsubmit=run(async event=>{const quantity=Number(event.target.elements.quantity.value);if(!checkoutRequest||checkoutRequest.account_id!==account()||checkoutRequest.quantity!==quantity)checkoutRequest={account_id:account(),quantity,request_id:crypto.randomUUID().replaceAll('-','')};const data=await api('/v3/checkout',checkoutRequest);if(data.confirmation_url)location.assign(data.confirmation_url);else{checkoutRequest=null;message('Оплата подтверждена. Коды доступны в заказе.');await refreshOrders();}});
-$('redeem-form').onsubmit=run(async event=>{await api('/v2/account/redeem',{account_id:account(),code:event.target.elements.code.value,request_id:crypto.randomUUID().replaceAll('-','')});event.target.reset();message('Код активирован.');await refreshAccount();});
+$('buy-form').onsubmit=run(async event=>{const quantity=Number(event.target.elements.quantity.value);if(!checkoutRequest||checkoutRequest.account_id!==account()||checkoutRequest.quantity!==quantity)checkoutRequest={account_id:account(),quantity,request_id:AppReviveTransport.requestId()};const data=await api('/v3/checkout',checkoutRequest);if(data.confirmation_url)location.assign(data.confirmation_url);else{checkoutRequest=null;message('Оплата подтверждена. Коды доступны в заказе.');await refreshOrders();}});
+$('redeem-form').onsubmit=run(async event=>{await api('/v2/account/redeem',{account_id:account(),code:event.target.elements.code.value,request_id:AppReviveTransport.requestId()});event.target.reset();message('Код активирован.');await refreshAccount();});
 $('ref-form').onsubmit=run(async event=>{await api('/v2/partner/bind',{account_id:account(),referral_code:event.target.elements.referral_code.value});message('Пригласивший закреплён.');await refreshAccount();});
 const verification=new URLSearchParams(location.hash.slice(1));
 if(verification.has('token')){$('verify').hidden=false;const purpose=verification.get('purpose');$('new-password-label').hidden=purpose==='apple';$('new-password').required=purpose!=='apple';$('verify-note').textContent=purpose==='apple'?'Войдите в аккаунт AppRevive, из которого запрашивали привязку, и подтвердите её.':'Задайте пароль AppRevive. Это не пароль Apple ID.';$('verify-form').onsubmit=run(async()=>{await api('/v3/auth/consume',{token:verification.get('token'),...(purpose==='apple'?{}:{password:$('new-password').value})});history.replaceState(null,'','/account');$('verify').hidden=true;$('new-password').value='';message('Подтверждено. Теперь можно войти или обновить кабинет.');try{await refresh();}catch{}});}
-if(insecure)message('Для входа нужен HTTPS. Не вводите пароль на незащищённом адресе.');
+
 refresh().then(async()=>{const checkout=new URLSearchParams(location.search).get('payment');if(checkout&&/^[a-f0-9]{32}$/.test(checkout)){await api('/v3/checkout/sync',{checkout_id:checkout});await refreshOrders();history.replaceState(null,'','/account');}}).catch(error=>{if(profile)message(error.message);});
