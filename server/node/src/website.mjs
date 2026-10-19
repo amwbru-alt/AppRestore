@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { httpAuthOrigin } from './transport.mjs';
 import { open, stat } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -8,6 +10,7 @@ const assets = new Map([
   ['/', ['index.html', 'text/html; charset=utf-8']],
   ['/account', ['account.html', 'text/html; charset=utf-8']],
   ['/admin', ['admin.html', 'text/html; charset=utf-8']],
+  ['/assets/portal.js', ['assets/portal.js', 'text/javascript; charset=utf-8']],
   ['/assets/transport.js', ['assets/transport.js', 'text/javascript; charset=utf-8']],
   ['/assets/portal.css', ['assets/portal.css', 'text/css; charset=utf-8']],
   ['/assets/account.js', ['assets/account.js', 'text/javascript; charset=utf-8']],
@@ -29,7 +32,7 @@ function external(value) {
   catch { return null; }
 }
 async function ready(file) { try { const info = await stat(file); return info.isFile() && info.size > 0; } catch { return false; } }
-async function sendFile(req, res, file, type, filename) {
+async function sendFile(req, res, file, type, filename, transformHtml) {
   let handle;
   try { handle = await open(file, 'r'); } catch (error) { if (error.code === 'ENOENT') return false; throw error; }
   const info = await handle.stat();
@@ -39,7 +42,11 @@ async function sendFile(req, res, file, type, filename) {
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('Accept-Ranges', 'bytes');
   }
-  res.setHeader('Cache-Control', filename || type.startsWith('text/html') ? 'no-store' : 'public, max-age=3600');
+  res.setHeader('Cache-Control', filename || type.startsWith('text/html') ? 'no-store' : /javascript|text\/css/.test(type) ? 'no-cache' : 'public, max-age=3600');
+  if(transformHtml && type.startsWith('text/html')){
+    const body=Buffer.from(transformHtml(await handle.readFile('utf8')));await handle.close();
+    res.setHeader('Content-Length',body.length);res.end(req.method==='HEAD'?'':body);return true;
+  }
   let start = 0, end = info.size - 1;
   if (filename && req.headers.range && req.method === 'GET') {
     const match = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range);
@@ -59,6 +66,9 @@ async function sendFile(req, res, file, type, filename) {
   return true;
 }
 export function createWebsite({ env = process.env, downloadsDir = fileURLToPath(new URL('../downloads/', import.meta.url)), macUrl = process.env.DOWNLOAD_MAC_URL, windowsUrl = process.env.DOWNLOAD_WINDOWS_URL } = {}) {
+  const versions=new Map();
+  for(const [path,[file,type]] of assets)if(/javascript|text\/css/.test(type)){try{versions.set(path,createHash('sha256').update(readFileSync(join(root,file))).digest('hex').slice(0,12));}catch{}}
+  const versionHtml=html=>html.replace(/((?:src|href)=["'])(\/assets\/[^"'?]+)(["'])/g,(all,prefix,path,end)=>versions.has(path)?prefix+path+'?v='+versions.get(path)+end:all);
   const platforms = { macos: { file: 'AppRevive-macOS.zip', url: external(macUrl) }, windows: { file: 'AppRevive-Windows.zip', url: external(windowsUrl) } };
   return async (req, res, path) => {
     const key = path.startsWith('/download/') ? path.slice('/download/'.length) : '';
@@ -79,7 +89,7 @@ export function createWebsite({ env = process.env, downloadsDir = fileURLToPath(
       headers(res, 'text/html; charset=utf-8'); res.statusCode = 503; res.setHeader('Cache-Control', 'no-store');
       res.end(req.method === 'HEAD' ? '' : '<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Скачивание AppRevive</title><link rel="stylesheet" href="/assets/site.css"><main class="section wrap"><a class="brand" href="/">AppRevive.</a><br><h1>Архив пока<br>не опубликован.</h1><br><p>Свяжитесь с поддержкой, чтобы получить актуальную сборку для вашего компьютера.</p><br><a class="button primary" href="https://t.me/llifegoldll">Написать в Telegram ↗</a><br><br><a class="text-link" href="/">← На главную</a></main></html>'); return true;
     }
-    if (await sendFile(req, res, join(root, asset[0]), asset[1])) return true;
+    if (await sendFile(req, res, join(root, asset[0]), asset[1], undefined, versionHtml)) return true;
     res.writeHead(404); res.end(); return true;
   };
 }

@@ -42,8 +42,8 @@ export class AuthService {
   }
   async register(body) {
     const email = normalizeEmail(body?.email), encoded = await passwordHash(body?.password);
-    const [existing] = await this.pool.execute('SELECT user_id FROM apprevive_users WHERE email=?', [email]);
-    if (existing.length) return { status: 'email_sent' }; // Do not overwrite an unverified password.
+    const [existing] = await this.pool.execute('SELECT user_id,verified FROM apprevive_users WHERE email=?', [email]);
+    if (existing.length) return existing[0].verified ? { status: 'email_sent' } : this.issue(existing[0].user_id, 'verify', email); // Never overwrite a preregistered password.
     const id = randomBytes(16).toString('hex');
     await this.pool.execute('INSERT INTO apprevive_users(user_id,email,password_hash) VALUES (?,?,?)', [id, email, encoded]);
     return this.issue(id, 'verify', email);

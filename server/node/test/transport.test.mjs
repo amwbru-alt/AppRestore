@@ -22,7 +22,7 @@ test('public HTTP authentication is opt-in and bound to the configured origin',(
 });
 test('browser HTTP login and request IDs work without secure-context randomUUID',async()=>{
  const source=await readFile(new URL('../public/assets/transport.js',import.meta.url),'utf8');
- function browser(config){const context={window:{},location:{protocol:'http:',hostname:'185.173.93.200',origin},fetch:async()=>({ok:true,json:async()=>config}),crypto:{getRandomValues:a=>webcrypto.getRandomValues(a)},Uint8Array};vm.runInNewContext(source,context);return context.window.AppReviveTransport;}
+ function browser(config){const context={window:{},location:{protocol:'http:',hostname:'185.173.93.200',origin},fetch:async()=>({ok:true,json:async()=>config}),crypto:{getRandomValues:a=>webcrypto.getRandomValues(a)},Uint8Array,AbortController,setTimeout,clearTimeout};vm.runInNewContext(source,context);return context.window.AppReviveTransport;}
  const allowed=browser({transport:{http_auth_origin:origin}});await allowed.requireAllowed();
  const ids=new Set(Array.from({length:200},()=>allowed.requestId()));assert.equal(ids.size,200);assert([...ids].every(x=>/^[a-f0-9]{32}$/.test(x)));
  await assert.rejects(browser({transport:{http_auth_origin:'http://another.example'}}).requireAllowed());

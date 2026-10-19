@@ -1,15 +1,18 @@
 'use strict';
 const $ = id => document.getElementById(id);
-const labels = { https_required:'Для входа нужен HTTPS. Откройте защищённый адрес сервиса.', service_login_required:'Войдите в AppRevive.', login_failed_or_unverified:'Неверные данные или почта ещё не подтверждена.', password_min_12:'Пароль AppRevive должен содержать от 12 символов.', mail_not_configured:'Отправка писем на сервере пока не настроена.', mail_unavailable:'Не удалось отправить письмо. Повторите позже.', payments_not_configured:'Приём оплаты ещё не настроен администратором.', verify_apple_email_required:'Подтвердите почту этого Apple ID.', apple_already_linked:'Этот Apple ID уже привязан к другому аккаунту сервиса.', invalid_or_expired_token:'Ссылка недействительна или истекла. Запросите новое письмо.', login_as_link_requester:'Войдите в аккаунт AppRevive, из которого запрашивали привязку Apple ID.', invalid_code:'Код не найден или уже использован.', rate_limited:'Слишком много запросов. Повторите позже.' };
-const plaintext = location.protocol !== 'https:';
-AppReviveTransport.ready.then(allowed => { for (const button of document.querySelectorAll('[data-secure]')) button.disabled = !allowed; if(plaintext) message(allowed ? 'Временный режим HTTP: пароль AppRevive и сессия передаются без шифрования.' : 'Вход по HTTP не включён на сервере.'); });
-const message = text => { $('message').textContent = text; };
-async function api(path, body) {
-  await AppReviveTransport.requireAllowed();
-  const response = await fetch(path, { credentials:'same-origin', headers: body === undefined ? {} : {'Content-Type':'application/json'}, method: body === undefined ? 'GET':'POST', ...(body === undefined ? {} : {body:JSON.stringify(body)}) });
-  const result = await response.json(); if (!response.ok) throw Error(labels[result.status] || 'Запрос не выполнен: ' + result.status); return result;
+const message=AppRevivePortal.notice;
+const api=AppRevivePortal.request;
+const run=AppRevivePortal.run;
+const plaintext=location.protocol!=='https:';
+function transportState(allowed){
+  // Keep controls clickable so a blocked deployment gives an explicit reason.
+  for(const button of document.querySelectorAll('[data-secure]'))button.disabled=false;
+  if(!allowed)message('Вход и регистрация по HTTP заблокированы настройками сервера. Администратор должен включить HTTP-режим и перезапустить сервис.');
+  else if(plaintext)message('Временный режим HTTP: пароль AppRevive и сессия передаются без шифрования.');
+  else message('Можно войти или зарегистрироваться.');
 }
-const run = fn => async event => { event?.preventDefault(); const button=event?.submitter; if(button)button.disabled=true; try{await fn(event);}catch(error){message(error.message);}finally{if(button)button.disabled=false;} };
+AppReviveTransport.ready.then(transportState);
+$('connection-retry').onclick=run(async()=>{transportState(await AppReviveTransport.retry());});
 function table(target, headings, rows){ const t=document.createElement('table'), head=document.createElement('tr');headings.forEach(x=>{const c=document.createElement('th');c.textContent=x;head.append(c);});t.append(head); for(const row of rows){const tr=document.createElement('tr');row.forEach(value=>{const td=document.createElement('td'); if(value instanceof Node)td.append(value);else td.textContent=String(value??'');tr.append(td);});t.append(tr);}$(target).replaceChildren(t); }
 const status = value => ({pending:'Ожидает',paid:'Оплачен',cancelled:'Отменён',refunded:'Возвращён',completed:'Завершено',failed:'Ошибка, попытка возвращена',reserved:'Ожидает подтверждения'}[value]||value);
 const rub = value => (Number(value)/100).toLocaleString('ru-RU',{style:'currency',currency:'RUB'});
@@ -32,4 +35,4 @@ $('ref-form').onsubmit=run(async event=>{await api('/v2/partner/bind',{account_i
 const verification=new URLSearchParams(location.hash.slice(1));
 if(verification.has('token')){$('verify').hidden=false;const purpose=verification.get('purpose');$('new-password-label').hidden=purpose==='apple';$('new-password').required=purpose!=='apple';$('verify-note').textContent=purpose==='apple'?'Войдите в аккаунт AppRevive, из которого запрашивали привязку, и подтвердите её.':'Задайте пароль AppRevive. Это не пароль Apple ID.';$('verify-form').onsubmit=run(async()=>{await api('/v3/auth/consume',{token:verification.get('token'),...(purpose==='apple'?{}:{password:$('new-password').value})});history.replaceState(null,'','/account');$('verify').hidden=true;$('new-password').value='';message('Подтверждено. Теперь можно войти или обновить кабинет.');try{await refresh();}catch{}});}
 
-refresh().then(async()=>{const checkout=new URLSearchParams(location.search).get('payment');if(checkout&&/^[a-f0-9]{32}$/.test(checkout)){await api('/v3/checkout/sync',{checkout_id:checkout});await refreshOrders();history.replaceState(null,'','/account');}}).catch(error=>{if(profile)message(error.message);});
+refresh().then(async()=>{const checkout=new URLSearchParams(location.search).get('payment');if(checkout&&/^[a-f0-9]{32}$/.test(checkout)){await api('/v3/checkout/sync',{checkout_id:checkout});await refreshOrders();history.replaceState(null,'','/account');}}).catch(error=>{if(error.status!==401 && profile)message(error.message);});

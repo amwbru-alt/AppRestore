@@ -66,3 +66,10 @@ test('website exposes explicit HTTP transport settings and serves the shared tra
   assert.equal((await fetch(url+'/assets/transport.js')).status,200);
   for(const page of ['/account','/admin'])assert.match(await (await fetch(url+page)).text(),/transport\.js.*(?:account|admin)\.js/);
 });
+
+test('HTML uses content-versioned scripts and JavaScript revalidates instead of staying stale for an hour',async t=>{
+ const {url}=await setup(t);const html=await(await fetch(url+'/account')).text();
+ for(const script of ['transport','portal','account'])assert.match(html,new RegExp('/assets/'+script+'\\.js\\?v=[a-f0-9]{12}'));
+ const asset=await fetch(url+'/assets/portal.js?v=old-version');assert.equal(asset.status,200);assert.equal(asset.headers.get('cache-control'),'no-cache');
+ const head=await fetch(url+'/account',{method:'HEAD'});assert.equal(Number(head.headers.get('content-length')),Buffer.byteLength(html));
+});

@@ -1,7 +1,7 @@
 'use strict';
 const $=id=>document.getElementById(id);const msg=text=>$('message').textContent=text;
-async function api(path,body){await AppReviveTransport.requireAllowed();const r=await fetch('/v3/'+path,{credentials:'same-origin',method:body===undefined?'GET':'POST',headers:body===undefined?{}:{'Content-Type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})});const data=await r.json();if(!r.ok)throw Error('Операция не выполнена: '+data.status);return data;}
-const run=fn=>async e=>{e?.preventDefault();const b=e?.submitter;if(b)b.disabled=true;try{await fn(e);}catch(error){msg(error.message);}finally{if(b)b.disabled=false;}};
+const api=(path,body)=>AppRevivePortal.request('/v3/'+path,body);
+const run=AppRevivePortal.run;
 const rub=x=>(Number(x)/100).toLocaleString('ru-RU',{style:'currency',currency:'RUB'});
 function table(id,columns,rows){const t=document.createElement('table'),tr=document.createElement('tr');for(const title of columns){const th=document.createElement('th');th.textContent=title;tr.append(th);}t.append(tr);for(const cells of rows){const row=document.createElement('tr');for(const value of cells){const td=document.createElement('td');if(value instanceof Node)td.append(value);else td.textContent=String(value??'');row.append(td);}t.append(row);}$(id).replaceChildren(t);}
 function actions(list){const box=document.createElement('div');for(const [title,action,question] of list){const b=document.createElement('button');b.className='button ghost';b.textContent=title;b.onclick=run(async()=>{if(question&&!confirm(question))return;b.disabled=true;try{await action();msg('Действие выполнено.');await snapshot();}finally{b.disabled=false;}});box.append(b);}return box;}

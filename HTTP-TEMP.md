@@ -15,23 +15,13 @@ npm ci
 
 Если сервер новый — скопируйте `.env.example` в `.env`, заполните свои DB_HOST, DB_PORT, DB_USER, DB_NAME, DB_PASSWORD. Новую базу вместо существующей создавать не нужно. `.env` не отправляется в Git и не входит в приложение.
 
-Следующая команда меняет только настройки HTTP и сохраняет остальные значения, включая MySQL и почту:
+Включить HTTP одной командой (из `server/node`):
 
 ```bash
-node --input-type=module <<'JS'
-import {readFileSync,writeFileSync} from 'node:fs';
-const file='.env';
-let text=readFileSync(file,'utf8');
-const settings={HOST:'0.0.0.0',PORT:'3000',ALLOW_HTTP:'true',ALLOW_HTTP_AUTH:'true',DEV_ALLOW_INSECURE_AUTH:'false',PUBLIC_URL:'http://185.173.93.200:3000'};
-for(const [name,value] of Object.entries(settings)){
-  const line=new RegExp('^'+name+'=.*$','m');
-  text=line.test(text)?text.replace(line,name+'='+value):text+'\n'+name+'='+value;
-}
-writeFileSync(file,text.trimEnd()+'\n',{mode:0o600});
-console.log('HTTP settings updated; other settings preserved.');
-JS
-chmod 600 .env
+npm run configure-http
 ```
+
+Команда задаёт правильный PUBLIC_URL и оба HTTP-флага, сохраняет реквизиты MySQL/почты и создаёт приватную резервную копию `.env.before-http`. После неё **обязательно перезапустите существующий процесс Node**. Для PM2 перезапустите ваш процесс с `--update-env`; для systemd обновите Environment/EnvironmentFile, если там также заданы эти переменные. Приоритет переменных окружения процесса выше `.env`.
 
 Остановите старый процесс Node через используемый вами systemd/PM2 или Ctrl+C. Перед миграцией сделайте резервную копию базы:
 

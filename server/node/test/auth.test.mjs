@@ -16,3 +16,13 @@ test('zero-day commission hold stays zero and proxy TLS cannot be forged remotel
  assert.doesNotThrow(()=>p.secure({method:'POST',headers:{'x-forwarded-proto':'https',origin:'https://apprevive.example'},socket:{remoteAddress:'127.0.0.1'}}));
  assert.throws(()=>p.secure({method:'POST',headers:{origin:'https://evil.example'},socket:{encrypted:true}}),e=>e.status===403);
 });
+
+import { AuthService } from '../src/auth.mjs';
+test('registration retries send a fresh verification link without replacing the pending password',async()=>{
+ const writes=[],mail=[];
+ const pool={execute:async(sql,args)=>{writes.push(sql);return sql.startsWith('SELECT')?[[{user_id:'test-user',verified:0}]]:[{affectedRows:1}];}};
+ const auth=new AuthService(pool,{mail:async data=>mail.push(data)});
+ assert.equal((await auth.register({email:'pending@example.test',password:'A service test password'})).status,'email_sent');
+ assert.equal(mail.length,1);assert.equal(mail[0].purpose,'verify');
+ assert(!writes.some(sql=>/UPDATE apprevive_users|INSERT INTO apprevive_users/.test(sql)));
+});
