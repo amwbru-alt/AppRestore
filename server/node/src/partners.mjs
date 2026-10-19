@@ -1,3 +1,4 @@
+import { registrationPartner } from './user-referrals.mjs';
 import { accrueCommission, commissionPolicy, readPolicy, ledgerBalance } from './ledger.mjs';
 import { randomBytes } from 'node:crypto';
 import { AccountService } from './accounts.mjs';
@@ -37,6 +38,8 @@ export class PartnerService {
       const [partner] = await db.execute('SELECT account_id FROM apprevive_partners WHERE referral_code=?', [code]);
       if (!partner.length) throw new ApiError(422, 'unknown_referral');
       if (partner[0].account_id === buyer) throw new ApiError(409, 'self_referral');
+      const registered = await registrationPartner(db,buyer);
+      if(registered && registered !== partner[0].account_id)throw new ApiError(409,'referral_locked');
       const [prior] = await db.execute('SELECT partner_id FROM apprevive_referrals WHERE buyer_id=?', [buyer]);
       if (prior.length) {
         if (prior[0].partner_id !== partner[0].account_id) throw new ApiError(409, 'referral_locked');
@@ -62,6 +65,13 @@ export class PartnerService {
         if (order.buyer_id !== buyer || order.quantity !== quantity || order.amount_kopecks !== amount_kopecks) throw new ApiError(409, 'payment_conflict');
       } else {
         const [referral] = await db.execute('SELECT partner_id FROM apprevive_referrals WHERE buyer_id=?', [buyer]);
+        const registered = await registrationPartner(db,buyer);
+        if (!referral.length && registered && registered !== buyer) {
+          // Never rewrite a historic Apple ID attribution or a prior organic purchase.
+          const [priorOrders] = await db.execute('SELECT order_id FROM apprevive_orders WHERE buyer_id=? LIMIT 1',[buyer]);
+          if(!priorOrders.length){await db.execute('INSERT INTO apprevive_referrals(buyer_id,partner_id) VALUES (?,?)',[buyer,registered]);referral.push({partner_id:registered});}
+        }
+
         order = { order_id: randomBytes(16).toString('hex'), state: 'paid' };
         await db.execute('INSERT INTO apprevive_orders (order_id,payment_reference,buyer_id,partner_id,quantity,amount_kopecks) VALUES (?,?,?,?,?,?)',
           [order.order_id, payment_reference, buyer, referral[0]?.partner_id || null, quantity, amount_kopecks]);

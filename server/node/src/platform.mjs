@@ -1,3 +1,4 @@
+import { registrationSummary } from './user-referrals.mjs';
 import { httpAuthOrigin } from './transport.mjs';
 import { isIP } from 'node:net';
 import { ApiError } from './service.mjs';
@@ -79,6 +80,7 @@ export class Platform {
     if (path === '/v3/partner' && req.method === 'GET') {
       const id = await this.auth.partnerAccount(user);
       const partner = await this.partners.profile({ account_id: id });
+      Object.assign(partner,await registrationSummary(this.pool,id));
       const [payouts] = await this.pool.execute('SELECT payout_id,amount_kopecks,state,created_at FROM apprevive_payouts WHERE partner_id=? ORDER BY created_at DESC LIMIT 100', [id]);
       reply(res, 200, { partner, ledger: partner.ledger, payouts }); return true;
     }
@@ -103,14 +105,14 @@ export class Platform {
     if (path.startsWith('/v3/admin/')) {
       if (user.role !== 'admin') throw new ApiError(403, 'admin_required');
       if (path === '/v3/admin/snapshot' && req.method === 'GET') {
-        const [users] = await this.pool.execute('SELECT user_id,email,verified,role,created_at FROM apprevive_users ORDER BY created_at DESC LIMIT 200');
+        const [users] = await this.pool.execute('SELECT u.user_id,u.email,u.verified,u.role,u.created_at,p.referral_code AS invited_by FROM apprevive_users u LEFT JOIN apprevive_user_referrals r ON r.user_id=u.user_id LEFT JOIN apprevive_partners p ON p.account_id=r.partner_id ORDER BY u.created_at DESC LIMIT 200');
         const [orders] = await this.pool.execute('SELECT * FROM apprevive_orders ORDER BY created_at DESC LIMIT 200');
         const [restorations] = await this.pool.execute("SELECT * FROM apprevive_restorations WHERE state='reserved' ORDER BY created_at LIMIT 200");
         const [payouts] = await this.pool.execute('SELECT * FROM apprevive_payouts ORDER BY created_at DESC LIMIT 200');
         const [commissions] = await this.pool.execute('SELECT * FROM apprevive_commissions ORDER BY available_at DESC LIMIT 200');
         const [checkouts] = await this.pool.execute('SELECT * FROM apprevive_checkouts ORDER BY created_at DESC LIMIT 200');
         const [audit] = await this.pool.execute('SELECT * FROM apprevive_admin_audit ORDER BY audit_id DESC LIMIT 200');
-        const [partners] = await this.pool.execute("SELECT p.account_id,p.referral_code,u.email,COALESCE(r.invited,0) AS invited,COALESCE(o.paid_orders,0) AS paid_orders,COALESCE(o.purchased_codes,0) AS purchased_codes,COALESCE(o.revenue_kopecks,0) AS revenue_kopecks FROM apprevive_partners p LEFT JOIN apprevive_user_partners m ON m.partner_id=p.account_id LEFT JOIN apprevive_users u ON u.user_id=m.user_id LEFT JOIN (SELECT partner_id,COUNT(*) AS invited FROM apprevive_referrals GROUP BY partner_id) r ON r.partner_id=p.account_id LEFT JOIN (SELECT partner_id,COUNT(*) AS paid_orders,SUM(quantity) AS purchased_codes,SUM(amount_kopecks) AS revenue_kopecks FROM apprevive_orders WHERE state='paid' GROUP BY partner_id) o ON o.partner_id=p.account_id ORDER BY p.created_at DESC,p.account_id LIMIT 200");
+        const [partners] = await this.pool.execute("SELECT p.account_id,p.referral_code,u.email,COALESCE(g.registered,0) AS registered,COALESCE(r.invited,0) AS invited,COALESCE(o.paid_orders,0) AS paid_orders,COALESCE(o.purchased_codes,0) AS purchased_codes,COALESCE(o.revenue_kopecks,0) AS revenue_kopecks FROM apprevive_partners p LEFT JOIN (SELECT partner_id,COUNT(*) AS registered FROM apprevive_user_referrals GROUP BY partner_id) g ON g.partner_id=p.account_id LEFT JOIN apprevive_user_partners m ON m.partner_id=p.account_id LEFT JOIN apprevive_users u ON u.user_id=m.user_id LEFT JOIN (SELECT partner_id,COUNT(*) AS invited FROM apprevive_referrals GROUP BY partner_id) r ON r.partner_id=p.account_id LEFT JOIN (SELECT partner_id,COUNT(*) AS paid_orders,SUM(quantity) AS purchased_codes,SUM(amount_kopecks) AS revenue_kopecks FROM apprevive_orders WHERE state='paid' GROUP BY partner_id) o ON o.partner_id=p.account_id ORDER BY p.created_at DESC,p.account_id LIMIT 200");
         reply(res, 200, { status: 'ok', partners, users, orders, restorations, payouts, commissions, checkouts, audit }); return true;
       }
       if (path === '/v3/admin/groups' && req.method === 'GET') {

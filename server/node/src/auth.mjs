@@ -1,3 +1,4 @@
+import { referralCode, registerReferred } from './user-referrals.mjs';
 import { publicLinksAllowed } from './transport.mjs';
 import { randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
@@ -41,11 +42,12 @@ export class AuthService {
     return { status: 'email_sent' };
   }
   async register(body) {
-    const email = normalizeEmail(body?.email), encoded = await passwordHash(body?.password);
+    const email = normalizeEmail(body?.email), encoded = await passwordHash(body?.password), code = referralCode(body?.referral_code);
     const [existing] = await this.pool.execute('SELECT user_id FROM apprevive_users WHERE email=?', [email]);
     if (existing.length) throw new ApiError(409, 'account_exists');
     const id = randomBytes(16).toString('hex');
-    try { await this.pool.execute('INSERT INTO apprevive_users(user_id,email,password_hash) VALUES (?,?,?)', [id, email, encoded]); }
+    try { if(code)await registerReferred(this.pool,{id,email,encoded,code});
+      else await this.pool.execute('INSERT INTO apprevive_users(user_id,email,password_hash) VALUES (?,?,?)', [id, email, encoded]); }
     catch (error) { if (error.code === 'ER_DUP_ENTRY') throw new ApiError(409, 'account_exists'); throw error; }
     // Registration does not prove ownership of the entered mailbox or Apple ID.
     return { status: 'registered' };
@@ -140,7 +142,8 @@ export class AuthService {
   }
   async profile(user) {
     const [accounts] = await this.pool.execute('SELECT account_id,email FROM apprevive_user_accounts WHERE user_id=?', [user.user_id]);
-    return { status: 'ok', user: { user_id: user.user_id, email: user.email, role: user.role }, accounts };
+    const [inviter]=await this.pool.execute('SELECT p.referral_code FROM apprevive_user_referrals r JOIN apprevive_partners p ON p.account_id=r.partner_id WHERE r.user_id=?',[user.user_id]);
+    return { status: 'ok', user: { user_id: user.user_id, email: user.email, role: user.role }, accounts, invited_by:inviter[0]?.referral_code||'' };
   }
   async createAdmin(email, password) {
     email = normalizeEmail(email); const encoded = await passwordHash(password);

@@ -75,6 +75,33 @@ test('production HTTP authorization, verified ownership, paid orders and payout 
  await payments.refund(created.checkout_id);assert.equal((await platform.payouts.balance(inviter)).available_kopecks,-1500);
  assert.equal((await (await call('/v3/orders')).json()).codes.length,0);
  await payments.webhook({event:'payment.succeeded',object:{id:row.provider_id}});assert.equal((await payments.row(created.checkout_id)).state,'refunded');
+ // Website registration attributes a real user before an Apple ID exists.
+ const invitation=partnerBefore.partner.referral_code;
+ const newEmail='registered-referral@example.test';
+ const badEmail='invalid-referral@example.test';
+ assert.equal((await call('/v3/auth/register',{email:badEmail,password:pass,referral_code:'RVP-000000000000'},'')).status,422);
+ const [notCreated]=await pool.execute('SELECT user_id FROM apprevive_users WHERE email=?',[badEmail]);assert.equal(notCreated.length,0);
+ assert.equal((await call('/v3/auth/register',{email:newEmail,password:pass,referral_code:invitation},'')).status,200);
+ const loginResponse=await call('/v3/auth/login',{email:newEmail,password:pass},'');assert.match(loginResponse.headers.get('set-cookie'),/HttpOnly/);
+ const referred=await loginResponse.json();const referredSession=await auth.session({headers:{authorization:'Bearer '+referred.token}});
+ let partnerStats=await (await call('/v3/partner',undefined,stranger.token)).json();
+ assert.equal(partnerStats.partner.registered,1);assert.equal(partnerStats.partner.registrations[0].paid_orders,0);
+ assert.equal((await (await call('/v3/me',undefined,referred.token)).json()).invited_by,invitation);
+ await auth.requestApple(referredSession,{email:newEmail});await auth.consume({token:mail.at(-1).token},referredSession);
+ const referredApple=appleId(newEmail);
+ // The registration inviter cannot be replaced by a different partner code.
+ assert.equal((await call('/v2/partner/bind',{account_id:referredApple,referral_code:profile.referral_code},referred.token)).status,409);
+ const referralCheckout=await (await call('/v3/checkout',{account_id:referredApple,quantity:2,request_id:id()},referred.token)).json();
+ const referralRow=await payments.row(referralCheckout.checkout_id);const referralPayment=provider.payments.get(referralRow.provider_id);
+ referralPayment.status='succeeded';referralPayment.paid=true;
+ await Promise.all([payments.sync(referralCheckout.checkout_id,referred.user),payments.sync(referralCheckout.checkout_id,referred.user)]);
+ partnerStats=await (await call('/v3/partner',undefined,stranger.token)).json();
+ assert.equal(partnerStats.partner.registered,1);assert.equal(partnerStats.partner.invited,1);assert.equal(partnerStats.partner.purchased_codes,2);
+ assert.equal(partnerStats.partner.paid_buyers,1);assert.equal(partnerStats.ledger.available_kopecks,2000);
+ assert.equal(partnerStats.partner.registrations[0].purchased_codes,2);
+ await payments.refund(referralCheckout.checkout_id);
+ partnerStats=await (await call('/v3/partner',undefined,stranger.token)).json();
+ assert.equal(partnerStats.partner.registered,1);assert.equal(partnerStats.partner.purchased_codes,0);assert.equal(partnerStats.ledger.available_kopecks,0);
  // Password reset revokes existing sessions.
  await auth.requestReset({email:owner.user.email});await auth.consume({token:mail.at(-1).token,password:'A changed service password'});
  await assert.rejects(auth.session({headers:{authorization:'Bearer '+owner.token}}),e=>e.status===401);

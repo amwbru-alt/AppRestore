@@ -26,22 +26,37 @@ async function refreshPartner(){
  const box=$('partner');box.replaceChildren();
  const label=document.createElement('p');label.textContent='Ваш персональный код приглашения';
  const code=document.createElement('strong');code.className='referral-code';code.textContent=p.referral_code;
- const link=new URL('/account',location.origin);link.searchParams.set('ref',p.referral_code);
+ const link=new URL('/register',location.origin);link.searchParams.set('ref',p.referral_code);
  const field=document.createElement('input');field.readOnly=true;field.value=link.href;field.setAttribute('aria-label','Ваша ссылка приглашения');
+ const copyCode=document.createElement('button');copyCode.type='button';copyCode.className='button ghost';copyCode.textContent='Скопировать код';copyCode.onclick=run(async()=>{try{await navigator.clipboard.writeText(p.referral_code);message('Код скопирован.');}catch{field.value=p.referral_code;field.focus();field.select();message('Скопируйте выделенный код.');}});
  const copy=document.createElement('button');copy.type='button';copy.className='button primary';copy.textContent='Скопировать ссылку';copy.onclick=run(async()=>{try{await navigator.clipboard.writeText(field.value);message('Ссылка скопирована.');}catch{field.focus();field.select();message('Скопируйте выделенную ссылку.');}});
  const terms=document.createElement('p');terms.textContent=`Вознаграждение: ${Number(p.commission_rate_bps||0)/100}%. Удержание: ${p.hold_days||0} дней. ${p.commission_rate_bps?'Начисляем за подтверждённые покупки.':'Администратор ещё не установил процент вознаграждения.'} Возвраты исключаются из начислений.`;
  const identity=document.createElement('small');identity.textContent='ID партнёра для выплаты: '+p.account_id;
- box.append(label,code,field,copy,terms,identity);
- stats('partner-stats',[['Приглашено',p.invited],['Купили коды',p.paid_buyers],['Оплаченных заказов',p.paid_orders||0],['Куплено кодов',p.purchased_codes],['Продажи',rub(p.revenue_kopecks)]]);
- table('referrals',['Участник','Приглашён','Оплаченных заказов','Куплено кодов','Продажи'],(p.referrals||[]).map(r=>[r.buyer,r.created_at,r.paid_orders,r.purchased_codes,rub(r.revenue_kopecks)]));
+ box.append(label,code,field,copy,copyCode,terms,identity);
+ stats('partner-stats',[['Зарегистрировано',p.registered??p.invited],['Всего приглашено',p.invited],['Купили коды',p.paid_buyers],['Оплаченных заказов',p.paid_orders||0],['Куплено кодов',p.purchased_codes],['Продажи',rub(p.revenue_kopecks)]]);
+ table('referrals',['Реферал','Регистрация','Оплаченных заказов','Куплено кодов','Продажи','Начислено вам'],(p.registrations?.length?p.registrations:p.referrals||[]).map(r=>[r.buyer,r.created_at,r.paid_orders,r.purchased_codes,rub(r.revenue_kopecks),rub(r.commission_kopecks||0)]));
  const l=data.ledger;stats('ledger',[['Доступно к выплате',rub(l.available_kopecks)],['На удержании',rub(l.held_kopecks)],['Выплачено',rub(l.paid_kopecks)],['Зарезервировано',rub(l.pending_kopecks)]]);
  table('payouts',['Сумма','Состояние','Дата'],data.payouts.map(p=>[rub(p.amount_kopecks),status(p.state),p.created_at]));
 }
 
 async function refreshOrders(){const data=await api('/v3/orders');table('orders',['Заказ','Количество','Сумма','Состояние','Коды / действие'],data.orders.map(order=>{const cell=document.createElement('div'); for(const code of data.codes.filter(c=>c.checkout_id===order.checkout_id)){const p=document.createElement('p');p.textContent=code.code;cell.append(p);}if(order.state==='pending'){const b=document.createElement('button');b.className='button ghost';b.textContent='Проверить оплату';b.onclick=run(async()=>{const updated=await api('/v3/checkout/sync',{checkout_id:order.checkout_id});if(updated.confirmation_url){const a=document.createElement('a');a.href=updated.confirmation_url;a.textContent='Перейти к оплате ↗';a.className='button primary';cell.append(a);}else await refreshOrders();});cell.append(b);}return [order.checkout_id,order.quantity,rub(order.amount_kopecks),status(order.state),cell];}));}
-async function refresh(){profile=await api('/v3/me');$('auth').hidden=true;$('cabinet').hidden=false;$('who').textContent=profile.user.email;const current=$('accounts').value;$('accounts').replaceChildren(...profile.accounts.map(a=>{const o=document.createElement('option');o.value=a.account_id;o.textContent=a.email;return o;}));if(profile.accounts.some(a=>a.account_id===current))$('accounts').value=current;await refreshAccount();await refreshOrders();await refreshPartner();const settings=await api('/v3/status');$('payment-status').textContent=settings.payments_enabled?'':'Онлайн-оплата пока не настроена.';}
-$('login-form').onsubmit=run(async event=>{await api('/v3/auth/login',Object.fromEntries(new FormData(event.target)));event.target.reset();message('Вход выполнен.');await refresh();});
-$('register-form').onsubmit=run(async event=>{await api('/v3/auth/register',Object.fromEntries(new FormData(event.target)));event.target.reset();message('Аккаунт создан. Подтверждать почту не нужно — войдите с указанным паролем.');});
+async function refresh(){
+ profile=await api('/v3/me');$('auth').hidden=true;$('cabinet').hidden=false;$('who').textContent=profile.user.email;
+ $('ref-form').hidden=!!profile.invited_by;$('invited-by').textContent=profile.invited_by?'Вы зарегистрированы по приглашению '+profile.invited_by+'. Пригласивший закреплён.':'';
+ const current=$('accounts').value;$('accounts').replaceChildren(...profile.accounts.map(a=>{const o=document.createElement('option');o.value=a.account_id;o.textContent=a.email;return o;}));
+ if(profile.accounts.some(a=>a.account_id===current))$('accounts').value=current;
+ const jobs=[['partner',refreshPartner],['balance',refreshAccount],['orders',refreshOrders],['payment-status',async()=>{const settings=await api('/v3/status');$('payment-status').textContent=settings.payments_enabled?'':'Онлайн-оплата пока не настроена.';}]];
+ const results=await Promise.allSettled(jobs.map(async([id,load])=>{try{await load();}catch(error){$(id).textContent='Не удалось загрузить раздел: '+error.message;throw error;}}));
+ const errors=results.filter(r=>r.status==='rejected');if(errors.length)message('Некоторые разделы не загрузились. Нажмите «Обновить». '+errors[0].reason.message,true);
+}
+function enterCabinet(){if(new URLSearchParams(location.search).get('next')==='admin'&&profile?.user.role==='admin'){location.assign('/admin');return;}history.replaceState(null,'','/account#cabinet');$('cabinet').scrollIntoView?.({block:'start'});}
+$('login-form').onsubmit=run(async event=>{await api('/v3/auth/login',Object.fromEntries(new FormData(event.target)));event.target.reset();await refresh();enterCabinet();message('Вход выполнен.');});
+$('register-form').onsubmit=run(async event=>{
+ const details=Object.fromEntries(new FormData(event.target));await api('/v3/auth/register',details);
+ try{await api('/v3/auth/login',{email:details.email,password:details.password});}catch(error){message('Аккаунт создан. Войдите с указанным паролем. '+error.message,true);return;}
+ event.target.reset();try{localStorage.removeItem('apprevive_referral');}catch{}
+ await refresh();enterCabinet();message('Добро пожаловать! Аккаунт создан'+(details.referral_code?' — пригласивший закреплён.':'.'));
+});
 $('reset-form').onsubmit=run(async event=>{await api('/v3/auth/reset',Object.fromEntries(new FormData(event.target)));message('Если аккаунт существует, письмо отправлено.');});
 $('resend').onclick=run(async()=>{await api('/v3/auth/resend',{email:$('reset-form').elements.email.value});message('Если требуется подтверждение, письмо отправлено.');});
 $('apple-form').onsubmit=run(async event=>{await api('/v3/auth/apple',Object.fromEntries(new FormData(event.target)));message('Откройте письмо на почте Apple ID. Для подтверждения войдите в этот же аккаунт AppRevive.');});
@@ -49,10 +64,16 @@ $('accounts').onchange=run(refreshAccount);$('refresh').onclick=run(refresh);
 $('logout').onclick=run(async()=>{await api('/v3/auth/logout',{});profile=null;$('cabinet').hidden=true;$('auth').hidden=false;message('Вы вышли.');});
 $('buy-form').onsubmit=run(async event=>{const quantity=Number(event.target.elements.quantity.value);if(!checkoutRequest||checkoutRequest.account_id!==account()||checkoutRequest.quantity!==quantity)checkoutRequest={account_id:account(),quantity,request_id:AppReviveTransport.requestId()};const data=await api('/v3/checkout',checkoutRequest);if(data.confirmation_url)location.assign(data.confirmation_url);else{checkoutRequest=null;message('Оплата подтверждена. Коды доступны в заказе.');await refreshOrders();}});
 $('redeem-form').onsubmit=run(async event=>{await api('/v2/account/redeem',{account_id:account(),code:event.target.elements.code.value,request_id:AppReviveTransport.requestId()});event.target.reset();message('Код активирован.');await refreshAccount();});
-const invited=new URLSearchParams(location.search).get('ref')||localStorage.getItem('apprevive_referral');
-if(invited&&/^RVP-[A-F0-9]{12}$/.test(invited)){localStorage.setItem('apprevive_referral',invited);$('ref-form').elements.referral_code.value=invited;}
-$('ref-form').onsubmit=run(async event=>{await api('/v2/partner/bind',{account_id:account(),referral_code:event.target.elements.referral_code.value});localStorage.removeItem('apprevive_referral');message('Пригласивший закреплён.');await refreshPartner();});
+$('register-form').elements.referral_code.addEventListener('input',event=>{event.target.value=event.target.value.toUpperCase();});
+let storedReferral='';try{storedReferral=localStorage.getItem('apprevive_referral')||'';}catch{}
+const invited=(new URLSearchParams(location.search).get('ref')||storedReferral).trim().toUpperCase();
+if(invited&&/^RVP-[A-F0-9]{12}$/.test(invited)){
+ try{localStorage.setItem('apprevive_referral',invited);}catch{}
+ $('register-form').elements.referral_code.value=invited;$('ref-form').elements.referral_code.value=invited;
+}
+if(location.hash==='#register-form')$('register-form').elements.email.focus();
+$('ref-form').onsubmit=run(async event=>{await api('/v2/partner/bind',{account_id:account(),referral_code:event.target.elements.referral_code.value});try{localStorage.removeItem('apprevive_referral');}catch{}message('Пригласивший закреплён.');await refreshPartner();});
 const verification=new URLSearchParams(location.hash.slice(1));
 if(verification.has('token')){$('verify').hidden=false;const purpose=verification.get('purpose');$('new-password-label').hidden=purpose==='apple';$('new-password').required=purpose!=='apple';$('verify-note').textContent=purpose==='apple'?'Войдите в аккаунт AppRevive, из которого запрашивали привязку, и подтвердите её.':'Задайте пароль AppRevive. Это не пароль Apple ID.';$('verify-form').onsubmit=run(async()=>{await api('/v3/auth/consume',{token:verification.get('token'),...(purpose==='apple'?{}:{password:$('new-password').value})});history.replaceState(null,'','/account');$('verify').hidden=true;$('new-password').value='';message('Подтверждено. Теперь можно войти или обновить кабинет.');try{await refresh();}catch{}});}
 
-refresh().then(async()=>{const checkout=new URLSearchParams(location.search).get('payment');if(checkout&&/^[a-f0-9]{32}$/.test(checkout)){await api('/v3/checkout/sync',{checkout_id:checkout});await refreshOrders();history.replaceState(null,'','/account');}}).catch(error=>{if(error.status!==401 && profile)message(error.message);});
+refresh().then(async()=>{const checkout=new URLSearchParams(location.search).get('payment');if(checkout&&/^[a-f0-9]{32}$/.test(checkout)){await api('/v3/checkout/sync',{checkout_id:checkout});await refreshOrders();history.replaceState(null,'','/account');}}).catch(error=>{if(error.status!==401)message(error.message,true);});

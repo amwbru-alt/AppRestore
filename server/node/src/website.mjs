@@ -73,6 +73,8 @@ export function createWebsite({ env = process.env, downloadsDir = fileURLToPath(
   return async (req, res, path) => {
     const key = path.startsWith('/download/') ? path.slice('/download/'.length) : '';
     const platform = Object.hasOwn(platforms, key) ? platforms[key] : null;
+    const aliases={'/register':'/account#register-form','/login':'/account#login-form','/profile':'/account#cabinet','/partners':'/account#partners','/account/':'/account','/admin/':'/admin'};
+    if(aliases[path]){if(!['GET','HEAD'].includes(req.method)){res.writeHead(405,{Allow:'GET, HEAD'});res.end();return true;}const [target,fragment]=aliases[path].split('#');const query=new URL(req.url,'http://internal').search;res.writeHead(302,{Location:target+query+(fragment?'#'+fragment:''),'Cache-Control':'no-store'});res.end();return true;}
     const asset = assets.get(path);
     if (!asset && !platform && path !== '/site-config' && path !== '/robots.txt') return false;
     if (!['GET', 'HEAD'].includes(req.method)) { res.writeHead(405, { Allow: 'GET, HEAD' }); res.end(); return true; }

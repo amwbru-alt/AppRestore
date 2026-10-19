@@ -73,3 +73,10 @@ test('HTML uses content-versioned scripts and JavaScript revalidates instead of 
  const asset=await fetch(url+'/assets/portal.js?v=old-version');assert.equal(asset.status,200);assert.equal(asset.headers.get('cache-control'),'no-cache');
  const head=await fetch(url+'/account',{method:'HEAD'});assert.equal(Number(head.headers.get('content-length')),Buffer.byteLength(html));
 });
+
+test('account aliases preserve invitation and admin destination without external redirects',async t=>{
+ const {url:base}=await setup(t);
+ for(const [path,target] of [['/register?ref=RVP-123456ABCDEF','/account?ref=RVP-123456ABCDEF#register-form'],['/login?next=admin','/account?next=admin#login-form'],['/partners','/account#partners'],['/account/','/account']]){
+  const response=await fetch(base+path,{redirect:'manual'});assert.equal(response.status,302);assert.equal(response.headers.get('location'),target);
+ }
+});

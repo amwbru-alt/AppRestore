@@ -53,9 +53,10 @@ fetch('/site-config').then(response => response.ok ? response.json() : Promise.r
 }).catch(() => { for (const id of ['mac-status', 'windows-status']) document.getElementById(id).textContent = 'Наличие архива проверим по кнопке скачивания.'; });
 const referral = new URLSearchParams(location.search).get('ref')?.trim().toUpperCase();
 if (referral && /^RVP-[A-F0-9]{12}$/.test(referral)) {
-  localStorage.setItem('apprevive_referral',referral);
+  try{localStorage.setItem('apprevive_referral',referral);}catch{}
   document.getElementById('referral').hidden = false;
   document.getElementById('referral-code').value = referral;
+  document.getElementById('register-referral').href='/register?ref='+encodeURIComponent(referral);
   document.getElementById('copy-referral').addEventListener('click', async () => {
     const field = document.getElementById('referral-code'); field.select();
     try { await navigator.clipboard.writeText(referral); document.getElementById('copy-status').textContent = 'Скопировано. Введите код в AppRevive до первой покупки.'; }

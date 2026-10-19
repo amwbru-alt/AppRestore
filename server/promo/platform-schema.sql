@@ -83,3 +83,13 @@ CREATE TABLE IF NOT EXISTS apprevive_user_partners (
  partner_id CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL UNIQUE,
  FOREIGN KEY (user_id) REFERENCES apprevive_users(user_id)
 ) ENGINE=InnoDB;
+
+-- Registration attribution is independent of Apple ID and immutable.
+CREATE TABLE IF NOT EXISTS apprevive_user_referrals (
+ user_id CHAR(32) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,
+ partner_id CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ KEY registered_partner (partner_id),
+ FOREIGN KEY (user_id) REFERENCES apprevive_users(user_id),
+ FOREIGN KEY (partner_id) REFERENCES apprevive_partners(account_id)
+) ENGINE=InnoDB;

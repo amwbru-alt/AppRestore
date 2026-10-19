@@ -6,7 +6,7 @@ const root=new URL('../public/',import.meta.url),origin='http://185.173.93.200:3
 const aid='a'.repeat(64);
 const settle=async()=>{for(let i=0;i<5;i++)await new Promise(r=>setImmediate(r));};
 async function page(t,name='account',{allowed=true,logged=false,role='user',hash='',override={}}={}){
- const errors=[],calls=[];
+ const errors=[],calls=[];let authenticated=logged;
  const dom=new JSDOM(await readFile(new URL(name+'.html',root),'utf8'),{url:origin+'/'+name+hash,runScripts:'outside-only',virtualConsole:new VirtualConsole().on('jsdomError',e=>errors.push(e.message))});
  t.after(()=>dom.window.close());const w=dom.window;
  const endpoints={
@@ -20,8 +20,9 @@ async function page(t,name='account',{allowed=true,logged=false,role='user',hash
  w.confirm=()=>true;w.fetch=async(path,options={})=>{
   calls.push({path,body:options.body?JSON.parse(options.body):null});
   if(override[path])return override[path](options,w);
-  const data=endpoints[path]||{status:'ok',unused_codes:['RV-UNIT-ONLY']};
-  const status=path==='/v3/me'&&!logged?401:200;
+  if(path==='/v3/auth/login')authenticated=true;
+  const data=path==='/v3/me'&&authenticated?{user:{email:'unit@example.test',role},accounts:logged?[{account_id:aid,email:'unit@example.test'}]:[]}:endpoints[path]||{status:'ok',unused_codes:['RV-UNIT-ONLY']};
+  const status=path==='/v3/me'&&!authenticated?401:200;
   return {ok:status<400,status,json:async()=>data};
  };
  for(const file of ['transport','portal',name])w.eval(await readFile(new URL('assets/'+file+'.js',root),'utf8'));
@@ -41,7 +42,7 @@ test('registration validates input and sends exactly one request on configured H
  const p=await page(t);const form=p.form('register-form');
  fill(form,{email:'invalid',password:'short'});await submit(form);assert.match(p.notice(),/Проверьте поля/);assert(!p.calls.some(c=>c.path==='/v3/auth/register'));
  fill(form,{email:'unit@example.test',password:'A unit service password'});await submit(form);
- assert.equal(p.calls.filter(c=>c.path==='/v3/auth/register').length,1);assert.match(p.notice(),/Аккаунт создан/);assert(!form.querySelector('button').disabled);assert.equal(form.elements.password.value,'');assert.deepEqual(p.errors,[]);
+ assert.equal(p.calls.filter(c=>c.path==='/v3/auth/register').length,1);assert.match(p.notice(),/Аккаунт создан/i);assert(!form.querySelector('button').disabled);assert.equal(form.elements.password.value,'');assert.deepEqual(p.errors,[]);
 });
 test('registration exposes sender failure and malformed API responses',async t=>{
  const p=await page(t,'account',{override:{'/v3/auth/register':async()=>({ok:false,status:503,json:async()=>({status:'mail_not_configured'})})}});
@@ -123,7 +124,7 @@ test('landing catalog filtering, internal anchors, downloads and referral copy f
 test('partner code is available without a linked Apple ID and invitation links survive login',async t=>{
  const p=await page(t,'account',{logged:true,hash:'?ref=RVP-123456ABCDEF',override:{'/v3/me':async()=>({ok:true,status:200,json:async()=>({user:{email:'partner@example.test',role:'user'},accounts:[]})})}});
  assert.match(p.form('partner').textContent,/RVP-ABCDEF123456/);
- assert.match(p.form('partner').querySelector('input').value,/\/account\?ref=RVP-ABCDEF123456/);
+ assert.match(p.form('partner').querySelector('input').value,/\/register\?ref=RVP-ABCDEF123456/);
  assert.equal(p.form('ref-form').elements.referral_code.value,'RVP-123456ABCDEF');
  assert(!p.calls.some(c=>c.path.startsWith('/v3/account?')));
  assert.equal(p.errors.length,0);
@@ -136,4 +137,20 @@ test('notices expire, may be dismissed, and old timers are cancelled',async t=>{
  [...timers.values()][0].fn();assert(p.form('message').hidden);
  p.w.AppRevivePortal.notice('Error',true);assert.equal(p.form('message').dataset.kind,'error');
  p.form('message').querySelector('button').click();assert(p.form('message').hidden);assert.equal(p.notice(),'');
+});
+
+test('registration sends invitation, logs in and opens the cabinet immediately',async t=>{
+ const p=await page(t,'account',{hash:'?ref=RVP-123456ABCDEF#register-form'});
+ fill(p.form('register-form'),{email:'new@example.test',password:'A unit service password'});
+ await submit(p.form('register-form'));
+ assert.equal(p.calls.find(c=>c.path==='/v3/auth/register').body.referral_code,'RVP-123456ABCDEF');
+ assert.equal(p.calls.filter(c=>c.path==='/v3/auth/login').length,1);
+ assert.equal(p.w.location.hash,'#cabinet');assert(!p.form('cabinet').hidden);
+ assert.match(p.form('partner').textContent,/RVP-ABCDEF123456/);
+});
+test('a failed orders panel never hides the partner code',async t=>{
+ const p=await page(t,'account',{logged:true,override:{'/v3/orders':async()=>({ok:false,status:503,json:async()=>({status:'unavailable'})})}});
+ assert.match(p.form('partner').textContent,/RVP-ABCDEF123456/);
+ assert.match(p.form('orders').textContent,/Не удалось загрузить/);
+ assert.match(p.notice(),/Некоторые разделы/);
 });
