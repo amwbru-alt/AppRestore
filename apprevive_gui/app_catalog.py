@@ -44,7 +44,10 @@ class AppCatalog(QObject):
         except Exception:
             # Missing config/table or unreachable database never hides the offline list.
             return
-        self._loaded.emit(rows)
+        try:
+            self._loaded.emit(rows)
+        except RuntimeError:
+            pass  # Window was closed while the catalog request was in flight.
 
     @Slot(object)
     def _apply(self, rows):

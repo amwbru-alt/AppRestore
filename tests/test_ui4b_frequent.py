@@ -113,6 +113,7 @@ def test_empty_field_shows_frequent_rows_like_results_typing_replaces_clearing_r
 def test_frequent_install_goes_the_usual_path(qapp) -> None:
     src = FakeSource("missing")
     src.owned = {"492224193"}
+    src.purchase_rows = lambda: [{"trackId": "492224193", "name": "Сбербанк"}]
     c, _ = _controller(src)
     started = []
     c._start = lambda items: started.append(items)

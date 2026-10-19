@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises';
+import { importGroups } from './catalog-groups.mjs';
 import { PartnerService } from './partners.mjs';
 import { randomBytes } from 'node:crypto';
 import { createDatabase } from './db.mjs';
@@ -37,7 +39,10 @@ async function syncIcons(pool) {
 let pool;
 try {
   pool = createDatabase();
-  if (process.argv[2] === 'record-purchase') {
+  if (process.argv[2] === 'import-groups') {
+    const raw = JSON.parse(await readFile(process.argv[3] || 'catalog-groups.json', 'utf8'));
+    console.log('Bank groups imported:', await importGroups(pool, raw));
+  } else if (process.argv[2] === 'record-purchase') {
     const [buyer_id, count, amount, payment_reference] = process.argv.slice(3);
     const result = await new PartnerService(pool).recordPurchase({ buyer_id, quantity: Number(count), amount_kopecks: Number(amount), payment_reference });
     console.log(JSON.stringify(result, null, 2));
@@ -52,6 +57,6 @@ try {
       await pool.execute('INSERT INTO apprevive_promo_codes (code) VALUES (?)', [Buffer.from(code)]);
       console.log(code); // Administrator terminal only; never exposed through HTTP.
     }
-  } else throw new Error('Use sync-icons, add-codes [1..1000], record-purchase BUYER_ID COUNT KOPECKS PAYMENT_ID, or refund-order PAYMENT_ID');
+  } else throw new Error('Use import-groups [FILE], sync-icons, add-codes [1..1000], record-purchase BUYER_ID COUNT KOPECKS PAYMENT_ID, or refund-order PAYMENT_ID');
 } catch (error) { console.error(error instanceof ApiError ? 'Operation rejected: ' + error.code : 'Catalog/code operation failed. Check command, environment and database.'); process.exitCode = 1; }
 finally { if (pool) await pool.end(); }

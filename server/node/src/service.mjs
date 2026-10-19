@@ -63,8 +63,15 @@ export class PromoService {
     throw new ApiError(503, 'unavailable');
   }
   async catalog() {
-    const [rows] = await this.pool.execute('SELECT store_id, name, icon_url FROM apprevive_app_catalog WHERE enabled=1 ORDER BY name LIMIT 5000');
-    return { status: 'ok', apps: rows.map(row => ({ trackId: String(row.store_id), name: row.name, iconUrl: safeIcon(row.icon_url) })) };
+    let rows;
+    try {
+      [rows] = await this.pool.execute('SELECT c.store_id,c.name,c.icon_url,g.group_id,g.name AS group_name,g.icon_url AS group_icon FROM apprevive_app_catalog c LEFT JOIN apprevive_catalog_variants v ON v.store_id=c.store_id LEFT JOIN apprevive_catalog_groups g ON g.group_id=v.group_id AND g.enabled=1 WHERE c.enabled=1 ORDER BY c.name LIMIT 5000');
+    } catch (error) {
+      if (error.code !== 'ER_NO_SUCH_TABLE') throw error;
+      [rows] = await this.pool.execute('SELECT store_id, name, icon_url FROM apprevive_app_catalog WHERE enabled=1 ORDER BY name LIMIT 5000');
+    }
+    return { status: 'ok', apps: rows.map(row => ({ trackId: String(row.store_id), name: row.name, iconUrl: safeIcon(row.icon_url),
+      ...(row.group_id ? { groupId: row.group_id, groupName: row.group_name, groupIconUrl: safeIcon(row.group_icon) } : {}) })) };
   }
 }
 export function safeIcon(value) {

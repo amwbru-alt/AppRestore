@@ -7,9 +7,11 @@ Item {
     id: root
     property string storeId: ""
     property string bundleId: ""
+    property string artworkUrl: ""
     property real radius: Theme.radiusRowIcon
     property real iconOpacity: 1.0
     readonly property string source: {
+        if (artworkUrl.indexOf("https://") === 0) return artworkUrl
         if (!iconBook) return ""  // window teardown: the book may already be gone
         var rev = iconBook.revision
         var a = storeId ? iconBook.pathFor(storeId) : ""

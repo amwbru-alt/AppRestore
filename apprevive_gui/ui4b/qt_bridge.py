@@ -819,6 +819,7 @@ class Restore4b(QObject):
         self._files_chosen: set[str] = set()
         self.catalog_provider = None
         self._history_open = False
+        self._history_banks_only = True
         self._history_query = ""
         self._history_id_note = ""
         self._history_account = ""
@@ -1098,6 +1099,16 @@ class Restore4b(QObject):
     def installFound(self, store_id: str, name: str, store_status: str = "") -> None:
         """A found app: the same path as «Вернуть» (fresh space, consent if needed, gate).
         ``store_status`` comes from region_probe only (Find4b passes its answer)."""
+
+        catalog = self.catalog_provider.items() if self.catalog_provider else standard_apps()
+        grouped = any(str(row.get("trackId")) == str(store_id) and row.get("groupId") for row in [*catalog, *standard_apps()])
+        owned = self.source.signed_in and any(str(row.get("trackId") or row.get("track_id") or "") == str(store_id) for row in self.source.purchase_rows())
+        if grouped and not owned:
+            self._history_open = True
+            self._history_id_note = "Вариант банка не найден в загруженной истории Apple ID. Сначала обновите историю. Установка не запускалась."
+            self._load_history(force=True)
+            self._refresh()
+            return
 
         item = RestoreItem(key=f"store:{store_id}", name=name or store_id, group=GROUP_REMOVED,
                            action=ACTION_STORE, store_id=store_id, store_status=store_status)
@@ -1511,6 +1522,7 @@ class Restore4b(QObject):
             failed=failed,
             query=self._history_query,
             id_note=self._history_id_note,
+            banks_only=self._history_banks_only,
             catalog=self.catalog_provider.items() if self.catalog_provider else standard_apps(),
         )
         view["open"] = self._history_open
@@ -1534,6 +1546,12 @@ class Restore4b(QObject):
         self._history_id_note = ""
         self._refresh()
 
+    @Slot(bool)
+    def setHistoryBanksOnly(self, banks_only: bool) -> None:
+        self._history_banks_only = bool(banks_only)
+        self._history_query = ""
+        self._refresh()
+
     @Slot(str)
     def setHistoryQuery(self, query: str) -> None:
         self._history_query = query
@@ -1541,8 +1559,15 @@ class Restore4b(QObject):
 
     @Slot(str, str)
     def restoreFromHistory(self, store_id: str, name: str) -> None:
-        if self.flow.running or not str(store_id or "").strip():
+        if self.flow.running or not self.source.signed_in:
             return
+        store_id = str(store_id or "").strip()
+        purchases = self.source.purchase_rows()
+        if not any(str(item.get("trackId") or item.get("track_id") or "") == store_id for item in purchases):
+            self._history_id_note = "Этот ID не найден в загруженной истории текущего Apple ID. Установка не запускалась."
+            self._refresh()
+            return
+        name = name_for_store_id(purchases, store_id) or store_id
         self._history_open = False
         self._history_query = ""
         self._history_id_note = ""

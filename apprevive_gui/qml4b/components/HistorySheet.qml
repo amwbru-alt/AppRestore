@@ -83,11 +83,22 @@ Item {
             }
         }
 
+        Row {
+            id: bankTabs
+            x: sbox.x
+            y: sbox.y + sbox.height + 10
+            visible: !!root.h.bankAvailable && !!root.h.signedIn
+            height: visible ? Theme.goHeight : 0
+            spacing: 12
+            Cta { compact: true; secondary: !root.h.banksOnly; text: "Мои банки"; onClicked: { input.text = ""; ui.setHistoryBanksOnly(true) } }
+            Cta { compact: true; secondary: !!root.h.banksOnly; text: "Вся история"; onClicked: { input.text = ""; ui.setHistoryBanksOnly(false) } }
+        }
+
         Item {
             id: byId
-            visible: !!root.h.signedIn
+            visible: !!root.h.signedIn && !!root.h.allowManualId
             x: Theme.listPadX
-            y: sbox.y + sbox.height + (visible ? 10 : 0)
+            y: bankTabs.y + bankTabs.height + (visible ? 10 : 0)
             width: parent.width - 2 * Theme.listPadX
             height: visible ? 44 : 0
 
@@ -208,6 +219,7 @@ Item {
                     width: Theme.rowIcon; height: Theme.rowIcon
                     anchors.verticalCenter: parent.verticalCenter
                     storeId: r.storeId
+                    artworkUrl: r.iconUrl || ""
                     bundleId: r.bundleId || ""
                 }
                 Column {

@@ -1,6 +1,7 @@
 """Read the public catalog through the Node.js API, never directly from MySQL."""
 from __future__ import annotations
 import json
+import re
 import urllib.parse
 import urllib.request
 from .api_config import api_base_url
@@ -38,7 +39,15 @@ def validate_catalog(rows):
         parsed = urllib.parse.urlsplit(url)
         if parsed.scheme != 'https' or not parsed.hostname or parsed.username or parsed.password:
             url = ''
-        result.append(dict(trackId=sid, name=name[:255], iconUrl=url[:2048]))
+        item = dict(trackId=sid, name=name[:255], iconUrl=url[:2048])
+        group_id, group_name = row.get('groupId'), row.get('groupName')
+        if isinstance(group_id, str) and re.fullmatch(r'[a-z0-9][a-z0-9-]{0,63}', group_id) and isinstance(group_name, str) and group_name.strip():
+            icon = str(row.get('groupIconUrl') or '')
+            parsed_icon = urllib.parse.urlsplit(icon)
+            if parsed_icon.scheme != 'https' or not parsed_icon.hostname or parsed_icon.username or parsed_icon.password:
+                icon = ''
+            item.update(groupId=group_id, groupName=group_name.strip()[:255], groupIconUrl=icon[:2048])
+        result.append(item)
         seen.add(sid)
     return result
 

@@ -51,6 +51,7 @@ def build(settings: QSettings) -> tuple[QQmlApplicationEngine | None, list[Any]]
     catalog = AppCatalog(controller)
     controller.catalog_provider = catalog
     catalog.changed.connect(controller.changed.emit)
+    catalog.refresh()  # Bank metadata is ready before opening history or search.
 
     def remember_onboarding() -> None:
         if controller.onboarding.finished and not settings.value(ONBOARDED_KEY, False, type=bool):

@@ -147,23 +147,31 @@ def history_view(
     query: str = "",
     id_note: str = "",
     catalog: list[dict[str, object]] | None = None,
+    banks_only: bool = False,
 ) -> dict[str, object]:
     """The sheet. Unsigned: no rows from a previous account."""
 
-    rows = _rows(items, query) if signed_in else []
-    catalog_icons = {str(item.get("trackId")): str(item.get("iconUrl") or "") for item in (catalog or [])}
-    for row in rows:
-        if catalog_icons.get(row["storeId"]):
-            row["iconUrl"] = catalog_icons[row["storeId"]]
-    purchase_count = len(rows)
-    standard_count = 0
-    if signed_in and catalog:
-        owned_ids = {str(item.get("trackId") or item.get("track_id") or "") for item in items}
-        standard = _rows([item for item in catalog if str(item.get("trackId")) not in owned_ids], query)
-        for row in standard:
-            row["developer"] = f"Стандартный список · ID {row['storeId']}"
-        standard_count = len(standard)
-        rows.extend(standard)
+    metadata = {str(item.get("trackId")): item for item in (catalog or [])}
+    bank_ids = {sid for sid, item in metadata.items() if item.get("groupId") and item.get("groupName")}
+    only_banks = bool(banks_only and bank_ids)
+    enriched = []
+    for item in items:
+        sid = str(item.get("trackId") or item.get("track_id") or "")
+        if only_banks and sid not in bank_ids:
+            continue
+        row = dict(item)
+        meta = metadata.get(sid, {})
+        if sid in bank_ids:
+            actual = str(item.get("name") or "").strip()
+            if not actual or actual.isdigit():
+                actual = str(meta.get("name") or sid)
+            bank = str(meta["groupName"])
+            row["name"] = bank if actual.casefold() == bank.casefold() else f"{bank} — {actual}"
+        row["iconUrl"] = str(meta.get("groupIconUrl") or item.get("iconUrl") or meta.get("iconUrl") or "")
+        enriched.append(row)
+    # Only exact IDs from this account's purchase rows establish ownership.
+    # Catalog metadata never adds an unowned application.
+    rows = _rows(enriched, query) if signed_in else []
     if not signed_in:
         empty, empty_link = SIGNIN_TEXT, SIGNIN_LINK
     elif busy and not rows:
@@ -191,18 +199,22 @@ def history_view(
         lead = f"{count} {_purchase_word(count)} в истории"
     else:
         lead = ""
-    if signed_in and catalog:
-        if query.strip():
-            lead = f"Найдено {count}"
-        else:
-            lead = f"История: {purchase_count} · Стандартный список: {standard_count}"
+    if only_banks and signed_in:
+        lead = f"Вариантов банков в загруженной истории: {count}"
         if busy:
             lead += " · История обновляется…"
         elif failed:
             lead += f" · {FAILED}"
-        lead += " · Доступность определяется вашим Apple ID."
+        lead += " · Совпадение определяется по ID, не по названию."
+        if not count and not busy:
+            empty = "Варианты банков не найдены в загруженной истории. Это не доказывает, что их никогда не было."
+    if signed_in and id_note:
+        lead = (lead + " · " if lead else "") + id_note
     return {
         "title": TITLE,
+        "bankAvailable": bool(bank_ids),
+        "banksOnly": only_banks,
+        "allowManualId": False,
         "close": CLOSE,
         "placeholder": "Название приложения или ID" if catalog else PLACEHOLDER,
         "signedIn": signed_in,

@@ -35,7 +35,13 @@ fetch('/v1/catalog', { headers: { Accept: 'application/json' } }).then(async res
   if (!response.ok) throw Error('unavailable');
   const data = await response.json();
   if (data.status !== 'ok' || !Array.isArray(data.apps)) throw Error('bad catalog');
-  apps = data.apps.filter(app => typeof app.name === 'string' && app.name.trim()); renderApps();
+  const seen = new Set();
+  apps = data.apps.filter(app => app && typeof app.name === 'string' && app.name.trim()).flatMap(app => {
+    if (!app.groupId || !app.groupName) return [app];
+    if (seen.has(app.groupId)) return [];
+    seen.add(app.groupId);
+    return [{ ...app, name: app.groupName, iconUrl: app.groupIconUrl || app.iconUrl }];
+  }); renderApps();
 }).catch(() => {
   grid.replaceChildren(); const p = document.createElement('p'); p.className = 'catalog-message';
   p.textContent = 'Каталог сейчас недоступен. Поиск можно продолжить в AppRevive.'; grid.append(p);

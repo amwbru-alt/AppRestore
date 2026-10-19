@@ -58,3 +58,6 @@ server/node/.env
 
 # Installer archives served by the Node website (upload separately)
 server/node/downloads/
+
+# Administrator's private bank-group manifest (preserved across git pull)
+server/node/catalog-groups.local.json
