@@ -26,6 +26,15 @@ def command():
     return args
 
 
+@pytest.fixture(scope='module', autouse=True)
+def require_pdo_sqlite():
+    probe = subprocess.run(command() + ['-r', 'exit(class_exists("PDO") && in_array("sqlite", PDO::getAvailableDrivers(), true) ? 0 : 2);'], capture_output=True, text=True, timeout=15)
+    if probe.returncode:
+        if os.environ.get('APPREVIVE_TEST_PHP'):
+            pytest.fail('Configured APPREVIVE_TEST_PHP must provide PDO SQLite: ' + probe.stderr)
+        pytest.skip('Optional legacy PHP backend tests require PDO SQLite; Node API has a separate MySQL CI job')
+
+
 def invoke(path, mode, *args):
     result = subprocess.run(command() + [str(ROOT / 'tests/test_promo_server_driver.php'), str(path), mode, *args], capture_output=True, text=True, timeout=15)
     assert result.returncode == 0, result.stderr + result.stdout
