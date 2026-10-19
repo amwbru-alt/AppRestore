@@ -37,6 +37,13 @@ jobs:
           cache-dependency-path: server/node/package-lock.json
       - run: npm ci --ignore-scripts
         working-directory: server/node
+      - run: node src/migrate.mjs
+        working-directory: server/node
+        env:
+          DB_HOST: 127.0.0.1
+          DB_USER: root
+          DB_NAME: apprevive_test
+          DB_PASSWORD: isolated-ci-root
       - run: npm test
         working-directory: server/node
         env:

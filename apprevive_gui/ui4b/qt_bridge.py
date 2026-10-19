@@ -326,6 +326,9 @@ class SourceBase(QObject):
         """QuickSession.signOut → AppReviveService.sign_out (revoke, session copy
         and purchases-cache.json deleted; license journal and icon cache stay)."""
 
+    def open_service(self) -> None:
+        pass
+
     def open_partners(self) -> None:
         pass
 
@@ -757,6 +760,11 @@ class SessionSource(SourceBase):
     def sign_out(self) -> None:
         self._names.clear()  # names looked up for this Apple ID's storefront
         self.session.signOut()
+
+    def open_service(self) -> None:
+        controller = getattr(self.session.service, "service_account_controller", None)
+        if controller:
+            controller.open_profile(self.account_email if self.signed_in else "")
 
     def open_partners(self) -> None:
         from apprevive_gui.partners import PartnerDialog
@@ -1733,6 +1741,11 @@ class Restore4b(QObject):
         self._cleanup_kind = ""
         self._settings_open = False
         self._refresh()
+
+    @Slot()
+    def openServiceAccount(self) -> None:
+        if not self.flow.running:
+            self.source.open_service()
 
     @Slot()
     def openPartners(self) -> None:

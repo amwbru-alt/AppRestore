@@ -55,6 +55,13 @@ class PromoDialog(QDialog):
         telegram.setObjectName("promoTelegram")
         telegram.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(TELEGRAM_URL)))
         layout.addWidget(telegram)
+        buy = QPushButton("Купить код онлайн / открыть кабинет")
+        def open_service():
+            from apprevive_gui.service_account import ServiceDialog
+            self._service_dialog = ServiceDialog(getattr(self.credits, 'email', ''))
+            self._service_dialog.show()
+        buy.clicked.connect(open_service)
+        layout.addWidget(buy)
         self.code = QLineEdit()
         self.code.setObjectName("restorationCodeInput")
         self.code.setMaxLength(256)
@@ -186,8 +193,12 @@ def enable_restoration_codes(service, parent=None) -> PromoController:
         # Read the active authenticated ipatool session, not editable UI text.
         return account_email(service.core.tools.ipatool_auth_info())
 
-    controller = PromoController(AccountCredits(data_dir() / "server-operations.sqlite3", verified_email), parent)
-    access = AccountAccess(controller.credits, controller.request_code, controller.notify)
+    from apprevive_gui.service_account import ServiceController, preflight
+    service_controller = ServiceController(parent)
+    service.service_account_controller = service_controller
+    controller = PromoController(AccountCredits(data_dir() / "server-operations.sqlite3", verified_email, authenticate=service_controller.authenticate), parent)
+    access = AccountAccess(controller.credits, controller.request_code, controller.notify,
+                           review=service_controller.review, preflight=lambda details: preflight(service, details))
     service.restoration_access = access
     service.core.restoration_access = access
     return controller

@@ -10,7 +10,7 @@ check version -> zip as AppRevive-GUI-Windows.zip / AppRevive-GUI-macOS.zip
 on the unpacked copy.
 
     python packaging/package_gui.py --out gui-dist --ipatool-archive ARCHIVE
-        [--expect-version 0.4.0]
+        [--expect-version 0.5.0]
 """
 
 from __future__ import annotations

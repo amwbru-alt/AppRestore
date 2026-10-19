@@ -61,3 +61,8 @@ if (referral && /^RVP-[A-F0-9]{12}$/.test(referral)) {
     catch { field.focus(); field.select(); document.getElementById('copy-status').textContent = 'Скопируйте выделенный код вручную.'; }
   });
 }
+
+fetch('/v3/status').then(r=>r.ok?r.json():Promise.reject()).then(data=>{
+  if(data.payments_enabled){const link=document.querySelector('#pricing .text-link');if(link){link.href='/account';link.textContent='Купить код в кабинете ↗';link.removeAttribute('target');}}
+  if(data.commission_policy?.rate>0){const note=document.querySelector('#partners small');if(note)note.textContent=`Вознаграждение по новым заказам: ${data.commission_policy.rate/100}%. Удержание ${data.commission_policy.days} дней. Выплаты подтверждает администратор.`;}
+}).catch(()=>{});

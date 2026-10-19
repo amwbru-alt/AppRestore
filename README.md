@@ -15,7 +15,12 @@
   <a href="./LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPL v3"></a>
 </p>
 
-> **Статус:** beta · Версия 0.4.0. Windows и macOS · проект не связан с Apple Inc.
+> **Статус:** beta · Версия 0.5.0. Windows и macOS · проект не связан с Apple Inc.
+
+## Переход на 0.5.0
+
+[Полная инструкция: HTTPS, MySQL, почта, платежи, кабинет, админка и подписанные сборки](PLATFORM.md).
+Перед обновлением сервера выполните миграцию. Новый вход требует HTTPS; старый HTTP-адрес больше не подходит для личных данных.
 
 ## AppRevive: обновление исходного приложения
 

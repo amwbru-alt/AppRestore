@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import QObject, QSettings, QUrl
+from PySide6.QtCore import QObject, QSettings, QUrl, QTimer
 from PySide6.QtQml import QQmlApplicationEngine
 
 QML_DIR = Path(__file__).resolve().parent.parent / "qml4b"
@@ -52,6 +52,7 @@ def build(settings: QSettings) -> tuple[QQmlApplicationEngine | None, list[Any]]
     controller.catalog_provider = catalog
     catalog.changed.connect(controller.changed.emit)
     catalog.refresh()  # Bank metadata is ready before opening history or search.
+    QTimer.singleShot(3000, controller.checkUpdates)
 
     def remember_onboarding() -> None:
         if controller.onboarding.finished and not settings.value(ONBOARDED_KEY, False, type=bool):
@@ -115,8 +116,6 @@ def build(settings: QSettings) -> tuple[QQmlApplicationEngine | None, list[Any]]
     controller.changed.connect(queue_icons)
     source.changed.connect(queue_icons)
     controller.finder.changed.connect(queue_icons)
-    from PySide6.QtCore import QTimer
-
     # icons that were not found yet (network came up later) are retried by IconBook
     retry = QTimer()
     retry.setInterval(int(IconBook.RETRY_S * 1000))

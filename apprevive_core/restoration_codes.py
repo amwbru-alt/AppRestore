@@ -193,5 +193,15 @@ def metered_restoration(method):
     def wrapped(self, *args, **kwargs):
         access = getattr(self, "restoration_access", None)
         action = lambda: method(self, *args, **kwargs)
+        if access is not None and hasattr(access, 'run_operation'):
+            target = args[1] if len(args) > 1 else None
+            details = {'udid': str(args[0]) if args else '', 'operation': method.__name__}
+            if method.__name__ == 'restore_by_store_id':
+                details.update(store_id=str(target or ''), name='App Store ID ' + str(target or ''))
+            elif method.__name__ == 'install':
+                details.update(name=Path(target).name if target else 'Локальный IPA')
+            else:
+                details.update(name=str(getattr(target, 'name', '') or getattr(target, 'bundle_id', '') or 'Приложение'), store_id=str(getattr(target, 'store_id', '') or ''))
+            return access.run_operation(action, details)
         return access.run(action) if access is not None else action()
     return wrapped

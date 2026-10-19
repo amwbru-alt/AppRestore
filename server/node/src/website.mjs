@@ -5,6 +5,11 @@ import { join } from 'node:path';
 const root = fileURLToPath(new URL('../public/', import.meta.url));
 const assets = new Map([
   ['/', ['index.html', 'text/html; charset=utf-8']],
+  ['/account', ['account.html', 'text/html; charset=utf-8']],
+  ['/admin', ['admin.html', 'text/html; charset=utf-8']],
+  ['/assets/portal.css', ['assets/portal.css', 'text/css; charset=utf-8']],
+  ['/assets/account.js', ['assets/account.js', 'text/javascript; charset=utf-8']],
+  ['/assets/admin.js', ['assets/admin.js', 'text/javascript; charset=utf-8']],
   ['/assets/site.css', ['assets/site.css', 'text/css; charset=utf-8']],
   ['/assets/site.js', ['assets/site.js', 'text/javascript; charset=utf-8']],
   ['/assets/apprevive.png', ['assets/apprevive.png', 'image/png']],

@@ -382,7 +382,7 @@ def test_release_build_rejects_version_drift(tmp_path: Path) -> None:
     package_init = release_root / "apprevive_core" / "__init__.py"
     package_init.write_text(
         package_init.read_text(encoding="utf-8").replace(
-            '__version__ = "0.4.0"',
+            '__version__ = "0.5.0"',
             '__version__ = "9.9.9"',
         ),
         encoding="utf-8",
@@ -442,7 +442,7 @@ def test_release_build_is_deterministic_and_generates_bootstrap(
     )
     assert first.returncode == 0, first.stdout + first.stderr
 
-    archive = release_root / "dist" / "AppRevive-0.4.0-source.zip"
+    archive = release_root / "dist" / "AppRevive-0.5.0-source.zip"
     windows_bootstrap = release_root / "dist" / "install.ps1"
     macos_bootstrap = release_root / "dist" / "install.sh"
     checksums = release_root / "dist" / "SHA256SUMS.txt"
@@ -461,13 +461,13 @@ def test_release_build_is_deterministic_and_generates_bootstrap(
         in windows_bootstrap_text
     )
     assert (
-        "https://github.com/amwbru-alt/AppRestore/releases/download/v0.4.0/"
-        "AppRevive-0.4.0-source.zip"
+        "https://github.com/amwbru-alt/AppRestore/releases/download/v0.5.0/"
+        "AppRevive-0.5.0-source.zip"
     ) in windows_bootstrap_text
     assert f"EXPECTED_ARCHIVE_SHA256='{archive_digest}'" in macos_bootstrap_text
     assert (
-        "https://github.com/amwbru-alt/AppRestore/releases/download/v0.4.0/"
-        "AppRevive-0.4.0-source.zip"
+        "https://github.com/amwbru-alt/AppRestore/releases/download/v0.5.0/"
+        "AppRevive-0.5.0-source.zip"
     ) in macos_bootstrap_text
     assert checksums.read_text(encoding="utf-8") == (
         f"{archive_digest}  {archive.name}\n"
@@ -482,29 +482,29 @@ def test_release_build_is_deterministic_and_generates_bootstrap(
             for info in release_zip.infolist()
         )
         macos_installer = release_zip.getinfo(
-            "AppRevive-0.4.0/install-macos.sh"
+            "AppRevive-0.5.0/install-macos.sh"
         )
-    assert "AppRevive-0.4.0/CONTRIBUTING.md" in names
-    assert "AppRevive-0.4.0/.gitattributes" in names
-    assert "AppRevive-0.4.0/.github/workflows/ci.yml" in names
-    assert "AppRevive-0.4.0/.github/workflows/release.yml" in names
-    assert "AppRevive-0.4.0/docs/RELEASING.md" in names
-    assert "AppRevive-0.4.0/SECURITY.md" in names
-    assert "AppRevive-0.4.0/install-macos.sh" in names
-    assert "AppRevive-0.4.0/scripts/install.ps1.in" in names
-    assert "AppRevive-0.4.0/scripts/install.sh.in" in names
-    assert "AppRevive-0.4.0/requirements/runtime.lock" in names
-    assert "AppRevive-0.4.0/requirements/build.lock" in names
-    assert "AppRevive-0.4.0/requirements/test.lock" in names
-    assert "AppRevive-0.4.0/requirements/wheel-build.lock" in names
-    assert "AppRevive-0.4.0/requirements/sources/hexdump-3.3.zip" in names
-    assert "AppRevive-0.4.0/scripts/rebuild-vendored-wheel.py" in names
+    assert "AppRevive-0.5.0/CONTRIBUTING.md" in names
+    assert "AppRevive-0.5.0/.gitattributes" in names
+    assert "AppRevive-0.5.0/.github/workflows/ci.yml" in names
+    assert "AppRevive-0.5.0/.github/workflows/release.yml" in names
+    assert "AppRevive-0.5.0/docs/RELEASING.md" in names
+    assert "AppRevive-0.5.0/SECURITY.md" in names
+    assert "AppRevive-0.5.0/install-macos.sh" in names
+    assert "AppRevive-0.5.0/scripts/install.ps1.in" in names
+    assert "AppRevive-0.5.0/scripts/install.sh.in" in names
+    assert "AppRevive-0.5.0/requirements/runtime.lock" in names
+    assert "AppRevive-0.5.0/requirements/build.lock" in names
+    assert "AppRevive-0.5.0/requirements/test.lock" in names
+    assert "AppRevive-0.5.0/requirements/wheel-build.lock" in names
+    assert "AppRevive-0.5.0/requirements/sources/hexdump-3.3.zip" in names
+    assert "AppRevive-0.5.0/scripts/rebuild-vendored-wheel.py" in names
     assert (
-        "AppRevive-0.4.0/requirements/wheels/"
+        "AppRevive-0.5.0/requirements/wheels/"
         "hexdump-3.3-py3-none-any.whl"
     ) in names
-    assert "AppRevive-0.4.0/dist/install.ps1" not in names
-    assert "AppRevive-0.4.0/dist/install.sh" not in names
+    assert "AppRevive-0.5.0/dist/install.ps1" not in names
+    assert "AppRevive-0.5.0/dist/install.sh" not in names
     assert stat.S_ISREG(macos_installer.external_attr >> 16)
     assert (macos_installer.external_attr >> 16) & 0o777 == 0o755
 
@@ -531,7 +531,7 @@ def test_release_build_is_deterministic_and_generates_bootstrap(
     unpacked = tmp_path / "unpacked"
     with zipfile.ZipFile(archive) as release_zip:
         release_zip.extractall(unpacked)
-    unpacked_root = unpacked / "AppRevive-0.4.0"
+    unpacked_root = unpacked / "AppRevive-0.5.0"
     assert not (unpacked_root / ".git").exists()
     rebuilt = subprocess.run(
         [sys.executable, str(unpacked_root / "scripts" / "build-release.py")],
@@ -543,7 +543,7 @@ def test_release_build_is_deterministic_and_generates_bootstrap(
     )
     assert rebuilt.returncode == 0, rebuilt.stdout + rebuilt.stderr
     assert _sha256(
-        unpacked_root / "dist" / "AppRevive-0.4.0-source.zip"
+        unpacked_root / "dist" / "AppRevive-0.5.0-source.zip"
     ) == first_hashes[0]
 
     if (3, 10) <= sys.version_info[:2] < (3, 14):

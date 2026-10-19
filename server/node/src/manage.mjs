@@ -1,3 +1,4 @@
+import { AuthService } from './auth.mjs';
 import { readFile } from 'node:fs/promises';
 import { importGroups } from './catalog-groups.mjs';
 import { PartnerService } from './partners.mjs';
@@ -39,7 +40,12 @@ async function syncIcons(pool) {
 let pool;
 try {
   pool = createDatabase();
-  if (process.argv[2] === 'import-groups') {
+  if (process.argv[2] === 'create-admin') {
+    let input = ''; for await (const part of process.stdin) input += part;
+    if (input.length > 512) throw new Error('Invalid password input');
+    await new AuthService(pool).createAdmin(process.argv[3], input.replace(/[\r\n]+$/, ''));
+    console.log('Administrator ready. Password is never printed.');
+  } else if (process.argv[2] === 'import-groups') {
     const raw = JSON.parse(await readFile(process.argv[3] || 'catalog-groups.json', 'utf8'));
     console.log('Bank groups imported:', await importGroups(pool, raw));
   } else if (process.argv[2] === 'record-purchase') {

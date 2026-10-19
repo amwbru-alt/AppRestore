@@ -9,7 +9,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 
-$AppReviveVersion = "0.4.0"
+$AppReviveVersion = "0.5.0"
 $ManagedInstallMarkerName = ".apprevive-managed"
 $ManagedInstallMarkerValue = "AppRevive managed installation v1"
 $IpaToolVersion = "2.6.0"

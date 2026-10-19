@@ -30,6 +30,7 @@ class PartnerDialog(QDialog):
         layout.setSpacing(12)
         note = QLabel('Поделитесь своим кодом. Приглашённый вводит его до первой покупки.\nПартнёрский код не даёт восстановлений. Условия вознаграждения пока не установлены.')
         note.setWordWrap(True)
+        self.program_note = note
         layout.addWidget(note)
         layout.addWidget(QLabel('Ваш партнёрский код'))
         self.code = self.copy_field(layout, 'partnerCode')
@@ -112,6 +113,9 @@ class PartnerDialog(QDialog):
         if data.get('status') != 'ok' or any(type(data.get(k)) is not int or data[k] < 0 for k in keys):
             self.failed('Неверный ответ сервера статистики.')
             return
+        if 'commission_rate_bps' in data:
+            rate = data['commission_rate_bps'] / 100
+            self.program_note.setText(f'Пригласивший закрепляется до первой покупки. Вознаграждение по новым заказам: {rate:g}%. Удержание: {data.get("hold_days", 0)} дней. Выплаты подтверждает администратор после фактического перевода.')
         self.account = data['account_id']
         self.code.setText(data['referral_code'])
         self.buyer.setText(self.account)
@@ -119,6 +123,9 @@ class PartnerDialog(QDialog):
                            f"Оплаченных заказов: {data['paid_orders']} · Куплено кодов: {data['purchased_codes']}\n"
                            f"Оплачено приглашёнными: {data['revenue_kopecks'] / 100:.2f} ₽\n"
                            'Возвращённые заказы исключены. Сумма покупок — не ваш заработок.')
+        if 'ledger' in data:
+            ledger = data['ledger']
+            self.stats.setText(self.stats.text() + f"\nДоступно к выплате: {ledger.get('available_kopecks',0)/100:.2f} ₽ · На удержании: {ledger.get('held_kopecks',0)/100:.2f} ₽")
         bound = data.get('invited_by', '')
         self.binding.setText('Вас пригласил: ' + bound if bound else 'Пригласивший не указан. Привязку нельзя изменить.')
         self.referral.setEnabled(not bound)

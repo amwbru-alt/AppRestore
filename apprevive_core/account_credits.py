@@ -29,8 +29,14 @@ def api_call(method: str, body: dict, *, namespace="account") -> dict:
     if namespace not in ("account", "partner"):
         raise ValueError("Unknown API namespace")
     url = api_base_url() + "/v2/" + namespace + "/" + method
+    parsed_url = urlsplit(url)
+    if parsed_url.scheme != 'https' and parsed_url.hostname not in ('127.0.0.1', 'localhost', '::1'):
+        raise RestorationCodeError('Для учёта и входа AppRevive нужен HTTPS-адрес API. Обновите настройки сервиса.')
+    from .service_session import token, ServiceLoginRequired, ServiceLinkRequired
+    current_token = token()
     request = urllib.request.Request(url, data=json.dumps(body).encode(), headers={
-        'Content-Type': 'application/json', 'Accept': 'application/json', 'User-Agent': 'AppRevive/0.4',
+        **({'Authorization': 'Bearer ' + current_token} if current_token else {}),
+        'Content-Type': 'application/json', 'Accept': 'application/json', 'User-Agent': 'AppRevive/0.5',
     }, method='POST')
     try:
         with urllib.request.urlopen(request, timeout=15, context=promo_ssl_context() if urlsplit(url).scheme == 'https' else None) as response:
@@ -42,6 +48,12 @@ def api_call(method: str, body: dict, *, namespace="account") -> dict:
             raise ValueError('wrong account')
         return result
     except urllib.error.HTTPError as exc:
+        if exc.code == 401:
+            raise ServiceLoginRequired('Войдите в аккаунт AppRevive.') from exc
+        if exc.code == 403:
+            raise ServiceLinkRequired('Подтвердите почту Apple ID в кабинете AppRevive.') from exc
+        if exc.code == 426:
+            raise RestorationCodeError('Для защищённого входа необходим HTTPS-адрес API. Обновите настройки сервиса.') from exc
         if exc.code == 402:
             raise CodeRequired('Для продолжения нужен код.') from exc
         messages = {409: 'Есть незавершённое восстановление. Повторите на прежнем компьютере или обратитесь в Telegram.',
@@ -57,10 +69,12 @@ def api_call(method: str, body: dict, *, namespace="account") -> dict:
 
 
 class AccountCredits:
-    def __init__(self, path: Path, identity, call=api_call):
+    def __init__(self, path: Path, identity, call=api_call, authenticate=None):
         self.path, self.identity, self.call = path, identity, call
         self._lock = threading.RLock()
         self.current = ''
+        self.email = ''
+        self.authenticate = authenticate
         path.parent.mkdir(parents=True, exist_ok=True)
         with closing(self.connect()) as db:
             db.execute('CREATE TABLE IF NOT EXISTS server_operations (account TEXT PRIMARY KEY, request TEXT NOT NULL, outcome INTEGER)')
@@ -70,22 +84,32 @@ class AccountCredits:
         return sqlite3.connect(self.path, timeout=5)
 
     def select(self):
-        self.current = account_id(self.identity())
+        self.email = self.identity()
+        self.current = account_id(self.email)
         return self.current
 
     def invoke(self, method, account, **body):
-        result = self.call(method, dict(account_id=account, **body))
+        from .service_session import ServiceLoginRequired, ServiceLinkRequired
+        try:
+            result = self.call(method, dict(account_id=account, **body))
+        except (ServiceLoginRequired, ServiceLinkRequired):
+            if not self.authenticate or not self.authenticate(self.email):
+                raise RestorationCodeError('Вход в AppRevive отменён.')
+            result = self.call(method, dict(account_id=account, **body))
         if result.get('account_id') != account:
             raise RestorationCodeError('Сервер вернул другой аккаунт.')
+        return result
+
+    def balance(self, account):
+        result = self.invoke('balance', account)
+        if result.get('status') != 'ok' or type(result.get('credits')) is not int or result['credits'] < 0:
+            raise RestorationCodeError('Неверный ответ сервера баланса.')
         return result
 
     @property
     def remaining(self):
         with self._lock:
-            result = self.invoke('balance', self.select())
-            if result.get('status') != 'ok' or type(result.get('credits')) is not int or result['credits'] < 0:
-                raise RestorationCodeError('Неверный ответ сервера баланса.')
-            return result['credits']
+            return self.balance(self.select())['credits']
 
     def redeem(self, code):
         # The worker captured the verified account before opening the code dialog.
@@ -119,9 +143,18 @@ class AccountCredits:
 
 
 class AccountAccess:
-    def __init__(self, credits, prompt, changed=lambda: None):
+    def __init__(self, credits, prompt, changed=lambda: None, review=None, preflight=None):
         self.credits, self.prompt, self.changed = credits, prompt, changed
         self.local = threading.local()
+        self.review, self.preflight = review, preflight
+
+    def run_operation(self, action, details):
+        previous = getattr(self.local, 'details', {})
+        self.local.details = details
+        try:
+            return self.run(action)
+        finally:
+            self.local.details = previous
 
     def run(self, action):
         if getattr(self.local, 'active', False):
@@ -129,6 +162,7 @@ class AccountAccess:
         with self.credits._lock:
             account = self.credits.select()
             prior = self.credits.pending(account)
+            details = getattr(self.local, 'details', {})
             request = uuid.uuid4().hex
             if prior:
                 request, outcome = prior
@@ -141,10 +175,15 @@ class AccountAccess:
                     if outcome == 1:
                         raise RestorationCodeError('Предыдущее успешное восстановление подтверждено сервером. Повторная установка не запускалась.')
                     request = uuid.uuid4().hex
+            if self.review:
+                balance = self.credits.balance(account)
+                checks = self.preflight(details) if self.preflight else []
+                if not self.review(dict(email=self.credits.email, details=details, balance=balance, checks=checks)):
+                    raise RestorationCodeError('Восстановление отменено до резервирования.')
             self.credits.remember(account, request, -1)
             while True:
                 try:
-                    result = self.credits.invoke('reserve', account, request_id=request)
+                    result = self.credits.invoke('reserve', account, request_id=request, details={key: details[key] for key in ('name', 'store_id') if key in details})
                     break
                 except CodeRequired:
                     if not self.prompt():

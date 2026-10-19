@@ -1,3 +1,4 @@
+import { accrueCommission, commissionPolicy, readPolicy, ledgerBalance } from './ledger.mjs';
 import { randomBytes } from 'node:crypto';
 import { AccountService } from './accounts.mjs';
 import { ApiError, hash } from './service.mjs';
@@ -7,7 +8,7 @@ const account = value => {
   return value;
 };
 export class PartnerService {
-  constructor(pool) { this.pool = pool; this.accounts = new AccountService(pool); }
+  constructor(pool, policy = commissionPolicy()) { this.pool = pool; this.accounts = new AccountService(pool); this.policy = policy; }
   async profile(body) {
     const id = account(body?.account_id);
     return this.accounts.transaction(id, async db => {
@@ -20,7 +21,9 @@ export class PartnerService {
       const [binding] = await db.execute('SELECT p.referral_code FROM apprevive_referrals r JOIN apprevive_partners p ON p.account_id=r.partner_id WHERE r.buyer_id=?', [id]);
       const [invited] = await db.execute('SELECT COUNT(*) AS total FROM apprevive_referrals WHERE partner_id=?', [id]);
       const [paid] = await db.execute("SELECT COUNT(*) AS orders, COUNT(DISTINCT buyer_id) AS buyers, COALESCE(SUM(quantity),0) AS codes, COALESCE(SUM(amount_kopecks),0) AS revenue FROM apprevive_orders WHERE partner_id=? AND state='paid'", [id]);
-      return { status: 'ok', account_id: id, referral_code: own[0].referral_code, invited_by: binding[0]?.referral_code || '',
+      const policy = await readPolicy(db, this.policy);
+      const ledger = await ledgerBalance(db, id);
+      return { status: 'ok', ledger, commission_rate_bps: policy.rate, hold_days: policy.days, account_id: id, referral_code: own[0].referral_code, invited_by: binding[0]?.referral_code || '',
         invited: Number(invited[0].total), paid_buyers: Number(paid[0].buyers), paid_orders: Number(paid[0].orders),
         purchased_codes: Number(paid[0].codes), revenue_kopecks: Number(paid[0].revenue) };
     });
@@ -61,6 +64,7 @@ export class PartnerService {
         order = { order_id: randomBytes(16).toString('hex'), state: 'paid' };
         await db.execute('INSERT INTO apprevive_orders (order_id,payment_reference,buyer_id,partner_id,quantity,amount_kopecks) VALUES (?,?,?,?,?,?)',
           [order.order_id, payment_reference, buyer, referral[0]?.partner_id || null, quantity, amount_kopecks]);
+        await accrueCommission(db, { order: order.order_id, partner: referral[0]?.partner_id || null, amount: amount_kopecks }, await readPolicy(db, this.policy));
         for (let i = 0; i < quantity; i++) {
           const code = 'RV-' + randomBytes(12).toString('hex').toUpperCase();
           await db.execute('INSERT INTO apprevive_promo_codes (code) VALUES (?)', [Buffer.from(code)]);
@@ -77,6 +81,7 @@ export class PartnerService {
     return this.accounts.transaction(orders[0].buyer_id, async db => {
       const [rows] = await db.execute('SELECT order_id FROM apprevive_orders WHERE payment_reference=? FOR UPDATE', [payment_reference]);
       await db.execute("UPDATE apprevive_orders SET state='refunded' WHERE payment_reference=?", [payment_reference]);
+      await db.execute("UPDATE apprevive_commissions SET state='void' WHERE order_id=?", [rows[0].order_id]);
       await db.execute('DELETE p FROM apprevive_promo_codes p JOIN apprevive_order_codes c ON SHA2(p.code,256)=c.code_hash WHERE c.order_id=?', [rows[0].order_id]);
       return { order_id: rows[0].order_id, state: 'refunded' };
     });

@@ -62,6 +62,11 @@ export class AccountService {
       if (row.credits < 1) throw new ApiError(402, 'code_required');
       await db.execute('UPDATE apprevive_accounts SET credits=credits-1 WHERE account_id=?', [account]);
       await db.execute("INSERT INTO apprevive_restorations (account_id,request_id,state) VALUES (?,?,'reserved')", [account, id]);
+      if (body.details && typeof body.details === 'object') {
+        const name = typeof body.details.name === 'string' ? body.details.name.slice(0,255) : '';
+        const sid = /^[1-9][0-9]{7,11}$/.test(body.details.store_id || '') ? body.details.store_id : '';
+        await db.execute('INSERT IGNORE INTO apprevive_restoration_details(account_id,request_id,store_id,name) VALUES (?,?,?,?)', [account,id,sid,name]);
+      }
       return { status: 'reserved', account_id: account, request_id: id };
     });
   }

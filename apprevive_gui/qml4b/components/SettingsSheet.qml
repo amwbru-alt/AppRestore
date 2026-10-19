@@ -74,6 +74,14 @@ Sheet {
         }
         Item { width: 1; height: 24 }
         Cta {
+            objectName: "openServiceAccount"
+            secondary: true; compact: true
+            text: "Аккаунт AppRevive и баланс"
+            enabledLook: !!root.s.cleanupEnabled
+            onClicked: ui.openServiceAccount()
+        }
+        Item { width: 1; height: 12 }
+        Cta {
             objectName: "openPartners"
             secondary: true; compact: true
             text: "Партнёрская программа"

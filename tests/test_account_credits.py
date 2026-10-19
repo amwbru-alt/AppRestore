@@ -130,3 +130,27 @@ def test_ambiguous_crash_never_refunds_or_reinstalls(tmp_path):
     with pytest.raises(RestorationCodeError, match='прервано'):
         access.run(lambda: pytest.fail('ambiguous operation'))
     assert credits.remaining == 0
+
+
+def test_review_cancel_does_not_reserve_or_install(tmp_path):
+    server=Server()
+    credits=AccountCredits(tmp_path/'state.db',lambda:'owner@example.com',server)
+    access=AccountAccess(credits,lambda:False,review=lambda data:False,preflight=lambda details:['USB ready'])
+    with pytest.raises(RestorationCodeError,match='до резервирования'):
+        access.run_operation(lambda:pytest.fail('cancelled'),{'name':'Owned bank','store_id':'455652438'})
+    assert credits.remaining==1
+    assert not server.operations
+
+
+def test_service_login_recovers_request_only_after_authentication(tmp_path):
+    from apprevive_core.service_session import ServiceLoginRequired
+    server=Server();logged=[False];prompts=[]
+    def call(method,body):
+        if not logged[0]:raise ServiceLoginRequired('login')
+        return server(method,body)
+    def authenticate(email):prompts.append(email);logged[0]=True;return True
+    credits=AccountCredits(tmp_path/'state.db',lambda:'owner@example.com',call,authenticate=authenticate)
+    access=AccountAccess(credits,lambda:False)
+    access.run(lambda:None)
+    assert prompts==['owner@example.com']
+    assert credits.remaining==0
