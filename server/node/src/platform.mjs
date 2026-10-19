@@ -1,3 +1,5 @@
+import { SecurityService } from './security.mjs';
+import { records,metrics } from './admin-data.mjs';
 import { registrationSummary } from './user-referrals.mjs';
 import { httpAuthOrigin } from './transport.mjs';
 import { isIP } from 'node:net';
@@ -12,7 +14,7 @@ import { safeIcon } from './service.mjs';
 const loopback = ip => ['127.0.0.1','::1','::ffff:127.0.0.1'].includes(ip);
 export class Platform {
   constructor(pool, { auth = new AuthService(pool), accounts = new AccountService(pool), partners = new PartnerService(pool), payments, env = process.env } = {}) {
-    this.pool = pool; this.auth = auth; this.accounts = accounts; this.partners = partners;
+    this.pool = pool; this.security = new SecurityService(pool); this.auth = auth; this.accounts = accounts; this.partners = partners;
     this.payments = payments || new PaymentService(pool, partners); this.payouts = new PayoutService(pool, accounts); this.env = env; this.limits = new Map();
   }
   secure(req) {
@@ -71,6 +73,9 @@ export class Platform {
     }
     const user = await this.auth.session(req);
     const query = new URL(req.url, 'http://internal').searchParams;
+    if(path==='/v3/security/sessions'&&req.method==='GET'){reply(res,200,await this.security.sessions(user));return true;}
+    if(path==='/v3/security/revoke'&&req.method==='POST'){reply(res,200,await this.security.revoke(user,await json(req)));return true;}
+    if(path==='/v3/security/password'&&req.method==='POST'){this.limit('password:'+user.user_id,5,3600);reply(res,200,await this.security.password(user,await json(req)));return true;}
     if (path === '/v3/me' && req.method === 'GET') { reply(res, 200, await this.auth.profile(user)); return true; }
     if (path === '/v3/auth/logout' && req.method === 'POST') {
       res.setHeader('Set-Cookie', 'apprevive_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0');
@@ -104,6 +109,8 @@ export class Platform {
     if (path === '/v3/checkout/sync' && req.method === 'POST') { const body = await json(req); reply(res, 200, await this.payments.sync(body.checkout_id, user)); return true; }
     if (path.startsWith('/v3/admin/')) {
       if (user.role !== 'admin') throw new ApiError(403, 'admin_required');
+      if(path==='/v3/admin/metrics'&&req.method==='GET'){reply(res,200,await metrics(this.pool));return true;}
+      if(['/v3/admin/users','/v3/admin/orders'].includes(path)&&req.method==='GET'){reply(res,200,await records(this.pool,path.split('/').at(-1),query));return true;}
       if (path === '/v3/admin/snapshot' && req.method === 'GET') {
         const [users] = await this.pool.execute('SELECT u.user_id,u.email,u.verified,u.role,u.created_at,p.referral_code AS invited_by FROM apprevive_users u LEFT JOIN apprevive_user_referrals r ON r.user_id=u.user_id LEFT JOIN apprevive_partners p ON p.account_id=r.partner_id ORDER BY u.created_at DESC LIMIT 200');
         const [orders] = await this.pool.execute('SELECT * FROM apprevive_orders ORDER BY created_at DESC LIMIT 200');

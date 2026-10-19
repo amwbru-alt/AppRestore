@@ -13,15 +13,21 @@ function transportState(allowed){
 }
 AppReviveTransport.ready.then(transportState);
 $('connection-retry').onclick=run(async()=>{transportState(await AppReviveTransport.retry());});
-function table(target, headings, rows){ const t=document.createElement('table'), head=document.createElement('tr');headings.forEach(x=>{const c=document.createElement('th');c.textContent=x;head.append(c);});t.append(head); for(const row of rows){const tr=document.createElement('tr');row.forEach(value=>{const td=document.createElement('td'); if(value instanceof Node)td.append(value);else td.textContent=String(value??'');tr.append(td);});t.append(tr);}$(target).replaceChildren(t); }
+function table(target, headings, rows){ const t=document.createElement('table'), head=document.createElement('tr');headings.forEach(x=>{const c=document.createElement('th');c.textContent=x;head.append(c);});t.append(head); for(const row of rows){const tr=document.createElement('tr');row.forEach(value=>{const td=document.createElement('td'); if(value instanceof Node)td.append(value);else td.textContent=String(value??'');tr.append(td);});t.append(tr);}if(!rows.length){const empty=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=headings.length;cell.textContent='Нет записей по выбранным условиям';cell.className='empty-state';empty.append(cell);t.append(empty);}$(target).replaceChildren(t); }
 const status = value => ({pending:'Ожидает',paid:'Оплачен',cancelled:'Отменён',refunded:'Возвращён',completed:'Завершено',failed:'Ошибка, попытка возвращена',reserved:'Ожидает подтверждения'}[value]||value);
 const rub = value => (Number(value)/100).toLocaleString('ru-RU',{style:'currency',currency:'RUB'});
 function stats(target, items){$(target).replaceChildren(...items.map(([title,value])=>{const box=document.createElement('div');box.className='stat';const b=document.createElement('b'),s=document.createElement('span');b.textContent=value;s.textContent=title;box.append(b,s);return box;}));}
-let profile=null, checkoutRequest=null;
+let profile=null, checkoutRequest=null, viewEpoch=0;
+function clearPrivateView(){
+ viewEpoch++;profile=null;checkoutRequest=null;$('cabinet').hidden=true;$('auth').hidden=false;
+ for(const id of ['orders','balance','history','partner','partner-stats','referrals','ledger','payouts','sessions','accounts'])$(id).replaceChildren();
+ for(const id of ['password-form','buy-form','redeem-form','apple-form'])$(id).reset();
+ $('who').textContent='';
+}
 function account(){const id=$('accounts').value;if(!id)throw Error('Сначала привяжите и подтвердите Apple ID.');return id;}
-async function refreshAccount(){if(!$('accounts').value){stats('balance',[['Apple ID','Не привязан']]);table('history',['История восстановлений'],[['Привяжите Apple ID, чтобы увидеть баланс и восстановления.']]);return;}const data=await api('/v3/account?account_id='+account()); stats('balance',[['Осталось восстановлений',data.credits],['Успешных установок',data.installations]]); table('history',['Приложение','ID операции','Состояние','Дата'],data.history.map(r=>[r.name||r.store_id||'Восстановление',r.request_id,status(r.state),r.created_at]));}
+async function refreshAccount(){if(!$('accounts').value){stats('balance',[['Apple ID','Не привязан']]);table('history',['История восстановлений'],[['Привяжите Apple ID, чтобы увидеть баланс и восстановления.']]);return;}const selected=account(),epoch=viewEpoch;const data=await api('/v3/account?account_id='+selected);if(epoch!==viewEpoch||$('accounts').value!==selected)return; stats('balance',[['Осталось восстановлений',data.credits],['Успешных установок',data.installations]]); table('history',['Приложение','ID операции','Состояние','Дата'],data.history.map(r=>[r.name||r.store_id||'Восстановление',r.request_id,status(r.state),r.created_at]));}
 async function refreshPartner(){
- const data=await api('/v3/partner'),p=data.partner;
+ const epoch=viewEpoch,data=await api('/v3/partner'),p=data.partner;if(epoch!==viewEpoch)return;
  if(!p?.referral_code)throw Error('Не удалось получить код приглашения. Обновите сервер и выполните миграцию базы.');
  const box=$('partner');box.replaceChildren();
  const label=document.createElement('p');label.textContent='Ваш персональный код приглашения';
@@ -39,14 +45,16 @@ async function refreshPartner(){
  table('payouts',['Сумма','Состояние','Дата'],data.payouts.map(p=>[rub(p.amount_kopecks),status(p.state),p.created_at]));
 }
 
-async function refreshOrders(){const data=await api('/v3/orders');table('orders',['Заказ','Количество','Сумма','Состояние','Коды / действие'],data.orders.map(order=>{const cell=document.createElement('div'); for(const code of data.codes.filter(c=>c.checkout_id===order.checkout_id)){const p=document.createElement('p');p.textContent=code.code;cell.append(p);}if(order.state==='pending'){const b=document.createElement('button');b.className='button ghost';b.textContent='Проверить оплату';b.onclick=run(async()=>{const updated=await api('/v3/checkout/sync',{checkout_id:order.checkout_id});if(updated.confirmation_url){const a=document.createElement('a');a.href=updated.confirmation_url;a.textContent='Перейти к оплате ↗';a.className='button primary';cell.append(a);}else await refreshOrders();});cell.append(b);}return [order.checkout_id,order.quantity,rub(order.amount_kopecks),status(order.state),cell];}));}
+async function refreshOrders(){const epoch=viewEpoch,data=await api('/v3/orders');if(epoch!==viewEpoch)return;table('orders',['Заказ','Количество','Сумма','Состояние','Коды / действие'],data.orders.map(order=>{const cell=document.createElement('div'); for(const code of data.codes.filter(c=>c.checkout_id===order.checkout_id)){const p=document.createElement('p');p.textContent=code.code;cell.append(p);}if(order.state==='pending'){const b=document.createElement('button');b.className='button ghost';b.textContent='Проверить оплату';b.onclick=run(async()=>{const updated=await api('/v3/checkout/sync',{checkout_id:order.checkout_id});if(updated.confirmation_url){const a=document.createElement('a');a.href=updated.confirmation_url;a.textContent='Перейти к оплате ↗';a.className='button primary';cell.append(a);}else await refreshOrders();});cell.append(b);}return [order.checkout_id,order.quantity,rub(order.amount_kopecks),status(order.state),cell];}));}
 async function refresh(){
- profile=await api('/v3/me');$('auth').hidden=true;$('cabinet').hidden=false;$('who').textContent=profile.user.email;
+ const epoch=viewEpoch,next=await api('/v3/me');if(epoch!==viewEpoch)return;profile=next;$('auth').hidden=true;$('cabinet').hidden=false;$('who').textContent=profile.user.email;
  $('ref-form').hidden=!!profile.invited_by;$('invited-by').textContent=profile.invited_by?'Вы зарегистрированы по приглашению '+profile.invited_by+'. Пригласивший закреплён.':'';
  const current=$('accounts').value;$('accounts').replaceChildren(...profile.accounts.map(a=>{const o=document.createElement('option');o.value=a.account_id;o.textContent=a.email;return o;}));
  if(profile.accounts.some(a=>a.account_id===current))$('accounts').value=current;
- const jobs=[['partner',refreshPartner],['balance',refreshAccount],['orders',refreshOrders],['payment-status',async()=>{const settings=await api('/v3/status');$('payment-status').textContent=settings.payments_enabled?'':'Онлайн-оплата пока не настроена.';}]];
- const results=await Promise.allSettled(jobs.map(async([id,load])=>{try{await load();}catch(error){$(id).textContent='Не удалось загрузить раздел: '+error.message;throw error;}}));
+ const jobs=[['sessions',refreshSessions],['partner',refreshPartner],['balance',refreshAccount],['orders',refreshOrders],['payment-status',async()=>{const settings=await api('/v3/status');$('payment-status').textContent=settings.payments_enabled?'':'Онлайн-оплата пока не настроена.';}]];
+ const results=await Promise.allSettled(jobs.map(async([id,load])=>{try{await load();}catch(error){if(epoch!==viewEpoch)return;$(id).textContent='Не удалось загрузить раздел: '+error.message;throw error;}}));
+ if(epoch!==viewEpoch)return;
+ $('sync-status').textContent='Обновлено '+new Date().toLocaleTimeString('ru-RU');
  const errors=results.filter(r=>r.status==='rejected');if(errors.length)message('Некоторые разделы не загрузились. Нажмите «Обновить». '+errors[0].reason.message,true);
 }
 function enterCabinet(){if(new URLSearchParams(location.search).get('next')==='admin'&&profile?.user.role==='admin'){location.assign('/admin');return;}history.replaceState(null,'','/account#cabinet');$('cabinet').scrollIntoView?.({block:'start'});}
@@ -61,7 +69,7 @@ $('reset-form').onsubmit=run(async event=>{await api('/v3/auth/reset',Object.fro
 $('resend').onclick=run(async()=>{await api('/v3/auth/resend',{email:$('reset-form').elements.email.value});message('Если требуется подтверждение, письмо отправлено.');});
 $('apple-form').onsubmit=run(async event=>{await api('/v3/auth/apple',Object.fromEntries(new FormData(event.target)));message('Откройте письмо на почте Apple ID. Для подтверждения войдите в этот же аккаунт AppRevive.');});
 $('accounts').onchange=run(refreshAccount);$('refresh').onclick=run(refresh);
-$('logout').onclick=run(async()=>{await api('/v3/auth/logout',{});profile=null;$('cabinet').hidden=true;$('auth').hidden=false;message('Вы вышли.');});
+$('logout').onclick=run(async()=>{await api('/v3/auth/logout',{});clearPrivateView();message('Вы вышли.');});
 $('buy-form').onsubmit=run(async event=>{const quantity=Number(event.target.elements.quantity.value);if(!checkoutRequest||checkoutRequest.account_id!==account()||checkoutRequest.quantity!==quantity)checkoutRequest={account_id:account(),quantity,request_id:AppReviveTransport.requestId()};const data=await api('/v3/checkout',checkoutRequest);if(data.confirmation_url)location.assign(data.confirmation_url);else{checkoutRequest=null;message('Оплата подтверждена. Коды доступны в заказе.');await refreshOrders();}});
 $('redeem-form').onsubmit=run(async event=>{await api('/v2/account/redeem',{account_id:account(),code:event.target.elements.code.value,request_id:AppReviveTransport.requestId()});event.target.reset();message('Код активирован.');await refreshAccount();});
 $('register-form').elements.referral_code.addEventListener('input',event=>{event.target.value=event.target.value.toUpperCase();});
@@ -77,3 +85,29 @@ const verification=new URLSearchParams(location.hash.slice(1));
 if(verification.has('token')){$('verify').hidden=false;const purpose=verification.get('purpose');$('new-password-label').hidden=purpose==='apple';$('new-password').required=purpose!=='apple';$('verify-note').textContent=purpose==='apple'?'Войдите в аккаунт AppRevive, из которого запрашивали привязку, и подтвердите её.':'Задайте пароль AppRevive. Это не пароль Apple ID.';$('verify-form').onsubmit=run(async()=>{await api('/v3/auth/consume',{token:verification.get('token'),...(purpose==='apple'?{}:{password:$('new-password').value})});history.replaceState(null,'','/account');$('verify').hidden=true;$('new-password').value='';message('Подтверждено. Теперь можно войти или обновить кабинет.');try{await refresh();}catch{}});}
 
 refresh().then(async()=>{const checkout=new URLSearchParams(location.search).get('payment');if(checkout&&/^[a-f0-9]{32}$/.test(checkout)){await api('/v3/checkout/sync',{checkout_id:checkout});await refreshOrders();history.replaceState(null,'','/account');}}).catch(error=>{if(error.status!==401)message(error.message,true);});
+
+async function refreshSessions(){
+ const epoch=viewEpoch,data=await api('/v3/security/sessions');if(epoch!==viewEpoch)return;
+ $('sessions').replaceChildren(...data.sessions.map(session=>{
+  const row=document.createElement('div');row.className='session-row';
+  const text=document.createElement('span');text.textContent=(session.current?'Этот вход':'Другая сессия')+' · до '+new Date(session.expires_at).toLocaleString('ru-RU');row.append(text);
+  if(!session.current){const button=document.createElement('button');button.type='button';button.className='button ghost';button.textContent='Завершить';button.onclick=run(async()=>{await api('/v3/security/revoke',{session_id:session.id});await refreshSessions();message('Сессия завершена.');});row.append(button);}return row;
+ }));
+}
+$('refresh-sessions').onclick=run(refreshSessions);
+$('revoke-others').onclick=run(async()=>{await api('/v3/security/revoke',{others:true});await refreshSessions();message('Остальные сессии завершены.');});
+$('password-form').onsubmit=run(async event=>{await api('/v3/security/password',Object.fromEntries(new FormData(event.target)));event.target.reset();await refreshSessions();message('Пароль изменён. Остальные сессии завершены.');});
+window.addEventListener('apprevive:expired',()=>{if(!profile)return;clearPrivateView();$('sessions').replaceChildren();message('Сессия завершена. Войдите снова.',true);});
+let liveBusy=false;
+async function liveRefresh(){
+ if(liveBusy||!profile||document.hidden||navigator.onLine===false||document.querySelector('form[data-busy="true"]')||document.activeElement?.matches('input,textarea,select'))return;
+ liveBusy=true;
+ try{
+  const results=await Promise.allSettled([refreshPartner(),refreshOrders(),refreshAccount()]);
+  $('sync-status').textContent=results.some(r=>r.status==='rejected')?'Не удалось обновить. Повторим автоматически.':'Обновлено '+new Date().toLocaleTimeString('ru-RU');
+ }finally{liveBusy=false;}
+}
+const liveTimer=setInterval(liveRefresh,30000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)liveRefresh();});
+window.addEventListener('online',liveRefresh);
+window.addEventListener('pagehide',()=>clearInterval(liveTimer));

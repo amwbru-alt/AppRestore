@@ -7,7 +7,7 @@ import { PartnerService } from '../src/partners.mjs';
 import { AccountService } from '../src/accounts.mjs';
 import { PaymentService } from '../src/payments.mjs';
 import { Platform } from '../src/platform.mjs';
-import { PromoService } from '../src/service.mjs';
+import { hash, PromoService } from '../src/service.mjs';
 import { createApi } from '../src/http.mjs';
 const id=()=>randomBytes(16).toString('hex');
 class FakeProvider{
@@ -102,6 +102,30 @@ test('production HTTP authorization, verified ownership, paid orders and payout 
  await payments.refund(referralCheckout.checkout_id);
  partnerStats=await (await call('/v3/partner',undefined,stranger.token)).json();
  assert.equal(partnerStats.partner.registered,1);assert.equal(partnerStats.partner.purchased_codes,0);assert.equal(partnerStats.ledger.available_kopecks,0);
+ // User-scoped session control: another user's session cannot be revoked.
+ const second=await auth.login({email:stranger.user.email,password:pass});
+ let sessions=await (await call('/v3/security/sessions',undefined,stranger.token)).json();
+ assert(sessions.sessions.some(s=>s.current));assert(sessions.sessions.some(s=>!s.current));
+ assert(!JSON.stringify(sessions).includes(stranger.token));
+ await call('/v3/security/revoke',{session_id:hash(owner.token)},stranger.token);
+ await auth.session({headers:{authorization:'Bearer '+owner.token}});
+ await call('/v3/security/revoke',{others:true},stranger.token);
+ await assert.rejects(auth.session({headers:{authorization:'Bearer '+second.token}}),e=>e.status===401);
+ const third=await auth.login({email:stranger.user.email,password:pass});
+ assert.equal((await call('/v3/security/password',{current_password:'incorrect',new_password:'A replacement service password'},stranger.token)).status,403);
+ assert.equal((await call('/v3/security/password',{current_password:pass,new_password:'A replacement service password'},stranger.token)).status,200);
+ await auth.session({headers:{authorization:'Bearer '+stranger.token}});
+ await assert.rejects(auth.session({headers:{authorization:'Bearer '+third.token}}),e=>e.status===401);
+ await assert.rejects(auth.login({email:stranger.user.email,password:pass}),e=>e.status===401);
+ await auth.login({email:stranger.user.email,password:'A replacement service password'});
+ assert.equal((await call('/v3/admin/users?page=1&size=1',undefined,stranger.token)).status,403);
+ await pool.execute("UPDATE apprevive_users SET role='admin' WHERE user_id=?",[owner.user.user_id]);
+ const listed=await (await call('/v3/admin/users?page=1&size=1&q=platform-')).json();
+ assert.equal(listed.rows.length,1);assert.equal(listed.total,2);assert.equal(listed.pages,2);
+ const secondPage=await (await call('/v3/admin/users?page=2&size=1&q=platform-')).json();assert.notEqual(secondPage.rows[0].user_id,listed.rows[0].user_id);
+ const injection=await (await call('/v3/admin/users?q='+encodeURIComponent("%' OR 1=1 --"))).json();assert.equal(injection.total,0);
+ assert.equal((await call('/v3/admin/orders?page=-1')).status,400);
+ const metrics=await (await call('/v3/admin/metrics')).json();assert(metrics.users>=3);assert.equal(typeof metrics.revenue_kopecks,'number');
  // Password reset revokes existing sessions.
  await auth.requestReset({email:owner.user.email});await auth.consume({token:mail.at(-1).token,password:'A changed service password'});
  await assert.rejects(auth.session({headers:{authorization:'Bearer '+owner.token}}),e=>e.status===401);

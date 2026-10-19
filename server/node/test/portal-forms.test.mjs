@@ -14,6 +14,8 @@ async function page(t,name='account',{allowed=true,logged=false,role='user',hash
   '/v3/me':logged?{user:{email:'unit@example.test',role},accounts:[{account_id:aid,email:'unit@example.test'}]}:{status:'service_login_required'},
   ['/v3/account?account_id='+aid]:{credits:1,installations:0,history:[],partner:{referral_code:'RVP-ABCDEF123456',invited:0,paid_buyers:0,purchased_codes:0,revenue_kopecks:0},ledger:{available_kopecks:0,held_kopecks:0,paid_kopecks:0,pending_kopecks:0},payouts:[]},
   '/v3/partner':{partner:{account_id:aid,referral_code:'RVP-ABCDEF123456',invited:0,paid_buyers:0,paid_orders:0,purchased_codes:0,revenue_kopecks:0},ledger:{available_kopecks:0,held_kopecks:0,paid_kopecks:0,pending_kopecks:0},payouts:[]},
+  '/v3/security/sessions':{sessions:[]},
+  '/v3/admin/users?page=1&size=25':{rows:[],page:1,pages:1,total:0},
   '/v3/orders':{orders:[],codes:[]},'/v3/status':{payments_enabled:false,commission_policy:{rate:0,days:14}},
   '/v3/admin/groups':{groups:[]},'/v3/admin/snapshot':{users:[],orders:[],restorations:[],payouts:[],commissions:[],checkouts:[],audit:[]}
  };
@@ -21,6 +23,8 @@ async function page(t,name='account',{allowed=true,logged=false,role='user',hash
   calls.push({path,body:options.body?JSON.parse(options.body):null});
   if(override[path])return override[path](options,w);
   if(path==='/v3/auth/login')authenticated=true;
+  if(path.startsWith('/v3/admin/users?')||path.startsWith('/v3/admin/orders?'))return {ok:true,status:200,json:async()=>({rows:[],page:1,pages:1,total:0})};
+  if(path==='/v3/admin/metrics')return {ok:true,status:200,json:async()=>({users:0,registered_referrals:0,paid_orders:0,revenue_kopecks:0,codes:0,pending_restorations:0,updated_at:new Date().toISOString()})};
   const data=path==='/v3/me'&&authenticated?{user:{email:'unit@example.test',role},accounts:logged?[{account_id:aid,email:'unit@example.test'}]:[]}:endpoints[path]||{status:'ok',unused_codes:['RV-UNIT-ONLY']};
   const status=path==='/v3/me'&&!authenticated?401:200;
   return {ok:status<400,status,json:async()=>data};
@@ -153,4 +157,33 @@ test('a failed orders panel never hides the partner code',async t=>{
  assert.match(p.form('partner').textContent,/RVP-ABCDEF123456/);
  assert.match(p.form('orders').textContent,/Не удалось загрузить/);
  assert.match(p.notice(),/Некоторые разделы/);
+});
+
+test('security controls submit credentials only to password endpoint and allow session revocation',async t=>{
+ const p=await page(t,'account',{logged:true});
+ fill(p.form('password-form'),{current_password:'Old service password',new_password:'A new service password'});await submit(p.form('password-form'));
+ assert.equal(p.calls.find(c=>c.path==='/v3/security/password').body.current_password,'Old service password');
+ assert.equal(p.form('password-form').elements.current_password.value,'');
+ p.form('revoke-others').click();await settle();assert.equal(p.calls.find(c=>c.path==='/v3/security/revoke').body.others,true);
+ p.w.dispatchEvent(new p.w.CustomEvent('apprevive:expired'));assert(p.form('cabinet').hidden);assert(!p.form('auth').hidden);
+});
+test('admin searches the full server dataset and CSV neutralizes spreadsheet formulas',async t=>{
+ const p=await page(t,'admin',{logged:true,role:'admin'});
+ fill(p.form('users-search'),{q:'name@example.test',state:'user'});await submit(p.form('users-search'));
+ assert(p.calls.some(c=>c.path.includes('admin/users?q=name%40example.test&state=user&page=1')));
+ assert.match(p.form('users-pagination').textContent,/найдено 0/);
+ const csv=p.w.AppRevivePortal.csv([['=HYPERLINK("x")','normal',' +SUM(1,2)']]);
+ assert(csv.includes("\"'=HYPERLINK"));assert(csv.includes("\"' +SUM"));assert(csv.startsWith('\uFEFF'));
+});
+
+test('visible cabinet refreshes data and pauses in background or offline',async t=>{
+ const p=await page(t,'account',{logged:true});
+ Object.defineProperty(p.w.document,'hidden',{configurable:true,value:false});
+ let count=p.calls.filter(c=>c.path==='/v3/partner').length;p.w.dispatchEvent(new p.w.Event('online'));await settle();
+ assert.equal(p.calls.filter(c=>c.path==='/v3/partner').length,count+1);
+ count++;
+ Object.defineProperty(p.w.document,'hidden',{configurable:true,value:true});p.w.dispatchEvent(new p.w.Event('online'));await settle();
+ assert.equal(p.calls.filter(c=>c.path==='/v3/partner').length,count);
+ Object.defineProperty(p.w.document,'hidden',{configurable:true,value:false});Object.defineProperty(p.w.navigator,'onLine',{configurable:true,value:false});p.w.dispatchEvent(new p.w.Event('online'));await settle();
+ assert.equal(p.calls.filter(c=>c.path==='/v3/partner').length,count);
 });

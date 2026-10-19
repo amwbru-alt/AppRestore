@@ -6,6 +6,7 @@ window.AppRevivePortal = (() => {
     password_min_12:'Пароль AppRevive должен содержать от 12 символов.', invalid_email:'Введите корректный адрес электронной почты.',
     mail_not_configured:'Отправка писем пока не настроена на сервере. Администратор должен подключить почтовый сервис.',
     mail_unavailable:'Почтовый сервис не принял письмо. Повторите позже или обратитесь к администратору.',
+    current_password_incorrect:'Текущий пароль неверен.',invalid_session:'Некорректная сессия.',invalid_page:'Некорректный номер страницы.',invalid_filter:'Некорректный фильтр.',
     payments_not_configured:'Приём оплаты пока не настроен.', verify_apple_email_required:'Подтвердите почту этого Apple ID.',
     unknown_referral:'Код приглашения не найден.', self_referral:'Нельзя пригласить себя.', referral_locked:'Пригласивший уже закреплён.', purchase_already_recorded:'Пригласившего нужно указать до первой покупки.',
     apple_already_linked:'Этот Apple ID уже привязан к другому аккаунту AppRevive.',
@@ -29,10 +30,10 @@ window.AppRevivePortal = (() => {
     await AppReviveTransport.requireAllowed();
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),20000);
     try {
-      const response=await fetch(path,{signal:controller.signal,credentials:'same-origin',method:body===undefined?'GET':'POST',headers:body===undefined?{}:{'Content-Type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})});
+      const response=await fetch(path,{cache:'no-store',signal:controller.signal,credentials:'same-origin',method:body===undefined?'GET':'POST',headers:body===undefined?{}:{'Content-Type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})});
       let data;try{data=await response.json();}catch{throw Error('Сервер вернул некорректный ответ. Проверьте обновление API и повторите позже.');}
       if(!data || typeof data!=='object')throw Error('Сервер вернул некорректный ответ. Обновите страницу и повторите.');
-      if(!response.ok){const error=Error(labels[data.status]||'Операция не выполнена. Код: '+(data.status||response.status));error.status=response.status;throw error;}
+      if(!response.ok){if(response.status===401&&!path.startsWith('/v3/auth/'))window.dispatchEvent(new CustomEvent('apprevive:expired'));const error=Error(labels[data.status]||'Операция не выполнена. Код: '+(data.status||response.status));error.status=response.status;throw error;}
       return data;
     } catch(error) {
       if(controller.signal.aborted)throw Error('Сервер не ответил за 20 секунд. Повторите позже.');
@@ -59,5 +60,11 @@ window.AppRevivePortal = (() => {
     for(const form of document.forms){form.noValidate=true;form.addEventListener('input',()=>form.querySelectorAll('[aria-invalid]').forEach(input=>input.removeAttribute('aria-invalid')));}
   }
   bindForms();
-  return {request,run,notice};
+  function csv(rows){
+    return '\uFEFF'+rows.map(row=>row.map(value=>{let text=String(value??'');if(/^[\s]*[=+@-]/.test(text))text="'"+text;return '"'+text.replaceAll('"','""')+'"';}).join(';')).join('\r\n');
+  }
+  function downloadCsv(name,rows){
+    const url=URL.createObjectURL(new Blob([csv(rows)],{type:'text/csv;charset=utf-8'}));const link=document.createElement('a');link.href=url;link.download=name;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }
+  return {request,run,notice,csv,downloadCsv};
 })();
