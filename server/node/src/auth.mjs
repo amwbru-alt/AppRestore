@@ -118,6 +118,11 @@ export class AuthService {
       await db.commit(); return { status: 'verified', purpose: row.purpose };
     } catch (error) { await db.rollback(); throw error; } finally { db.release(); }
   }
+  async buyingAccount(user) {
+    const id=hash('apprevive-web-buyer-v1:'+user.user_id);
+    await this.pool.execute('INSERT IGNORE INTO apprevive_user_buyers(user_id,buyer_id) VALUES (?,?)',[user.user_id,id]);
+    return id;
+  }
   async partnerAccount(user) {
     const db = await this.pool.getConnection();
     try {

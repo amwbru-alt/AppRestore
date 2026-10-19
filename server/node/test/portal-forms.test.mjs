@@ -68,18 +68,12 @@ test('login, reset and resend handlers submit their own form data',async t=>{
  for(const path of ['/v3/auth/login','/v3/auth/reset','/v3/auth/resend'])assert.equal(p.calls.find(c=>c.path===path)?.body.email,'unit@example.test');
  assert.deepEqual(p.errors,[]);
 });
-test('cabinet Apple link, redeem, referral, checkout and refresh work on HTTP',async t=>{
+test('cabinet checkout needs no Apple ID and refresh works on HTTP',async t=>{
  const p=await page(t,'account',{logged:true});
- assert(!p.form('cabinet').hidden);
- for(const [id,values,path] of [
-  ['apple-form',{email:'linked@example.test'},'/v3/auth/apple'],
-  ['redeem-form',{code:'RV-UNIT'},'/v2/account/redeem'],
-  ['ref-form',{referral_code:'RVP-ABCDEF123456'},'/v2/partner/bind'],
-  ['buy-form',{quantity:'1'},'/v3/checkout']
- ]){fill(p.form(id),values);await submit(p.form(id));assert(p.calls.some(c=>c.path===path),path);}
- const purchase=p.calls.find(c=>c.path==='/v3/checkout');assert.match(purchase.body.request_id,/^[a-f0-9]{32}$/);
- p.w.document.getElementById('refresh').click();await settle();assert.equal(p.notice(),'Готово.');
- assert.deepEqual(p.errors,[]);
+ assert(!p.form('cabinet').hidden);assert.equal(p.form('apple-form'),null);assert.equal(p.form('redeem-form'),null);
+ fill(p.form('buy-form'),{quantity:'1'});await submit(p.form('buy-form'));
+ const purchase=p.calls.find(c=>c.path==='/v3/checkout');assert.match(purchase.body.request_id,/^[a-f0-9]{32}$/);assert.equal(purchase.body.account_id,undefined);
+ p.form('refresh').click();await settle();assert.equal(p.notice(),'Готово.');assert.deepEqual(p.errors,[]);
 });
 test('admin catalog, groups, manual purchase, refund, policy and payouts handlers work',async t=>{
  const p=await page(t,'admin',{logged:true,role:'admin'});
@@ -129,7 +123,7 @@ test('partner code is available without a linked Apple ID and invitation links s
  const p=await page(t,'account',{logged:true,hash:'?ref=RVP-123456ABCDEF',override:{'/v3/me':async()=>({ok:true,status:200,json:async()=>({user:{email:'partner@example.test',role:'user'},accounts:[]})})}});
  assert.match(p.form('partner').textContent,/RVP-ABCDEF123456/);
  assert.match(p.form('partner').querySelector('input').value,/\/register\?ref=RVP-ABCDEF123456/);
- assert.equal(p.form('ref-form').elements.referral_code.value,'RVP-123456ABCDEF');
+ assert.equal(p.form('register-form').elements.referral_code.value,'RVP-123456ABCDEF');
  assert(!p.calls.some(c=>c.path.startsWith('/v3/account?')));
  assert.equal(p.errors.length,0);
 });
@@ -186,4 +180,13 @@ test('visible cabinet refreshes data and pauses in background or offline',async 
  assert.equal(p.calls.filter(c=>c.path==='/v3/partner').length,count);
  Object.defineProperty(p.w.document,'hidden',{configurable:true,value:false});Object.defineProperty(p.w.navigator,'onLine',{configurable:true,value:false});p.w.dispatchEvent(new p.w.Event('online'));await settle();
  assert.equal(p.calls.filter(c=>c.path==='/v3/partner').length,count);
+});
+
+test('purchased codes remain visible with real unused and activated labels; site never links Apple ID',async t=>{
+ const checkout='c'.repeat(32);
+ const p=await page(t,'account',{logged:true,override:{'/v3/orders':async()=>({ok:true,status:200,json:async()=>({orders:[{checkout_id:checkout,quantity:2,amount_kopecks:20000,state:'paid'}],codes:[{checkout_id:checkout,code:'RV-UNUSED',activation_status:'unused'},{checkout_id:checkout,code:'RV-USED',activation_status:'activated',activated_at:'2026-10-19T20:00:00Z'}]})})}});
+ assert.match(p.form('orders').textContent,/Не активирован/);assert.match(p.form('orders').textContent,/Активирован/);
+ const values=[...p.form('orders').querySelectorAll('input')].map(input=>input.value);assert.deepEqual(values,['RV-UNUSED','RV-USED']);
+ assert.equal(p.form('apple-form'),null);assert.equal(p.form('accounts'),null);
+ assert(!p.calls.some(c=>c.path==='/v3/auth/apple'||c.path.startsWith('/v3/account?')));
 });

@@ -55,7 +55,7 @@ test('production HTTP authorization, verified ownership, paid orders and payout 
  assert.equal((await call('/v2/account/balance',{account_id:aid},owner.token,{Origin:'https://evil.example'})).status,403);
  const inviter='de'.repeat(32);const profile=await partners.profile({account_id:inviter});await partners.bind({account_id:aid,referral_code:profile.referral_code});
  await pool.execute("INSERT INTO apprevive_settings(name,value) VALUES ('commission_policy',?) ON DUPLICATE KEY UPDATE value=VALUES(value)",[JSON.stringify({rate:1000,days:0})]);
- const purchase={account_id:aid,quantity:2,request_id:id()};
+ const purchase={quantity:2,request_id:id()};
  let response=await call('/v3/checkout',purchase);assert.equal(response.status,200);const created=await response.json();assert.match(created.confirmation_url,/yoomoney/);
  const row=await payments.row(created.checkout_id);
  // A forged webhook says succeeded, but provider still says pending: issue no codes.
@@ -73,7 +73,7 @@ test('production HTTP authorization, verified ownership, paid orders and payout 
  await platform.payouts.finish({payout_id:out.payout_id,state:'paid'});await platform.payouts.finish({payout_id:out.payout_id,state:'paid'});
  assert.equal((await platform.payouts.balance(inviter)).paid_kopecks,1500);
  await payments.refund(created.checkout_id);assert.equal((await platform.payouts.balance(inviter)).available_kopecks,-1500);
- assert.equal((await (await call('/v3/orders')).json()).codes.length,0);
+ assert((await (await call('/v3/orders')).json()).codes.every(c=>c.activation_status==='invalidated'));
  await payments.webhook({event:'payment.succeeded',object:{id:row.provider_id}});assert.equal((await payments.row(created.checkout_id)).state,'refunded');
  // Website registration attributes a real user before an Apple ID exists.
  const invitation=partnerBefore.partner.referral_code;
@@ -87,18 +87,27 @@ test('production HTTP authorization, verified ownership, paid orders and payout 
  let partnerStats=await (await call('/v3/partner',undefined,stranger.token)).json();
  assert.equal(partnerStats.partner.registered,1);assert.equal(partnerStats.partner.registrations[0].paid_orders,0);
  assert.equal((await (await call('/v3/me',undefined,referred.token)).json()).invited_by,invitation);
- await auth.requestApple(referredSession,{email:newEmail});await auth.consume({token:mail.at(-1).token},referredSession);
- const referredApple=appleId(newEmail);
- // The registration inviter cannot be replaced by a different partner code.
- assert.equal((await call('/v2/partner/bind',{account_id:referredApple,referral_code:profile.referral_code},referred.token)).status,409);
- const referralCheckout=await (await call('/v3/checkout',{account_id:referredApple,quantity:2,request_id:id()},referred.token)).json();
- const referralRow=await payments.row(referralCheckout.checkout_id);const referralPayment=provider.payments.get(referralRow.provider_id);
+ // Website buyer has no Apple ID at all; the server selects a service buyer ID.
+ const [linkedBefore]=await pool.execute('SELECT account_id FROM apprevive_user_accounts WHERE user_id=?',[referred.user.user_id]);assert.equal(linkedBefore.length,0);
+ const referralCheckout=await (await call('/v3/checkout',{quantity:2,request_id:id(),account_id:aid},referred.token)).json();
+ const referralRow=await payments.row(referralCheckout.checkout_id);assert.notEqual(referralRow.account_id,aid);assert.equal(referralRow.amount_kopecks,20000);const referralPayment=provider.payments.get(referralRow.provider_id);
  referralPayment.status='succeeded';referralPayment.paid=true;
  await Promise.all([payments.sync(referralCheckout.checkout_id,referred.user),payments.sync(referralCheckout.checkout_id,referred.user)]);
  partnerStats=await (await call('/v3/partner',undefined,stranger.token)).json();
  assert.equal(partnerStats.partner.registered,1);assert.equal(partnerStats.partner.invited,1);assert.equal(partnerStats.partner.purchased_codes,2);
  assert.equal(partnerStats.partner.paid_buyers,1);assert.equal(partnerStats.ledger.available_kopecks,2000);
  assert.equal(partnerStats.partner.registrations[0].purchased_codes,2);
+ const bought=await (await call('/v3/orders',undefined,referred.token)).json();assert.equal(bought.codes.length,2);assert(bought.codes.every(c=>c.activation_status==='unused'));
+ const deliveredCode=bought.codes[0].code;
+ // A different executor activates the bearer code in the native app, on their verified Apple ID.
+ assert.equal((await call('/v2/account/redeem',{account_id:aid,code:deliveredCode,request_id:id()})).status,200);
+ const activated=await (await call('/v3/orders',undefined,referred.token)).json();
+ assert.equal(activated.codes.find(c=>c.code===deliveredCode).activation_status,'activated');
+ assert(activated.codes.find(c=>c.code===deliveredCode).activated_at);
+ assert.equal(activated.codes.filter(c=>c.activation_status==='unused').length,1);
+ const [linkedAfter]=await pool.execute('SELECT account_id FROM apprevive_user_accounts WHERE user_id=?',[referred.user.user_id]);assert.equal(linkedAfter.length,0);
+ assert(!(await (await call('/v3/orders',undefined,stranger.token)).json()).codes.some(c=>c.code===deliveredCode));
+
  await payments.refund(referralCheckout.checkout_id);
  partnerStats=await (await call('/v3/partner',undefined,stranger.token)).json();
  assert.equal(partnerStats.partner.registered,1);assert.equal(partnerStats.partner.purchased_codes,0);assert.equal(partnerStats.ledger.available_kopecks,0);

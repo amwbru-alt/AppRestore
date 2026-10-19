@@ -80,6 +80,7 @@ export class PartnerService {
           const code = 'RV-' + randomBytes(12).toString('hex').toUpperCase();
           await db.execute('INSERT INTO apprevive_promo_codes (code) VALUES (?)', [Buffer.from(code)]);
           await db.execute('INSERT INTO apprevive_order_codes (code_hash,order_id) VALUES (?,?)', [hash(code), order.order_id]);
+          await db.execute('INSERT INTO apprevive_issued_codes(code_hash,code) VALUES (?,?)',[hash(code),Buffer.from(code)]);
         }
       }
       const [codes] = await db.execute('SELECT p.code FROM apprevive_order_codes c JOIN apprevive_promo_codes p ON SHA2(p.code,256)=c.code_hash WHERE c.order_id=?', [order.order_id]);

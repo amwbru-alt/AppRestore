@@ -98,12 +98,12 @@ export class Platform {
       reply(res, 200, { ...balance, history, partner, ledger, payouts }); return true;
     }
     if (path === '/v3/orders' && req.method === 'GET') {
-      const [orders] = await this.pool.execute('SELECT checkout_id,account_id,quantity,amount_kopecks,state,created_at FROM apprevive_checkouts WHERE user_id=? ORDER BY created_at DESC LIMIT 100', [user.user_id]);
-      const [codes] = await this.pool.execute("SELECT c.checkout_id,p.code FROM apprevive_checkouts c JOIN apprevive_orders o ON o.payment_reference=CONCAT('yk_',c.provider_id) JOIN apprevive_order_codes oc ON oc.order_id=o.order_id JOIN apprevive_promo_codes p ON SHA2(p.code,256)=oc.code_hash WHERE c.user_id=? AND c.state='paid'", [user.user_id]);
-      reply(res, 200, { status: 'ok', orders, codes: codes.map(row => ({ checkout_id: row.checkout_id, code: Buffer.from(row.code).toString() })) }); return true;
+      const [orders] = await this.pool.execute('SELECT checkout_id,quantity,amount_kopecks,state,created_at FROM apprevive_checkouts WHERE user_id=? ORDER BY created_at DESC LIMIT 100', [user.user_id]);
+      const [codes] = await this.pool.execute("SELECT c.checkout_id,oc.code_hash,COALESCE(v.code,p.code) AS code,r.activated_at,CASE WHEN r.code_hash IS NOT NULL THEN 'activated' WHEN o.state='refunded' THEN 'invalidated' WHEN p.code IS NOT NULL THEN 'unused' ELSE 'unavailable' END AS activation_status FROM apprevive_checkouts c JOIN apprevive_orders o ON o.payment_reference=CONCAT('yk_',c.provider_id) JOIN apprevive_order_codes oc ON oc.order_id=o.order_id LEFT JOIN apprevive_issued_codes v ON v.code_hash=oc.code_hash LEFT JOIN apprevive_promo_codes p ON SHA2(p.code,256)=oc.code_hash LEFT JOIN apprevive_promo_redemptions r ON r.code_hash=oc.code_hash WHERE c.user_id=? AND c.state IN ('paid','refunded')", [user.user_id]);
+      reply(res, 200, { status: 'ok', orders, codes: codes.map(row => ({ checkout_id: row.checkout_id, code: row.code?Buffer.from(row.code).toString():null, code_id:row.code_hash.slice(0,12), activation_status:row.activation_status,activated_at:row.activated_at })) }); return true;
     }
     if (path === '/v3/checkout' && req.method === 'POST') {
-      this.limit('purchase:' + user.user_id, 10, 60); const body = await json(req); await this.auth.requireAccount(user, body.account_id);
+      this.limit('purchase:' + user.user_id, 10, 60); const body = await json(req); body.account_id=await this.auth.buyingAccount(user);
       reply(res, 200, await this.payments.create(user, body)); return true;
     }
     if (path === '/v3/checkout/sync' && req.method === 'POST') { const body = await json(req); reply(res, 200, await this.payments.sync(body.checkout_id, user)); return true; }

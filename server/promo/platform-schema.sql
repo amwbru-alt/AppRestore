@@ -93,3 +93,19 @@ CREATE TABLE IF NOT EXISTS apprevive_user_referrals (
  FOREIGN KEY (user_id) REFERENCES apprevive_users(user_id),
  FOREIGN KEY (partner_id) REFERENCES apprevive_partners(account_id)
 ) ENGINE=InnoDB;
+
+-- Website purchases belong to a service user, never to an Apple ID.
+CREATE TABLE IF NOT EXISTS apprevive_user_buyers (
+ user_id CHAR(32) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,
+ buyer_id CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL UNIQUE,
+ FOREIGN KEY (user_id) REFERENCES apprevive_users(user_id)
+) ENGINE=InnoDB;
+
+-- Keep purchased codes visible to their buyer after activation deletes pool entries.
+CREATE TABLE IF NOT EXISTS apprevive_issued_codes (
+ code_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,
+ code VARBINARY(256) NOT NULL,
+ FOREIGN KEY (code_hash) REFERENCES apprevive_order_codes(code_hash)
+) ENGINE=InnoDB;
+INSERT IGNORE INTO apprevive_issued_codes(code_hash,code)
+ SELECT c.code_hash,p.code FROM apprevive_order_codes c JOIN apprevive_promo_codes p ON SHA2(p.code,256)=c.code_hash;
