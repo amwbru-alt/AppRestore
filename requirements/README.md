@@ -57,3 +57,7 @@ GitHub release and verifies the architecture-specific SHA-256 embedded in
 `install-macos.sh` before extraction. Dependencies and AppRevive are installed
 inside staging; the previous live runtime is moved only after all smoke checks
 pass.
+
+## Python 3.13 lzfse wheel compatibility
+
+The base lock regeneration command is preserved above. The lzfse entry has an explicit compatibility override: Python <3.13 retains 0.4.2, while non-macOS Python 3.13 uses upstream 0.4.2.post1, which supplies cp313 wheels. Hashes come from https://pypi.org/pypi/lzfse/0.4.2.post1/json and are still enforced by pip. Preserve this marker split when regenerating the lock. No source build or hash verification bypass is used.

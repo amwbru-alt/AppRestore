@@ -131,3 +131,13 @@ def test_lock_regeneration_and_vendored_wheel_are_documented() -> None:
     assert "VENDORED_SOURCE" in recipe
     assert HEXDUMP_WHEEL_SHA256 in readme
     assert HEXDUMP_SOURCE_SHA256 in readme
+
+
+def test_python_313_selects_the_available_lzfse_wheel_release() -> None:
+    from packaging.requirements import Requirement
+    pins = [Requirement(line.split(" --hash=")[0]) for line in _logical_requirements(RUNTIME_LOCK) if line.startswith("lzfse==")]
+    for version, expected in [("3.10.0", "==0.4.2"), ("3.12.0", "==0.4.2"), ("3.13.0", "==0.4.2.post1")]:
+        environment = {"python_full_version": version, "sys_platform": "win32"}
+        selected = [str(pin.specifier) for pin in pins if pin.marker.evaluate(environment)]
+        assert selected == [expected]
+    assert not any(pin.marker.evaluate({"python_full_version":"3.13.0", "sys_platform":"darwin"}) for pin in pins)

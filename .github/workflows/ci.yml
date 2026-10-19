@@ -45,6 +45,8 @@ jobs:
 
       - name: Install project and test runner
         run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
           python -m pip install --require-hashes --only-binary=:all: --no-deps -r requirements/build.lock
           python -m pip install --require-hashes --only-binary=:all: --no-deps --find-links requirements/wheels -r requirements/runtime.lock
           python -m pip install --no-deps --no-build-isolation --editable .
