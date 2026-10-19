@@ -40,7 +40,7 @@ test('registration validates input and sends exactly one request on configured H
  const p=await page(t);const form=p.form('register-form');
  fill(form,{email:'invalid',password:'short'});await submit(form);assert.match(p.notice(),/Проверьте поля/);assert(!p.calls.some(c=>c.path==='/v3/auth/register'));
  fill(form,{email:'unit@example.test',password:'A unit service password'});await submit(form);
- assert.equal(p.calls.filter(c=>c.path==='/v3/auth/register').length,1);assert.match(p.notice(),/Проверьте почту/);assert(!form.querySelector('button').disabled);assert.equal(form.elements.password.value,'');assert.deepEqual(p.errors,[]);
+ assert.equal(p.calls.filter(c=>c.path==='/v3/auth/register').length,1);assert.match(p.notice(),/Аккаунт создан/);assert(!form.querySelector('button').disabled);assert.equal(form.elements.password.value,'');assert.deepEqual(p.errors,[]);
 });
 test('registration exposes sender failure and malformed API responses',async t=>{
  const p=await page(t,'account',{override:{'/v3/auth/register':async()=>({ok:false,status:503,json:async()=>({status:'mail_not_configured'})})}});

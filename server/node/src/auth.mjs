@@ -42,18 +42,20 @@ export class AuthService {
   }
   async register(body) {
     const email = normalizeEmail(body?.email), encoded = await passwordHash(body?.password);
-    const [existing] = await this.pool.execute('SELECT user_id,verified FROM apprevive_users WHERE email=?', [email]);
-    if (existing.length) return existing[0].verified ? { status: 'email_sent' } : this.issue(existing[0].user_id, 'verify', email); // Never overwrite a preregistered password.
+    const [existing] = await this.pool.execute('SELECT user_id FROM apprevive_users WHERE email=?', [email]);
+    if (existing.length) throw new ApiError(409, 'account_exists');
     const id = randomBytes(16).toString('hex');
-    await this.pool.execute('INSERT INTO apprevive_users(user_id,email,password_hash) VALUES (?,?,?)', [id, email, encoded]);
-    return this.issue(id, 'verify', email);
+    try { await this.pool.execute('INSERT INTO apprevive_users(user_id,email,password_hash) VALUES (?,?,?)', [id, email, encoded]); }
+    catch (error) { if (error.code === 'ER_DUP_ENTRY') throw new ApiError(409, 'account_exists'); throw error; }
+    // Registration does not prove ownership of the entered mailbox or Apple ID.
+    return { status: 'registered' };
   }
   async login(body) {
     const email = normalizeEmail(body?.email);
     const [rows] = await this.pool.execute('SELECT user_id,email,password_hash,verified,role FROM apprevive_users WHERE email=?', [email]);
     const row = rows[0];
-    if (!await verifyPassword(body?.password, row?.password_hash) || !row?.verified) throw new ApiError(401, 'login_failed_or_unverified');
-    await this.requireAccount(row, appleId(email));
+    if (!await verifyPassword(body?.password, row?.password_hash)) throw new ApiError(401, 'login_failed_or_unverified');
+    if (Number(row.verified) === 1) await this.requireAccount(row, appleId(email));
     const token = randomBytes(32).toString('hex');
     await this.pool.execute('INSERT INTO apprevive_sessions(token_hash,user_id,expires_at) VALUES (?,?,DATE_ADD(UTC_TIMESTAMP(),INTERVAL 7 DAY))', [hash(token), row.user_id]);
     return { status: 'ok', token, user: { user_id: row.user_id, email: row.email, role: row.role } };
@@ -63,7 +65,7 @@ export class AuthService {
     const cookie = /(?:^|;\s*)apprevive_session=([a-f0-9]{64})(?:;|$)/.exec(String(req.headers.cookie || ''))?.[1];
     const token = bearer || cookie;
     if (!token) throw new ApiError(401, 'service_login_required');
-    const [rows] = await this.pool.execute('SELECT u.user_id,u.email,u.role FROM apprevive_sessions s JOIN apprevive_users u ON u.user_id=s.user_id WHERE s.token_hash=? AND s.expires_at>UTC_TIMESTAMP() AND u.verified=1', [hash(token)]);
+    const [rows] = await this.pool.execute('SELECT u.user_id,u.email,u.role,u.verified FROM apprevive_sessions s JOIN apprevive_users u ON u.user_id=s.user_id WHERE s.token_hash=? AND s.expires_at>UTC_TIMESTAMP()', [hash(token)]);
     if (!rows.length) throw new ApiError(401, 'service_login_required');
     return { ...rows[0], session_hash: hash(token) };
   }
@@ -116,7 +118,7 @@ export class AuthService {
   }
   async requireAccount(user, account) {
     if (typeof account !== 'string' || !/^[a-f0-9]{64}$/.test(account)) throw new ApiError(400, 'invalid_account');
-    if (account === appleId(user.email)) await this.pool.execute('INSERT IGNORE INTO apprevive_user_accounts(account_id,user_id,email) VALUES (?,?,?)', [account, user.user_id, user.email]);
+    if (Number(user.verified) === 1 && account === appleId(user.email)) await this.pool.execute('INSERT IGNORE INTO apprevive_user_accounts(account_id,user_id,email) VALUES (?,?,?)', [account, user.user_id, user.email]);
     const [rows] = await this.pool.execute('SELECT account_id FROM apprevive_user_accounts WHERE account_id=? AND user_id=?', [account, user.user_id]);
     if (!rows.length) throw new ApiError(403, 'verify_apple_email_required');
   }

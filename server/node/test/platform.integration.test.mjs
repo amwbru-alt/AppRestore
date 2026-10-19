@@ -21,10 +21,13 @@ test('production HTTP authorization, verified ownership, paid orders and payout 
  if(!/^apprevive_test(?:_[a-z0-9]+)?$/.test(process.env.DB_NAME||''))throw Error('Isolated test database required');
  const pool=createDatabase();t.after(()=>pool.end());const mail=[];const auth=new AuthService(pool,{mail:async value=>mail.push(value)});
  const pass='A service password 2026';
- async function signup(email){await auth.register({email,password:'Unverified initial password'});const token=mail.at(-1).token;await auth.consume({token,password:pass});return auth.login({email,password:pass});}
+ async function signup(email){const before=mail.length;assert.equal((await auth.register({email,password:pass})).status,'registered');assert.equal(mail.length,before);return auth.login({email,password:pass});}
  const owner=await signup('platform-owner@example.test'), stranger=await signup('platform-stranger@example.test');
  const ownerSession=await auth.session({headers:{authorization:'Bearer '+owner.token}});
  const aid=appleId(owner.user.email),other=appleId(stranger.user.email);
+ // Entering an email during password-only signup must not claim its existing Apple balance.
+ await assert.rejects(auth.requireAccount(ownerSession,aid),e=>e.status===403);
+ await auth.requestApple(ownerSession,{email:owner.user.email});await auth.consume({token:mail.at(-1).token},ownerSession);
  await auth.requireAccount(ownerSession,aid);
  await assert.rejects(auth.requireAccount(ownerSession,other),e=>e.status===403);
  // A different Apple ID requires a token sent to that mailbox and the requesting service user.

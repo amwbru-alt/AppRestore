@@ -47,12 +47,13 @@ def request(path, body=None):
         labels={'https_required':'Для входа в AppRevive требуется HTTPS. Администратор должен настроить защищённый адрес API.',
                 'mail_not_configured':'Отправка писем ещё не настроена на сервере.',
                 'payments_not_configured':'Приём платежей пока не настроен. Получите код у администратора.',
-                'login_failed_or_unverified':'Неверная почта/пароль AppRevive или почта ещё не подтверждена.',
+                'login_failed_or_unverified':'Неверная почта или пароль AppRevive.',
+                'account_exists':'Аккаунт с этой почтой уже существует. Войдите с прежним паролем.',
                 'password_min_12':'Пароль AppRevive должен содержать от 12 символов.',
                 'invalid_or_expired_token':'Ссылка подтверждения недействительна или истекла.',
                 'apple_already_linked':'Apple ID уже привязан к другому аккаунту AppRevive.',
                 'rate_limited':'Слишком много запросов. Повторите позже.'}
-        if exc.code==401: raise ServiceLoginRequired(labels.get(code,'Войдите в аккаунт AppRevive и подтвердите почту.')) from exc
+        if exc.code==401: raise ServiceLoginRequired(labels.get(code,'Войдите в аккаунт AppRevive.')) from exc
         if exc.code==403: raise ServiceLinkRequired('Подтвердите почту этого Apple ID в кабинете AppRevive.') from exc
         raise RestorationCodeError(labels.get(code,'Запрос сервиса не выполнен. '+code)) from exc
     except (OSError,ValueError) as exc:

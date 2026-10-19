@@ -18,11 +18,25 @@ test('zero-day commission hold stays zero and proxy TLS cannot be forged remotel
 });
 
 import { AuthService } from '../src/auth.mjs';
-test('registration retries send a fresh verification link without replacing the pending password',async()=>{
- const writes=[],mail=[];
- const pool={execute:async(sql,args)=>{writes.push(sql);return sql.startsWith('SELECT')?[[{user_id:'test-user',verified:0}]]:[{affectedRows:1}];}};
- const auth=new AuthService(pool,{mail:async data=>mail.push(data)});
- assert.equal((await auth.register({email:'pending@example.test',password:'A service test password'})).status,'email_sent');
- assert.equal(mail.length,1);assert.equal(mail[0].purpose,'verify');
- assert(!writes.some(sql=>/UPDATE apprevive_users|INSERT INTO apprevive_users/.test(sql)));
+test('password-only signup needs no mail and never marks the mailbox verified',async()=>{
+ const writes=[];const auth=new AuthService({execute:async(sql,args)=>{writes.push({sql,args});return sql.startsWith('SELECT')?[[]]:[{affectedRows:1}];}},{mail:async()=>assert.fail('Registration must not send mail')});
+ assert.equal((await auth.register({email:'new@example.test',password:'A service test password'})).status,'registered');
+ assert(writes.some(w=>w.sql.startsWith('INSERT INTO apprevive_users')));
+ assert(!writes.some(w=>/email_tokens|verified=1|user_accounts/.test(w.sql)));
+});
+test('signup cannot replace an existing password, including previously pending users',async()=>{
+ const writes=[];const auth=new AuthService({execute:async sql=>{writes.push(sql);return [[{user_id:'existing',verified:0}]];}},{mail:async()=>assert.fail('No signup mail')});
+ await assert.rejects(auth.register({email:'pending@example.test',password:'A service test password'}),e=>e.code==='account_exists');
+ assert(!writes.some(sql=>/INSERT|UPDATE/.test(sql)));
+});
+test('unverified service users may log in but cannot auto-claim an Apple ID balance',async()=>{
+ const encoded=await passwordHash('A service test password');let linked=false;
+ const auth=new AuthService({execute:async(sql,args)=>{
+  if(sql.includes('password_hash'))return [[{user_id:'new',email:'new@example.test',password_hash:encoded,verified:0,role:'user'}]];
+  if(sql.startsWith('INSERT INTO apprevive_sessions'))return [{affectedRows:1}];
+  if(sql.startsWith('INSERT IGNORE INTO apprevive_user_accounts'))linked=true;
+  return [[]];
+ }});
+ const result=await auth.login({email:'new@example.test',password:'A service test password'});assert.equal(result.status,'ok');assert.equal(linked,false);
+ await assert.rejects(auth.requireAccount({user_id:'new',email:'new@example.test',verified:0},'0'.repeat(64)),e=>e.status===403);assert.equal(linked,false);
 });

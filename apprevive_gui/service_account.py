@@ -55,7 +55,7 @@ class ServiceDialog(QDialog):
         self.work(action,done)
     def register(self):
         body=dict(email=self.email.text().strip(),password=self.password.text())
-        def done(_):self.password.clear();self.status.setText('Проверьте почту: по ссылке подтвердите адрес и задайте пароль AppRevive. Затем войдите здесь.')
+        def done(_):self.password.clear();self.status.setText('Аккаунт создан. Подтверждать почту не нужно. Нажмите «Войти» и введите свой пароль AppRevive.')
         self.work(lambda:request('/v3/auth/register',body),done)
     def link(self):
         self.work(lambda:request('/v3/auth/apple',dict(email=self.apple_email)),lambda _:self.status.setText('На почту Apple ID отправлена ссылка. Откройте её, войдите в тот же аккаунт AppRevive и подтвердите привязку. Затем нажмите «Проверить».'))

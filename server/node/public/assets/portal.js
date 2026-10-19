@@ -2,7 +2,7 @@
 window.AppRevivePortal = (() => {
   const labels = {
     https_required:'Вход и регистрация по HTTP ещё не включены на сервере. Обратитесь к администратору.',
-    service_login_required:'Войдите в AppRevive.', login_failed_or_unverified:'Неверная почта/пароль или почта ещё не подтверждена.',
+    service_login_required:'Войдите в AppRevive.', login_failed_or_unverified:'Неверная почта или пароль AppRevive.', account_exists:'Аккаунт с этой почтой уже существует. Войдите с прежним паролем.',
     password_min_12:'Пароль AppRevive должен содержать от 12 символов.', invalid_email:'Введите корректный адрес электронной почты.',
     mail_not_configured:'Отправка писем пока не настроена на сервере. Администратор должен подключить почтовый сервис.',
     mail_unavailable:'Почтовый сервис не принял письмо. Повторите позже или обратитесь к администратору.',
