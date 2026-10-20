@@ -203,3 +203,26 @@ test('shop filters use the site endpoint and reset returns to the first page',as
  assert.match(p.form('shop-pagination').textContent,/Страница 1/);
  assert(!p.calls.some(c=>c.path==='/v3/orders'));
 });
+
+test('landing journeys, catalog expansion, calculator and mobile navigation respond to real controls',async t=>{
+ const dom=new JSDOM(await readFile(new URL('index.html',root),'utf8'),{url:origin,runScripts:'outside-only'});t.after(()=>dom.window.close());const w=dom.window;
+ w.fetch=async path=>({ok:true,json:async()=>path==='/v1/catalog'?{status:'ok',apps:Array.from({length:12},(_,i)=>({name:'Application '+i,trackId:String(123456789+i)}))}:path==='/site-config'?{downloads:{macos:true,windows:true}}:{payments_enabled:false}});
+ w.eval(await readFile(new URL('assets/site.js',root),'utf8'));await settle();
+ assert.equal(w.document.querySelectorAll('.app-card').length,8);w.document.getElementById('catalog-more').click();assert.equal(w.document.querySelectorAll('.app-card').length,12);assert(w.document.getElementById('catalog-more').hidden);
+ w.document.querySelector('#catalog-suggestions button').click();assert.equal(w.document.getElementById('app-search').value,'Application 0');assert.equal(w.document.querySelectorAll('.app-card').length,1);
+ w.document.getElementById('catalog-clear').click();assert.equal(w.document.getElementById('app-search').value,'');
+ w.document.getElementById('journey-code').click();assert.equal(w.document.getElementById('journey-action').getAttribute('href'),'/account');assert.match(w.document.getElementById('journey-steps').textContent,/Apple ID на сайте не нужен/);
+ w.document.getElementById('journey-code').dispatchEvent(new w.KeyboardEvent('keydown',{key:'ArrowLeft',bubbles:true}));assert.equal(w.document.getElementById('journey-self').getAttribute('aria-selected'),'true');
+ const quantity=w.document.getElementById('code-quantity');quantity.value='3';quantity.dispatchEvent(new w.Event('input'));assert.equal(w.document.getElementById('code-total').textContent,'300 ₽');assert.equal(w.document.getElementById('code-checkout').getAttribute('href'),'/account?quantity=3');
+ quantity.value='101';quantity.dispatchEvent(new w.Event('input'));assert(!w.document.getElementById('code-checkout').hasAttribute('href'));
+ const menu=w.document.getElementById('menu-toggle');menu.click();assert.equal(menu.getAttribute('aria-expanded'),'true');w.document.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape'}));assert.equal(menu.getAttribute('aria-expanded'),'false');
+});
+test('catalog load failure exposes a working retry',async t=>{
+ const dom=new JSDOM(await readFile(new URL('index.html',root),'utf8'),{url:origin,runScripts:'outside-only'});t.after(()=>dom.window.close());const w=dom.window;let attempts=0;
+ w.fetch=async path=>{if(path==='/v1/catalog'&&++attempts===1)throw new TypeError('offline');return {ok:true,json:async()=>path==='/v1/catalog'?{status:'ok',apps:[{name:'Recovered application'}]}:{downloads:{}}};};
+ w.eval(await readFile(new URL('assets/site.js',root),'utf8'));await settle();const retry=w.document.getElementById('catalog-retry');assert(!retry.hidden);retry.click();await settle();assert(retry.hidden);assert.equal(w.document.querySelectorAll('.app-card').length,1);
+});
+test('cabinet accepts a valid quantity from the landing calculator and ignores invalid values',async t=>{
+ const valid=await page(t,'account',{hash:'?quantity=3'});assert.equal(valid.form('buy-form').elements.quantity.value,'3');
+ const invalid=await page(t,'account',{hash:'?quantity=1000'});assert.equal(invalid.form('buy-form').elements.quantity.value,'1');
+});

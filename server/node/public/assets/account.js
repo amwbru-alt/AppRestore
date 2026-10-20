@@ -122,3 +122,6 @@ const liveTimer=setInterval(liveRefresh,30000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)liveRefresh();});
 window.addEventListener('online',liveRefresh);
 window.addEventListener('pagehide',()=>clearInterval(liveTimer));
+
+const requestedQuantity=Number(new URLSearchParams(location.search).get('quantity'));
+if(Number.isInteger(requestedQuantity)&&requestedQuantity>=1&&requestedQuantity<=100)$('buy-form').elements.quantity.value=String(requestedQuantity);
