@@ -105,12 +105,23 @@ test('production HTTP authorization, verified ownership, paid orders and payout 
  assert.equal(activated.codes.find(c=>c.code===deliveredCode).activation_status,'activated');
  assert(activated.codes.find(c=>c.code===deliveredCode).activated_at);
  assert.equal(activated.codes.filter(c=>c.activation_status==='unused').length,1);
+ const filtered=await (await call('/v3/shop/orders?size=1&activation=activated',undefined,referred.token)).json();
+ assert.equal(filtered.orders.length,1);assert.equal(filtered.codes.length,1);assert.equal(filtered.codes[0].code,deliveredCode);
+ assert.equal(filtered.stats.activated,1);assert.equal(filtered.stats.unused,1);
+ const untouched=await (await call('/v3/shop/orders?activation=unused',undefined,referred.token)).json();assert.equal(untouched.codes.length,1);assert.equal(untouched.codes[0].activation_status,'unused');
+ const privateShop=await (await call('/v3/shop/orders',undefined,stranger.token)).json();assert.equal(privateShop.total,0);assert.equal(privateShop.codes.length,0);
+ assert.equal((await call('/v3/shop/orders?page=-1',undefined,referred.token)).status,400);
+
  const [linkedAfter]=await pool.execute('SELECT account_id FROM apprevive_user_accounts WHERE user_id=?',[referred.user.user_id]);assert.equal(linkedAfter.length,0);
  assert(!(await (await call('/v3/orders',undefined,stranger.token)).json()).codes.some(c=>c.code===deliveredCode));
 
  await payments.refund(referralCheckout.checkout_id);
  partnerStats=await (await call('/v3/partner',undefined,stranger.token)).json();
  assert.equal(partnerStats.partner.registered,1);assert.equal(partnerStats.partner.purchased_codes,0);assert.equal(partnerStats.ledger.available_kopecks,0);
+ // Site history reaches beyond the native API's original 100-order window.
+ const extra=[];for(let i=0;i<101;i++)extra.push(id(),referred.user.user_id,referralRow.account_id,id(),1,10000);
+ await pool.execute('INSERT INTO apprevive_checkouts(checkout_id,user_id,account_id,request_id,quantity,amount_kopecks) VALUES '+Array(101).fill('(?,?,?,?,?,?)').join(','),extra);
+ const lastPage=await (await call('/v3/shop/orders?page=6&size=20',undefined,referred.token)).json();assert.equal(lastPage.total,102);assert.equal(lastPage.pages,6);assert.equal(lastPage.orders.length,2);
  // User-scoped session control: another user's session cannot be revoked.
  const second=await auth.login({email:stranger.user.email,password:pass});
  let sessions=await (await call('/v3/security/sessions',undefined,stranger.token)).json();

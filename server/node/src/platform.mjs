@@ -1,3 +1,4 @@
+import { shopOrders } from './shop-orders.mjs';
 import { SecurityService } from './security.mjs';
 import { records,metrics } from './admin-data.mjs';
 import { registrationSummary } from './user-referrals.mjs';
@@ -97,6 +98,7 @@ export class Platform {
       const [payouts] = await this.pool.execute('SELECT payout_id,amount_kopecks,state,created_at FROM apprevive_payouts WHERE partner_id=? ORDER BY created_at DESC LIMIT 100', [id]);
       reply(res, 200, { ...balance, history, partner, ledger, payouts }); return true;
     }
+    if(path==='/v3/shop/orders'&&req.method==='GET'){reply(res,200,await shopOrders(this.pool,user,query));return true;}
     if (path === '/v3/orders' && req.method === 'GET') {
       const [orders] = await this.pool.execute('SELECT checkout_id,quantity,amount_kopecks,state,created_at FROM apprevive_checkouts WHERE user_id=? ORDER BY created_at DESC LIMIT 100', [user.user_id]);
       const [codes] = await this.pool.execute("SELECT c.checkout_id,oc.code_hash,COALESCE(v.code,p.code) AS code,r.activated_at,CASE WHEN r.code_hash IS NOT NULL THEN 'activated' WHEN o.state='refunded' THEN 'invalidated' WHEN p.code IS NOT NULL THEN 'unused' ELSE 'unavailable' END AS activation_status FROM apprevive_checkouts c JOIN apprevive_orders o ON o.payment_reference=CONCAT('yk_',c.provider_id) JOIN apprevive_order_codes oc ON oc.order_id=o.order_id LEFT JOIN apprevive_issued_codes v ON v.code_hash=oc.code_hash LEFT JOIN apprevive_promo_codes p ON SHA2(p.code,256)=oc.code_hash LEFT JOIN apprevive_promo_redemptions r ON r.code_hash=oc.code_hash WHERE c.user_id=? AND c.state IN ('paid','refunded')", [user.user_id]);

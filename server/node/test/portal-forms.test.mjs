@@ -21,6 +21,10 @@ async function page(t,name='account',{allowed=true,logged=false,role='user',hash
  };
  w.confirm=()=>true;w.fetch=async(path,options={})=>{
   calls.push({path,body:options.body?JSON.parse(options.body):null});
+  if(path.startsWith('/v3/shop/orders?')){
+   const mock=override['/v3/orders'];const response=mock?await mock(options,w):{ok:true,status:200,json:async()=>endpoints['/v3/orders']};
+   return {...response,json:async()=>({page:1,pages:1,total:0,stats:{total:0,unused:0,activated:0,invalidated:0},...await response.json()})};
+  }
   if(override[path])return override[path](options,w);
   if(path==='/v3/auth/login')authenticated=true;
   if(path.startsWith('/v3/admin/users?')||path.startsWith('/v3/admin/orders?'))return {ok:true,status:200,json:async()=>({rows:[],page:1,pages:1,total:0})};
@@ -189,4 +193,13 @@ test('purchased codes remain visible with real unused and activated labels; site
  const values=[...p.form('orders').querySelectorAll('input')].map(input=>input.value);assert.deepEqual(values,['RV-UNUSED','RV-USED']);
  assert.equal(p.form('apple-form'),null);assert.equal(p.form('accounts'),null);
  assert(!p.calls.some(c=>c.path==='/v3/auth/apple'||c.path.startsWith('/v3/account?')));
+});
+
+test('shop filters use the site endpoint and reset returns to the first page',async t=>{
+ const p=await page(t,'account',{logged:true});
+ fill(p.form('shop-filter'),{state:'paid',activation:'unused',q:'abc'});await submit(p.form('shop-filter'));
+ assert(p.calls.some(c=>c.path.startsWith('/v3/shop/orders?')&&c.path.includes('activation=unused')&&c.path.includes('state=paid')&&c.path.includes('page=1')));
+ p.form('shop-reset').click();await settle();assert.equal(p.form('shop-filter').elements.activation.value,'');
+ assert.match(p.form('shop-pagination').textContent,/Страница 1/);
+ assert(!p.calls.some(c=>c.path==='/v3/orders'));
 });

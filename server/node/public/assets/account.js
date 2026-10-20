@@ -17,12 +17,12 @@ function table(target, headings, rows){ const t=document.createElement('table'),
 const status = value => ({pending:'Ожидает',paid:'Оплачен',cancelled:'Отменён',refunded:'Возвращён',completed:'Завершено',failed:'Ошибка, попытка возвращена',reserved:'Ожидает подтверждения'}[value]||value);
 const rub = value => (Number(value)/100).toLocaleString('ru-RU',{style:'currency',currency:'RUB'});
 function stats(target, items){$(target).replaceChildren(...items.map(([title,value])=>{const box=document.createElement('div');box.className='stat';const b=document.createElement('b'),s=document.createElement('span');b.textContent=value;s.textContent=title;box.append(b,s);return box;}));}
-let profile=null, checkoutRequest=null, viewEpoch=0;
+let profile=null, checkoutRequest=null, viewEpoch=0, shopPage=1, shopVersion=0;
 function clearPrivateView(){
  viewEpoch++;profile=null;checkoutRequest=null;$('cabinet').hidden=true;$('auth').hidden=false;
- for(const id of ['orders','partner','partner-stats','referrals','ledger','payouts','sessions'])$(id).replaceChildren();
- for(const id of ['password-form','buy-form'])$(id).reset();
- $('who').textContent='';
+ for(const id of ['orders','code-stats','shop-pagination','partner','partner-stats','referrals','ledger','payouts','sessions'])$(id).replaceChildren();
+ for(const id of ['password-form','buy-form','shop-filter'])$(id).reset();
+ $('who').textContent='';shopPage=1;shopVersion++;
 }
 async function refreshPartner(){
  const epoch=viewEpoch,data=await api('/v3/partner'),p=data.partner;if(epoch!==viewEpoch)return;
@@ -43,13 +43,25 @@ async function refreshPartner(){
  table('payouts',['Сумма','Состояние','Дата'],data.payouts.map(p=>[rub(p.amount_kopecks),status(p.state),p.created_at]));
 }
 
-async function refreshOrders(){const epoch=viewEpoch,data=await api('/v3/orders');if(epoch!==viewEpoch)return;table('orders',['Заказ','Количество','Сумма','Состояние','Коды / действие'],data.orders.map(order=>{const cell=document.createElement('div'); for(const code of data.codes.filter(c=>c.checkout_id===order.checkout_id)){const line=document.createElement('div');line.className='purchased-code';
+async function refreshOrders(page=shopPage){
+ const epoch=viewEpoch,version=++shopVersion,query=new URLSearchParams(new FormData($('shop-filter')));query.set('page',String(page));query.set('size','20');
+ const data=await api('/v3/shop/orders?'+query);if(epoch!==viewEpoch||version!==shopVersion)return;
+ shopPage=data.page;
+ stats('code-stats',[['Всего кодов',data.stats.total],['Не активировано',data.stats.unused],['Активировано',data.stats.activated],['Аннулировано',data.stats.invalidated]]);
+ renderShopPagination(data);
+table('orders',['Заказ','Куплено в заказе','Сумма','Состояние','Промокоды / действие'],data.orders.map(order=>{const cell=document.createElement('div'); for(const code of data.codes.filter(c=>c.checkout_id===order.checkout_id)){const line=document.createElement('div');line.className='purchased-code';
  const field=document.createElement('input');field.readOnly=true;field.value=code.code||('Исторический код · '+code.code_id);field.setAttribute('aria-label','Купленный промокод');
  const badge=document.createElement('span');badge.className='code-status '+code.activation_status;badge.textContent=({unused:'Не активирован',activated:'Активирован',invalidated:'Аннулирован',unavailable:'Статус требует проверки'})[code.activation_status]||'Статус требует проверки';
  line.append(field,badge);
  if(code.activated_at){const time=document.createElement('small');time.textContent='Активирован '+new Date(code.activated_at).toLocaleString('ru-RU');line.append(time);}
  if(code.code){const copy=document.createElement('button');copy.className='button ghost';copy.textContent='Копировать';copy.onclick=run(async()=>{try{await navigator.clipboard.writeText(code.code);message('Промокод скопирован.');}catch{field.focus();field.select();message('Скопируйте выделенный промокод.');}});line.append(copy);}else{const note=document.createElement('small');note.textContent='Текст старого кода не сохранялся до обновления.';line.append(note);}
  cell.append(line);}if(order.state==='pending'){const b=document.createElement('button');b.className='button ghost';b.textContent='Проверить оплату';b.onclick=run(async()=>{const updated=await api('/v3/checkout/sync',{checkout_id:order.checkout_id});if(updated.confirmation_url){const a=document.createElement('a');a.href=updated.confirmation_url;a.textContent='Перейти к оплате ↗';a.className='button primary';cell.append(a);}else await refreshOrders();});cell.append(b);}return [order.checkout_id,order.quantity,rub(order.amount_kopecks),status(order.state),cell];}));}
+function renderShopPagination(data){
+ const box=$('shop-pagination'),label=document.createElement('span');label.textContent=`Страница ${data.page} из ${data.pages} · заказов по фильтру ${data.total}`;box.replaceChildren(label);
+ for(const [text,target,disabled]of [['← Назад',data.page-1,data.page<=1],['Далее →',data.page+1,data.page>=data.pages]]){const button=document.createElement('button');button.type='button';button.className='button ghost';button.textContent=text;button.disabled=disabled;button.onclick=run(()=>refreshOrders(target));box.append(button);}
+}
+$('shop-filter').onsubmit=run(()=>refreshOrders(1));
+$('shop-reset').onclick=run(async()=>{$('shop-filter').reset();await refreshOrders(1);});
 async function refresh(){
  const epoch=viewEpoch,next=await api('/v3/me');if(epoch!==viewEpoch)return;profile=next;$('auth').hidden=true;$('cabinet').hidden=false;$('who').textContent=profile.user.email;
  $('invited-by').textContent=profile.invited_by?'Вы зарегистрированы по приглашению '+profile.invited_by+'. Пригласивший закреплён.':'';
