@@ -80,3 +80,28 @@ test('account aliases preserve invitation and admin destination without external
   const response=await fetch(base+path,{redirect:'manual'});assert.equal(response.status,302);assert.equal(response.headers.get('location'),target);
  }
 });
+test('commercial documents are reachable, explicit drafts, and preserve API behaviour', async t => {
+  const { url } = await setup(t, { env: { DB_PASSWORD: 'must-not-leak' } });
+  const paths = ['/legal','/terms','/offer','/privacy','/refund','/cookies','/contacts','/instructions','/referral-terms'];
+  for (const path of paths) {
+    const response = await fetch(url + path); const html = await response.text();
+    assert.equal(response.status, 200, path);
+    assert.equal(response.headers.get('cache-control'), 'no-store');
+    assert.match(html, /Проект документов/); assert.match(html, /name="robots" content="noindex"/);
+    assert(!html.includes('must-not-leak'));
+    assert.match(html, /legal\.css\?v=[a-f0-9]{12}/);
+    const head = await fetch(url + path, { method: 'HEAD' });
+    assert.equal(await head.text(), ''); assert.equal(Number(head.headers.get('content-length')), Buffer.byteLength(html));
+    assert.equal((await fetch(url + path, { method:'POST' })).status, 405);
+  }
+  assert.match(await (await fetch(url + '/offer')).text(), /а не доказательство успешной установки/);
+  assert.match(await (await fetch(url + '/instructions')).text(), /Apple ID на сайте вводить не нужно/);
+  for (const path of ['/', '/account']) assert.match(await (await fetch(url + path)).text(), /href="\/offer"/);
+});
+test('operator configuration is escaped and only complete documents can be indexed', async t => {
+  const env = { LEGAL_OPERATOR_NAME:'ИП <script>alert(1)</script>', LEGAL_OPERATOR_INN:'123', LEGAL_OPERATOR_OGRNIP:'456', LEGAL_OPERATOR_ADDRESS:'Адрес', LEGAL_CONTACT_EMAIL:'support@example.test', LEGAL_DATA_LOCATION:'Указанное оператором место', DB_PASSWORD:'secret-test' };
+  const { url } = await setup(t, { env });
+  const html = await (await fetch(url + '/contacts')).text();
+  assert(!html.includes('<script>')); assert(html.includes('&lt;script&gt;')); assert(!html.includes('secret-test'));
+  assert(!html.includes('Проект документов')); assert(!html.includes('content="noindex"'));
+});
