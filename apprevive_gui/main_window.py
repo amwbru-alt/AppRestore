@@ -307,8 +307,24 @@ class Sidebar(QFrame):
 
 
 class MainWindow(QMainWindow):
+    restoreStage = Signal(str)
+
+    def _restore_complete(self, text):
+        self.statusBar().showMessage("Готово")
+        QMessageBox.information(self, "Установка", text)
+
+    def _restore_failed(self, text):
+        self.statusBar().showMessage('Ошибка восстановления')
+        show_error(self, 'Ошибка', text)
+
+    def _show_restore_stage(self, text):
+        self.statusBar().showMessage(text)
+        if hasattr(self, "_progress"):
+            self._progress.setText(text)
+
     def __init__(self, service: GuiService, artwork: ArtworkCache) -> None:
         super().__init__()
+        self.restoreStage.connect(self._show_restore_stage, Qt.ConnectionType.QueuedConnection)
         self.service = service
         self.artwork = artwork
         self._artwork_loader = ArtworkLoader(artwork, self)
@@ -1207,6 +1223,7 @@ class MainWindow(QMainWindow):
                         udid,
                         app,
                         try_device_redownload=try_device_redownload,
+                        progress=self.restoreStage.emit,
                     )
                 except Exception as exc:
                     out.append((app, None, str(exc)))
@@ -1325,6 +1342,7 @@ class MainWindow(QMainWindow):
         failed: list[tuple[Any, str]],
     ) -> None:
         self._set_offloaded_restore_enabled(True)
+        self.statusBar().showMessage("Есть ошибки восстановления" if failed else "Готово" if succeeded else "Восстановление завершено")
         if failed:
             self._progress.setText("")
             self._show_restore_errors(failed)
@@ -1503,12 +1521,13 @@ class MainWindow(QMainWindow):
             for app in apps:
                 out.append(
                     self.service.restore_missing(
-                        udid, app, acquire_license=acquire
+                        udid, app, acquire_license=acquire, progress=self.restoreStage.emit
                     )
                 )
             return out
 
         def done(results: list[str]) -> None:
+            self.statusBar().showMessage("Готово")
             self.log("ok  " + "; ".join(results))
             QMessageBox.information(self, "Готово", "Установка завершена.")
 
@@ -1516,7 +1535,7 @@ class MainWindow(QMainWindow):
             self,
             job,
             on_finished=done,
-            on_failed=lambda m: show_error(self, "Ошибка", m),
+            on_failed=self._restore_failed,
         )
 
     def _build_library(self) -> QWidget:
@@ -1613,13 +1632,13 @@ class MainWindow(QMainWindow):
             udid = self._device_udid
 
             def job() -> str:
-                return self.service.install_ipa(udid, Path(path))
+                return self.service.install_ipa(udid, Path(path), progress=self.restoreStage.emit)
 
             run_in_thread(
                 self,
                 job,
-                on_finished=lambda s: QMessageBox.information(self, "Установка", s),
-                on_failed=lambda m: show_error(self, "Ошибка", m),
+                on_finished=self._restore_complete,
+                on_failed=self._restore_failed,
             )
 
     def _build_doctor(self) -> QWidget:

@@ -27,7 +27,7 @@ from apprevive_gui.ui4b.formatting import (
     missing_caption,
     plural,
 )
-from apprevive_gui.ui4b.queue import CURRENT, DONE, FAILED, LIMIT_ERROR, STAGE_INSTALL, WAIT, RestoreQueue
+from apprevive_gui.ui4b.queue import CURRENT, DONE, FAILED, LIMIT_ERROR, STAGE_INSTALL, STAGE_PREPARE, STAGE_CONFIRM, WAIT, RestoreQueue
 from apprevive_gui.ui4b.space import SPACE_OVER, DeviceSpace, plan_space
 
 STATE_DISCONNECTED = "disconnected"
@@ -145,7 +145,7 @@ def phone_tiles(inp: HomeInput, state: str) -> list[dict[str, object]]:
         elif entry.state == DONE:
             kind = "new"
         elif entry.state == CURRENT:
-            if entry.stage == STAGE_INSTALL:
+            if entry.stage in (STAGE_PREPARE, STAGE_INSTALL, STAGE_CONFIRM):
                 kind = "installing"
             else:
                 kind = "downloading"

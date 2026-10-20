@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from apprevive_core.restore_progress import STAGE_LABELS
 from pathlib import Path
 from typing import Any
 
@@ -204,12 +205,13 @@ class GuiService:
                 progress("Установка на iPhone")
                 progress("Проверка иконки")
             return f"demo restored {app.name}"
-        return self.core.restore_offloaded(
-            udid,
-            app,
-            acquire_license=acquire_license,
-            try_device_redownload=try_device_redownload,
-        )
+        with self.core.progress_stages((lambda phase: progress(STAGE_LABELS[phase])) if progress else None):
+            return self.core.restore_offloaded(
+                udid,
+                app,
+                acquire_license=acquire_license,
+                try_device_redownload=try_device_redownload,
+            )
 
     def restore_missing(
         self,
@@ -225,9 +227,10 @@ class GuiService:
                 progress("Файл проверен")
                 progress("Установка на iPhone")
             return f"demo installed {app.name}"
-        return self.core.restore_missing(
-            udid, app, acquire_license=acquire_license
-        )
+        with self.core.progress_stages((lambda phase: progress(STAGE_LABELS[phase])) if progress else None):
+            return self.core.restore_missing(
+                udid, app, acquire_license=acquire_license
+            )
 
     def scan_local(self) -> list[Any]:
         if self.demo_mode:
@@ -235,8 +238,10 @@ class GuiService:
         entries, _errors = self.core.scan_local(refresh=True)
         return entries
 
-    def install_ipa(self, udid: str, path: Path) -> str:
+    def install_ipa(self, udid: str, path: Path, *, progress=None) -> str:
         if self.demo_mode:
             return f"demo install {path.name}"
-        meta = self.core.install(udid, path)
+        with self.core.progress_stages((lambda phase: progress(STAGE_LABELS[phase])) if progress else None):
+            self.core._stage('check')
+            meta = self.core.install(udid, path)
         return f"{meta.name} {meta.version}"

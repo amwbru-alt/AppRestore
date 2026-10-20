@@ -8,6 +8,7 @@ import re
 import stat
 import sys
 import tempfile
+import threading
 import time
 import uuid
 from pathlib import Path
@@ -94,6 +95,30 @@ class AppReviveService:
         ] | None = None
         #: GUI: the IPA is verified and about to go onto the phone.
         self.on_device_install: Callable[[], None] | None = None
+        self.on_restore_stage: Callable[[str], None] | None = None
+        self._progress_local = threading.local()
+
+    @contextmanager
+    def progress_stages(self, callback: Callable[[str], None] | None) -> Iterator[None]:
+        previous = getattr(self._progress_local, 'callback', None)
+        self._progress_local.callback = callback
+        try:
+            yield
+        finally:
+            self._progress_local.callback = previous
+
+    def _stage(self, phase: str) -> None:
+        callback = (
+            getattr(getattr(self, '_progress_local', None), 'callback', None)
+            or getattr(self, 'on_restore_stage', None)
+        )
+        if callback is not None:
+            try:
+                callback(phase)
+            except Exception:
+                # Display failures must never change installation or credit accounting.
+                pass
+
 
     @staticmethod
     def _make_private(path: Path, *, directory: bool = False) -> None:
@@ -406,6 +431,7 @@ class AppReviveService:
             attempt_dir.mkdir(mode=0o700)
             output = attempt_dir / "download.ipa"
             try:
+                self._stage('download')
                 ok = self.tools.download_ipa(
                     output,
                     store_id=value if kind == "store" else None,
@@ -428,6 +454,7 @@ class AppReviveService:
                 continue
             candidate = candidates[0]
             try:
+                self._stage('prepare')
                 verified = self._verify_ipa(
                     candidate,
                     expected_bundle_id=expected,
@@ -718,6 +745,7 @@ class AppReviveService:
         part of the boundary contract.
         """
 
+        self._stage('prepare')
         source = Path(ipa).expanduser()
         try:
             before = source.lstat()
@@ -1090,6 +1118,7 @@ class AppReviveService:
                 attempt_dir.mkdir(mode=0o700)
                 output = attempt_dir / "download.ipa"
                 try:
+                    self._stage('download')
                     ok = self.tools.download_ipa(
                         output,
                         store_id=resolved,
@@ -1104,6 +1133,7 @@ class AppReviveService:
                     errors.append(f"{label}: IPA output missing")
                     continue
                 try:
+                    self._stage('prepare')
                     downloaded = self._verify_ipa(output)
                 except (IpaError, AppReviveError) as exc:
                     errors.append(f"{label}: {exc}")
@@ -1149,6 +1179,7 @@ class AppReviveService:
         *,
         acquire_license: bool = False,
     ) -> str:
+        self._stage('check')
         print(
             f"  downloading via App Store ID {store_id} "
             "(bundle ID will be read from the IPA)…"
@@ -1198,6 +1229,7 @@ class AppReviveService:
             if notice is not None:
                 notice()
             try:
+                self._stage('install')
                 request_state = self.tools.install_ipa(
                     udid,
                     ready.metadata.path,
@@ -1218,6 +1250,7 @@ class AppReviveService:
                     f"request ({precondition})"
                 )
             try:
+                self._stage('confirm')
                 self._wait_until_installed(
                     udid,
                     verified.metadata.bundle_id,
@@ -1271,6 +1304,7 @@ class AppReviveService:
 
         Returns a short human-readable result status.
         """
+        self._stage('check')
         if app.local_ipa:
             print(f"  using local IPA: {app.local_ipa}")
             metadata = self.install(
@@ -1291,12 +1325,14 @@ class AppReviveService:
         if try_device_redownload:
             print("  asking iPhone to redownload the app…")
         if try_device_redownload:
+            self._stage('download')
             request_state = self.tools.device_request_redownload(
                 udid,
                 app.bundle_id,
             )
             if request_state is not RedownloadRequestState.FAILED_BEFORE_REQUEST:
                 self._wait_for_native_redownload(udid, app.bundle_id)
+                self._stage('confirm')
                 self._remember_app_best_effort(
                     store_id=app.store_id,
                     bundle_id=app.bundle_id,
@@ -1365,6 +1401,7 @@ class AppReviveService:
         Unlike offloaded restore, there is no placeholder to ask iOS to
         redownload — only local IPA or App Store download via ipatool.
         """
+        self._stage('check')
         if app.local_ipa and app.bundle_id:
             print(f"  using local IPA: {app.local_ipa}")
             metadata = self.install(

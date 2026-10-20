@@ -5,6 +5,7 @@ asks iOS to download it, and falls back to an IPA install when iOS refuses.
 """
 
 from __future__ import annotations
+from apprevive_core.restore_progress import STAGE_LABELS
 
 import os
 import re
@@ -152,7 +153,8 @@ class QuickSession(QObject):
     def __init__(self) -> None:
         super().__init__()
         self.service = GuiService(demo_mode=False)
-        self.service.core.on_device_install = self._note_device_install
+        self.service.core.on_restore_stage = self._note_restore_stage
+        self._restore_phase = 'check'
         self._lock = threading.Lock()
         self._tool_lock = threading.Lock()
         self._probe_started = False
@@ -1280,12 +1282,21 @@ class QuickSession(QObject):
                 self._force = True
 
     def _restore_one(self, udid: str, app: OffloadedApp) -> None:
-        try:
-            self.service.restore_offloaded(udid, app, try_device_redownload=True)
-        except Exception as exc:
-            if "refusing a competing ipa install" not in str(exc).lower():
-                raise
-            self.service.restore_offloaded(udid, app, try_device_redownload=False)
+        runner = self.service.core.tools.runner
+        with self._tool_lock:
+            previous = getattr(runner, 'on_output', None)
+            if hasattr(runner, 'on_output'):
+                runner.on_output = self._on_tool_output
+            try:
+                try:
+                    self.service.restore_offloaded(udid, app, try_device_redownload=True)
+                except Exception as exc:
+                    if "refusing a competing ipa install" not in str(exc).lower():
+                        raise
+                    self.service.restore_offloaded(udid, app, try_device_redownload=False)
+            finally:
+                if hasattr(runner, 'on_output'):
+                    runner.on_output = previous
 
     def _install_store(self, udid: str, store_id: str, acquire: bool = False) -> None:
         try:
@@ -1522,6 +1533,7 @@ class QuickSession(QObject):
             if not ipa.is_file():
                 message = "Файл копии не найден."
                 return
+            self._note_restore_stage('check')
             self.service.install_ipa(udid, ipa)
             ok = True
         except Exception as exc:  # noqa: BLE001
@@ -1540,28 +1552,42 @@ class QuickSession(QObject):
             self._emit_files_note()
             self.copySettled.emit(path if ok else "", ok, message)
 
+    def _note_restore_stage(self, phase: str) -> None:
+        self._restore_phase = phase
+        self._output_tail = ''
+        label = STAGE_LABELS[phase]
+        if getattr(self, '_files_mode', False):
+            self._set_files_note(label, busy=True)
+        else:
+            self.installProgress.emit(-1, label)
+
     def _note_device_install(self) -> None:
         """Download has finished. The phone install has no percent of its own."""
 
-        self.installProgress.emit(-1, f"Ставим на {self._noun_now()}")
+        self._note_restore_stage('install')
 
     def _on_tool_output(self, text: str) -> None:
-        self._output_tail = (self._output_tail + text.casefold())[-180:]
+        if not getattr(self, '_files_mode', False) and getattr(self, '_restore_phase', 'download') in ('prepare', 'install', 'confirm'):
+            return
+        previous = self._output_tail
+        combined = previous + text.casefold()
+        self._output_tail = combined[-180:]
         if "err error" in self._output_tail or "success=false" in self._output_tail:
             return
         match = None
-        for match in _PROGRESS.finditer(self._output_tail):
-            pass
+        for found in _PROGRESS.finditer(combined):
+            if found.end() > len(previous):
+                match = found
         if match is None:
             return
         percent = int(match.group(1))
-        if percent <= 0:
+        if not 0 <= percent <= 100:
             return
         if self._files_mode:
             label = "Сохраняем файл" if percent >= 100 else f"Скачиваем {percent}%"
             self._set_files_note(label, busy=True)
             return
-        label = f"Ставим на {self._noun_now()}" if percent >= 100 else f"Скачиваем {percent}%"
+        label = f"Загрузка {percent}%"
         self.installProgress.emit(percent, label)
 
     def _maybe_probe_shelf(self) -> None:

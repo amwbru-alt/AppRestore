@@ -18,9 +18,15 @@ CURRENT = "current"
 DONE = "done"
 FAILED = "failed"
 
-STAGE_DOWNLOAD = 0
-STAGE_INSTALL = 1
-STAGE_DONE = 2
+STAGE_CHECK = 0
+STAGE_DOWNLOAD = 1
+STAGE_PREPARE = 2
+STAGE_INSTALL = 3
+STAGE_CONFIRM = 4
+STAGE_DONE = 5
+
+from apprevive_core.restore_progress import STAGE_LABELS
+_PHASE_INDEX = {label: index for index, label in enumerate(STAGE_LABELS.values())}
 
 #: Status words that mean the IPA is already being installed on the device.
 _INSTALL_WORDS = ("установ", "ставим", "ставится", "install")
@@ -36,10 +42,11 @@ LIMIT_ERROR = "не хватило лимита"
 class QueueEntry:
     item: RestoreItem
     state: str = WAIT
-    stage: int = STAGE_DOWNLOAD
+    stage: int = STAGE_CHECK
     percent: int = -1
     status: str = ""
     error: str = ""
+    visited: set[int] = field(default_factory=lambda: {STAGE_CHECK})
 
 
 @dataclass
@@ -86,7 +93,7 @@ class RestoreQueue:
         for entry in self.entries:
             if entry.state == WAIT:
                 entry.state = CURRENT
-                entry.stage = STAGE_DOWNLOAD
+                entry.stage = STAGE_CHECK
                 return
 
     def _find(self, key: str) -> QueueEntry | None:
@@ -102,12 +109,14 @@ class RestoreQueue:
         if text:
             entry.status = text
         installing = any(word in text.casefold() for word in _INSTALL_WORDS)
-        if percent >= 0:
-            entry.percent = max(0, min(100, int(percent)))
-            # ipatool prints «downloading N %»; installation follows at 100.
-            entry.stage = STAGE_INSTALL if installing else STAGE_DOWNLOAD
+        if text in _PHASE_INDEX:
+            entry.stage = _PHASE_INDEX[text]
         elif installing:
             entry.stage = STAGE_INSTALL
+        elif percent >= 0:
+            entry.stage = STAGE_DOWNLOAD
+        entry.visited.add(entry.stage)
+        entry.percent = max(0, min(100, int(percent))) if percent >= 0 and entry.stage == STAGE_DOWNLOAD else -1
 
     def settle(self, key: str, ok: bool, error: str = "") -> None:
         entry = self._find(key) or self.current()
@@ -136,13 +145,15 @@ class RestoreQueue:
         for entry in self.entries:
             item = entry.item
             size = format_size(item.size_bytes) if item.size_bytes else ""
-            stages = ["Скачано", "Установка", "Готово"]
+            stages = ["Проверка", "Загрузка", "Подготовка", "Установка", "Результат"]
             if entry.state == DONE:
                 detail, right = size, f"На {noun}"
             elif entry.state == FAILED:
                 detail, right = entry.error or "Не получилось", "Ошибка"
             elif entry.state == CURRENT:
-                if entry.stage == STAGE_INSTALL:
+                if entry.stage in (STAGE_CHECK, STAGE_PREPARE, STAGE_CONFIRM):
+                    detail = entry.status or list(STAGE_LABELS.values())[entry.stage]
+                elif entry.stage == STAGE_INSTALL:
                     detail = f"Ставится на {noun}"
                 else:
                     pct = f" {entry.percent} %" if entry.percent >= 0 else ""
@@ -150,7 +161,7 @@ class RestoreQueue:
                     if entry.status in (LICENSE_NOTICE, REGION_NOTICE) and entry.percent <= 0:
                         # the gate's notice before a free license (smoke 12): shown, not swallowed
                         detail = entry.status
-                    stages[0] = f"Скачивание{pct}"
+                    stages[STAGE_DOWNLOAD] = f"Загрузка{pct}"
                 right = ""
             else:
                 detail, right = size, "Остановлено" if self.stopped else "В очереди"
@@ -162,6 +173,7 @@ class RestoreQueue:
                     "bundleId": item.bundle_id,
                     "state": entry.state,
                     "stage": entry.stage,
+                    "visited": sorted(entry.visited),
                     # download only; the install stage has no number
                     "percent": entry.percent if entry.stage == STAGE_DOWNLOAD else -1,
                     "stages": stages,

@@ -56,15 +56,15 @@ Column {
                             id: stageCol
                             required property int index
                             required property string modelData
-                            width: (body.width - 8) / 3
+                            width: (body.width - 4 * ((row.modelData.stages || []).length - 1)) / Math.max(1, (row.modelData.stages || []).length)
                             spacing: 7
                             Rectangle {
                                 width: parent.width; height: Theme.stageBar; radius: Theme.barRadius
-                                color: stageCol.index < row.stage ? Theme.ink : Theme.track
+                                color: stageCol.index < row.stage && (row.modelData.visited || []).indexOf(stageCol.index) >= 0 ? Theme.ink : Theme.track
                                 clip: true
                                 // скачивание: по проценту
                                 Rectangle {
-                                    visible: stageCol.index === row.stage && row.stage === 0
+                                    visible: stageCol.index === row.stage && row.stage === 1 && row.modelData.percent >= 0
                                     height: parent.height; radius: Theme.barRadius
                                     width: parent.width * Math.max(0, row.modelData.percent) / 100
                                     color: Theme.accent
@@ -73,7 +73,7 @@ Column {
                                 // установка: неопределённо
                                 Rectangle {
                                     id: runner
-                                    visible: stageCol.index === row.stage && row.stage === 1
+                                    visible: stageCol.index === row.stage && row.modelData.percent < 0
                                     height: parent.height; radius: Theme.barRadius
                                     width: parent.width * 0.3
                                     color: Theme.accent
@@ -90,7 +90,7 @@ Column {
                                 token: "stageLabel"
                                 font.features: Theme.tnum
                                 text: stageCol.modelData
-                                color: stageCol.index < row.stage ? Theme.ink2 : (stageCol.index === row.stage ? Theme.ink : Theme.ink3Text)
+                                color: stageCol.index < row.stage && (row.modelData.visited || []).indexOf(stageCol.index) >= 0 ? Theme.ink2 : (stageCol.index === row.stage ? Theme.ink : Theme.ink3Text)
                             }
                         }
                     }

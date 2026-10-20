@@ -21,6 +21,7 @@ TEST_MODULES = (
     'tests/test_gui_packaging.py',
     'tests/test_auth_pty_posix.py',
     'tests/test_quick_session.py',
+    'tests/test_restore_progress.py',
     'tests/test_ui4b_names_icons.py',
     'tests/test_ui4b_logic.py',
     'tests/test_ui4b_passphrase.py',
