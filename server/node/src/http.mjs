@@ -1,4 +1,6 @@
 import http from 'node:http';
+import { randomBytes } from 'node:crypto';
+import { failureKind } from './diagnostics.mjs';
 import { createWebsite } from './website.mjs';
 import { ApiError } from './service.mjs';
 const loopback = address => ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(address);
@@ -19,7 +21,7 @@ async function jsonBody(req, limit = 4096) {
   try { return JSON.parse(Buffer.concat(parts).toString('utf8')); }
   catch { throw new ApiError(400, 'invalid_json'); }
 }
-export function createApi(service, { requireHttps = true, redemptionLimit = 20, now = Date.now, accounts = null, partners = null, website = createWebsite(), platform = null } = {}) {
+export function createApi(service, { requireHttps = true, redemptionLimit = 20, now = Date.now, accounts = null, partners = null, website = createWebsite(), platform = null, reportError = entry => console.error(JSON.stringify(entry)) } = {}) {
   const attempts = new Map();
   let lastPrune = 0;
   const server = http.createServer(async (req, res) => {
@@ -62,8 +64,13 @@ export function createApi(service, { requireHttps = true, redemptionLimit = 20, 
       }
       throw new ApiError(['/v1/catalog', '/v1/redeem'].includes(path) ? 405 : 404, 'not_found');
     } catch (error) {
-      // Never return or log SQL, passwords, submitted codes, tokens or account data.
-      reply(res, error instanceof ApiError ? error.status : 503, { status: error instanceof ApiError ? error.code : 'unavailable' });
+      if (error instanceof ApiError) { reply(res, error.status, { status: error.code }); return; }
+      const requestId=randomBytes(8).toString('hex'),kind=failureKind(error);
+      // No raw error, URL, query, request body, email, cookies or driver SQL.
+      try { reportError({event:'request_failed',request_id:requestId,kind}); } catch {}
+      const websiteRequest=new URL(req.url,'http://internal').pathname.startsWith('/v3/');
+      if(websiteRequest)res.setHeader('X-Request-ID',requestId);
+      reply(res,503,websiteRequest?{status:kind,request_id:requestId}:{status:'unavailable'});
     }
   });
   server.requestTimeout = 20000;

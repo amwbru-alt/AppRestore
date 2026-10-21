@@ -226,3 +226,15 @@ test('cabinet accepts a valid quantity from the landing calculator and ignores i
  const valid=await page(t,'account',{hash:'?quantity=3'});assert.equal(valid.form('buy-form').elements.quantity.value,'3');
  const invalid=await page(t,'account',{hash:'?quantity=1000'});assert.equal(invalid.form('buy-form').elements.quantity.value,'1');
 });
+test('database errors show a support reference without pretending the password is wrong',async t=>{
+ const p=await page(t,'account',{override:{'/v3/auth/login':async()=>({ok:false,status:503,json:async()=>({status:'database_schema_outdated',request_id:'abcdef0123456789'})})}});
+ fill(p.form('login-form'),{email:'unit@example.test',password:'A unit service password'});await submit(p.form('login-form'));
+ assert.match(p.notice(),/База сайта требует обновления/);assert.match(p.notice(),/abcdef0123456789/);assert(!p.form('login-form').querySelector('button').disabled);
+});
+test('registration reports account creation separately from subsequent cabinet failure',async t=>{
+ const p=await page(t,'account',{override:{'/v3/me':async()=>({ok:false,status:503,json:async()=>({status:'database_schema_outdated',request_id:'1234567890abcdef'})})}});
+ fill(p.form('register-form'),{email:'unit@example.test',password:'A unit service password'});await submit(p.form('register-form'));
+ assert.match(p.notice(),/Аккаунт создан, вход выполнен/);assert.match(p.notice(),/Не регистрируйтесь повторно/);
+ assert.equal(p.calls.filter(c=>c.path==='/v3/auth/register').length,1);
+ assert(!p.form('register-form').querySelector('button').disabled);
+});

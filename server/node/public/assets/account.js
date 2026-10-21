@@ -12,7 +12,7 @@ function transportState(allowed){
   else message('Можно войти или зарегистрироваться.');
 }
 AppReviveTransport.ready.then(transportState);
-$('connection-retry').onclick=run(async()=>{transportState(await AppReviveTransport.retry());});
+$('connection-retry').onclick=run(async()=>{transportState(await AppReviveTransport.retry());try{await refresh();enterCabinet();}catch(error){if(error.status!==401)throw error;}});
 function table(target, headings, rows){ const t=document.createElement('table'), head=document.createElement('tr');headings.forEach(x=>{const c=document.createElement('th');c.textContent=x;head.append(c);});t.append(head); for(const row of rows){const tr=document.createElement('tr');row.forEach(value=>{const td=document.createElement('td'); if(value instanceof Node)td.append(value);else td.textContent=String(value??'');tr.append(td);});t.append(tr);}if(!rows.length){const empty=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=headings.length;cell.textContent='Нет записей по выбранным условиям';cell.className='empty-state';empty.append(cell);t.append(empty);}$(target).replaceChildren(t); }
 const status = value => ({pending:'Ожидает',paid:'Оплачен',cancelled:'Отменён',refunded:'Возвращён',completed:'Завершено',failed:'Ошибка, попытка возвращена',reserved:'Ожидает подтверждения'}[value]||value);
 const rub = value => (Number(value)/100).toLocaleString('ru-RU',{style:'currency',currency:'RUB'});
@@ -70,14 +70,16 @@ async function refresh(){
  if(epoch!==viewEpoch)return;
  $('sync-status').textContent='Обновлено '+new Date().toLocaleTimeString('ru-RU');
  const errors=results.filter(r=>r.status==='rejected');if(errors.length)message('Некоторые разделы не загрузились. Нажмите «Обновить». '+errors[0].reason.message,true);
+ return errors.length===0;
 }
 function enterCabinet(){if(new URLSearchParams(location.search).get('next')==='admin'&&profile?.user.role==='admin'){location.assign('/admin');return;}history.replaceState(null,'','/account#cabinet');$('cabinet').scrollIntoView?.({block:'start'});}
-$('login-form').onsubmit=run(async event=>{await api('/v3/auth/login',Object.fromEntries(new FormData(event.target)));event.target.reset();await refresh();enterCabinet();message('Вход выполнен.');});
+$('login-form').onsubmit=run(async event=>{await api('/v3/auth/login',Object.fromEntries(new FormData(event.target)));event.target.reset();let complete;try{complete=await refresh();}catch(error){message('Вход выполнен, но кабинет не загрузился. Не нужно вводить пароль повторно. Нажмите «Проверить подключение». '+error.message,true);return;}enterCabinet();if(complete)message('Вход выполнен.');});
 $('register-form').onsubmit=run(async event=>{
  const details=Object.fromEntries(new FormData(event.target));await api('/v3/auth/register',details);
  try{await api('/v3/auth/login',{email:details.email,password:details.password});}catch(error){message('Аккаунт создан. Войдите с указанным паролем. '+error.message,true);return;}
  event.target.reset();try{localStorage.removeItem('apprevive_referral');}catch{}
- await refresh();enterCabinet();message('Добро пожаловать! Аккаунт создан'+(details.referral_code?' — пригласивший закреплён.':'.'));
+ let complete;try{complete=await refresh();}catch(error){message('Аккаунт создан, вход выполнен, но кабинет не загрузился. Не регистрируйтесь повторно. Нажмите «Проверить подключение». '+error.message,true);return;}
+ enterCabinet();if(complete)message('Добро пожаловать! Аккаунт создан'+(details.referral_code?' — пригласивший закреплён.':'.'));
 });
 $('reset-form').onsubmit=run(async event=>{await api('/v3/auth/reset',Object.fromEntries(new FormData(event.target)));message('Если аккаунт существует, письмо отправлено.');});
 $('resend').onclick=run(async()=>{await api('/v3/auth/resend',{email:$('reset-form').elements.email.value});message('Если требуется подтверждение, письмо отправлено.');});

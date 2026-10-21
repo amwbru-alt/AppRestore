@@ -7,6 +7,8 @@
     "node": ">=24 <27"
   },
   "scripts": {
+    "doctor": "node --env-file=.env src/run-doctor.mjs",
+    "migrate": "node --env-file=.env src/migrate.mjs",
     "start": "node --env-file=.env src/index.mjs",
     "test": "node --test --test-concurrency=1 test/*.test.mjs",
     "sync-icons": "node --env-file=.env src/manage.mjs sync-icons",

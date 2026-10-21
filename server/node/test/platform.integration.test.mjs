@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { checkDatabase } from '../src/doctor.mjs';
 import assert from 'node:assert/strict';
 import { randomBytes } from 'node:crypto';
 import { createDatabase } from '../src/db.mjs';
@@ -19,7 +20,7 @@ class FakeProvider{
 }
 test('production HTTP authorization, verified ownership, paid orders and payout ledger', {skip:process.env.APPREVIVE_TEST_MYSQL!=='1'},async t=>{
  if(!/^apprevive_test(?:_[a-z0-9]+)?$/.test(process.env.DB_NAME||''))throw Error('Isolated test database required');
- const pool=createDatabase();t.after(()=>pool.end());const mail=[];const auth=new AuthService(pool,{mail:async value=>mail.push(value)});
+ const pool=createDatabase();t.after(()=>pool.end());assert.deepEqual(await checkDatabase(pool),[]);const mail=[];const auth=new AuthService(pool,{mail:async value=>mail.push(value)});
  const pass='A service password 2026';
  async function signup(email){const before=mail.length;assert.equal((await auth.register({email,password:pass})).status,'registered');assert.equal(mail.length,before);return auth.login({email,password:pass});}
  const owner=await signup('platform-owner@example.test'), stranger=await signup('platform-stranger@example.test');

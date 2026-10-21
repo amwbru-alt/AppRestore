@@ -13,6 +13,9 @@ window.AppRevivePortal = (() => {
     invalid_or_expired_token:'Ссылка недействительна или истекла. Запросите новое письмо.',
     login_as_link_requester:'Войдите в аккаунт AppRevive, из которого запрашивали привязку Apple ID.',
     invalid_code:'Код не найден или уже использован.', rate_limited:'Слишком много запросов. Повторите позже.',
+    database_schema_outdated:'База сайта требует обновления. Сообщите поддержке: нужно выполнить миграции сервера.',
+    database_unavailable:'Сайт временно не может подключиться к базе. Повторите позже или обратитесь в поддержку.',
+    database_configuration_error:'Ошибка настроек базы сайта. Обратитесь в поддержку.',
     admin_required:'Недостаточно прав. Войдите как администратор.', unavailable:'Сервер временно недоступен. Повторите позже.'
   };
   let noticeTimer;
@@ -33,7 +36,7 @@ window.AppRevivePortal = (() => {
       const response=await fetch(path,{cache:'no-store',signal:controller.signal,credentials:'same-origin',method:body===undefined?'GET':'POST',headers:body===undefined?{}:{'Content-Type':'application/json'},...(body===undefined?{}:{body:JSON.stringify(body)})});
       let data;try{data=await response.json();}catch{throw Error('Сервер вернул некорректный ответ. Проверьте обновление API и повторите позже.');}
       if(!data || typeof data!=='object')throw Error('Сервер вернул некорректный ответ. Обновите страницу и повторите.');
-      if(!response.ok){if(response.status===401&&!path.startsWith('/v3/auth/'))window.dispatchEvent(new CustomEvent('apprevive:expired'));const error=Error(labels[data.status]||'Операция не выполнена. Код: '+(data.status||response.status));error.status=response.status;throw error;}
+      if(!response.ok){if(response.status===401&&!path.startsWith('/v3/auth/'))window.dispatchEvent(new CustomEvent('apprevive:expired'));const error=Error(labels[data.status]||'Операция не выполнена. Код: '+(data.status||response.status));if(/^[a-f0-9]{16}$/.test(data.request_id||'')){error.message+=' Номер ошибки: '+data.request_id;error.requestId=data.request_id;}error.status=response.status;throw error;}
       return data;
     } catch(error) {
       if(controller.signal.aborted)throw Error('Сервер не ответил за 20 секунд. Повторите позже.');
