@@ -10,7 +10,7 @@ import pytest
 pytest.importorskip("PySide6")
 
 import apprevive_core.ipatool_api as api  # noqa: E402
-from apprevive_core.purchases_cache import CachedPurchase, PurchasesCache  # noqa: E402
+from apprevive_core.purchases_cache import CachedPurchase, PurchasesCache, account_key  # noqa: E402
 from apprevive_gui import quick_session as qs  # noqa: E402
 from apprevive_gui.purchases import PurchasesLoader, SessionChecker  # noqa: E402
 
@@ -220,3 +220,78 @@ def test_other_install_errors_do_not_offer_relogin(session) -> None:
     s, prompts, _ = session
     _failing_install(s, ToolUnavailable("failed to purchase item: something else"))
     assert not s.sessionRelogin and prompts == []
+
+
+def test_restoration_history_requires_fresh_account_and_matching_phone(session):
+    from apprevive_gui.purchases import PurchasesView
+    from apprevive_core.history_filter import device_inventory
+    s, _, _ = session
+    rows = ({'trackId':'12345678','bundleId':'bank.old','name':'Old'},
+            {'trackId':'22345678','bundleId':'bank.current','name':'Current'})
+    s._purchases._account = account_key(EMAIL)
+    s._udid = 'phone-a'
+    s._history_inventory_udid = 'phone-a'
+    s._history_inventory = device_inventory({'bank.current':{'CFBundleIdentifier':'bank.current'}})
+    s._purchases_view = PurchasesView(rows=rows, from_cache=True)
+    assert s.restorationPurchases == []
+    s._purchases_view = PurchasesView(rows=rows, confirmed=True, account=account_key(EMAIL))
+    assert [r['trackId'] for r in s.restorationPurchases] == ['12345678']
+    s._purchases._account = account_key('other@example.test')
+    assert s.restorationPurchases == []
+    s._purchases._account = account_key(EMAIL)
+    s._udid = 'phone-b'
+    assert s.restorationPurchases == []
+    s._udid = ''
+    assert s.restorationPurchases == []
+    assert 'Подключите' in s.restorationHistoryNote
+
+
+def test_history_device_read_failure_hides_previous_inventory(session):
+    import time
+    from apprevive_gui.purchases import PurchasesView
+    from apprevive_core.history_filter import device_inventory
+    s, _, _ = session
+    s._purchases._account = account_key(EMAIL)
+    s._udid = 'phone-a'
+    s._history_inventory_udid = 'phone-a'
+    s._history_inventory = device_inventory({})
+    s._purchases_view = PurchasesView(rows=({'trackId':'12345678','bundleId':'bank.old'},), confirmed=True, account=account_key(EMAIL))
+    def fail(_):
+        raise RuntimeError('device locked')
+    s.service.core.tools.list_apps = fail
+    s._ensure_history_inventory(force=True)
+    deadline = time.monotonic()+2
+    while s._history_scan_running and time.monotonic()<deadline:
+        time.sleep(.005)
+    assert not s._history_scan_running
+    assert s.restorationPurchases == []
+    assert 'Не удалось проверить' in s.restorationHistoryNote
+
+
+def test_device_switch_discards_inflight_inventory(session):
+    import threading
+    import time
+    from apprevive_gui.purchases import PurchasesView
+    s, _, _ = session
+    entered, release = threading.Event(), threading.Event()
+    s._purchases._account = account_key(EMAIL)
+    s._udid = 'phone-a'
+    s._purchases_view = PurchasesView(rows=({'trackId':'12345678','bundleId':'bank.old'},), confirmed=True, account=account_key(EMAIL))
+    def scan(udid):
+        if udid=='phone-a':
+            entered.set()
+            release.wait(2)
+            return {}
+        return {'bank.old':{'CFBundleIdentifier':'bank.old'}}
+    s.service.core.tools.list_apps = scan
+    s._ensure_history_inventory()
+    assert entered.wait(1)
+    s._udid = 'phone-b'
+    s._ensure_history_inventory(force=True)
+    assert s.restorationPurchases == []
+    release.set()
+    deadline=time.monotonic()+2
+    while (s._history_scan_running or s._history_inventory_udid!='phone-b') and time.monotonic()<deadline:
+        time.sleep(.005)
+    assert s._history_inventory_udid=='phone-b'
+    assert s.restorationPurchases == []

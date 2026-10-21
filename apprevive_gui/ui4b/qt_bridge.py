@@ -435,6 +435,8 @@ class SessionSource(SourceBase):
         if self.connected and udid and udid != self._phone_udid and hasattr(s, "loadPhone"):
             self._phone_udid = udid
             s.loadPhone()
+            if s.signedIn:
+                s.loadPurchases()
         if not self.connected:
             self._phone_udid = ""
             self._missing_udid = ""
@@ -608,7 +610,8 @@ class SessionSource(SourceBase):
 
     def items(self) -> list[RestoreItem]:
         nameless: list[tuple[str, str]] = []
-        missing = self._named(list(self._missing), nameless)
+        eligible = {(str(row.get("trackId") or ""), str(row.get("bundleId") or "")) for row in self.restoration_rows()}
+        missing = self._named([app for app in self._missing if (str(getattr(app, "store_id", "") or ""), str(getattr(app, "bundle_id", "") or "")) in eligible], nameless)
         offloaded = self._named(list(self.session.offloaded_snapshot()), nameless)
         self._look_up_names(nameless)
         items = apply_statuses(build_items(offloaded, missing), self._statuses)
@@ -628,6 +631,9 @@ class SessionSource(SourceBase):
 
     def space(self) -> DeviceSpace:
         return self._space
+
+    def restoration_rows(self) -> list[dict[str, object]]:
+        return list(getattr(self.session, "restorationPurchases", []) or [])
 
     def purchase_rows(self) -> list[dict[str, object]]:
         return list(self.session.purchases or [])
@@ -1524,7 +1530,7 @@ class Restore4b(QObject):
             bool(note) and not busy and not note.startswith("Останов") and "обновлён" not in note
         )
         view = history_view(
-            self.source.purchase_rows(),
+            self.source.restoration_rows() if hasattr(self.source, "restoration_rows") else [],
             signed_in=bool(self.source.signed_in),
             busy=busy,
             failed=failed,
@@ -1533,6 +1539,12 @@ class Restore4b(QObject):
             banks_only=self._history_banks_only,
             catalog=self.catalog_provider.items() if self.catalog_provider else standard_apps(),
         )
+        device_note = str(getattr(session, "restorationHistoryNote", "") or "")
+        if device_note:
+            view["lead"] = device_note
+            view["empty"] = device_note
+        elif not view["rows"] and not busy:
+            view["empty"] = "Нет подтверждённых приложений из истории Apple ID, отсутствующих на этом iPhone. Приложения без bundle ID скрыты: их нельзя надёжно сверить с телефоном."
         view["open"] = self._history_open
         view["query"] = self._history_query
         return view
@@ -1570,7 +1582,7 @@ class Restore4b(QObject):
         if self.flow.running or not self.source.signed_in:
             return
         store_id = str(store_id or "").strip()
-        purchases = self.source.purchase_rows()
+        purchases = self.source.restoration_rows() if hasattr(self.source, "restoration_rows") else []
         if not any(str(item.get("trackId") or item.get("track_id") or "") == store_id for item in purchases):
             self._history_id_note = "Этот ID не найден в загруженной истории текущего Apple ID. Установка не запускалась."
             self._refresh()

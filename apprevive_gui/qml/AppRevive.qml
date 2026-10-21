@@ -2205,7 +2205,7 @@ ApplicationWindow {
                                 width: parent.width
                                 height: Math.min(contentHeight, 280)
                                 clip: true
-                                model: session.purchases
+                                model: session.restorationPurchases
                                 delegate: Item {
                                     required property var modelData
                                     width: ListView.view.width

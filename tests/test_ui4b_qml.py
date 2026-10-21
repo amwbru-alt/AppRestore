@@ -955,6 +955,7 @@ def test_history_store_id_starts_the_usual_restore(qapp) -> None:
     source = FakeSource("empty")
     source.signed_in = True
     source.purchase_rows = lambda: [{"trackId": "492224193", "name": "СберБанк"}]
+    source.restoration_rows = source.purchase_rows  # verified missing-device fixture
     controller = Restore4b(source, onboarded=True)
     controller.openHistory()
     controller.restoreByStoreId("не id")
@@ -1006,3 +1007,16 @@ def test_settings_cleanup_requires_confirmation_and_renders(qapp):
     assert controller.settings['cleanupStatus'] == 'Удалено'
     assert not warnings
     window.close()
+
+
+def test_history_never_restores_an_owned_but_currently_installed_app(qapp):
+    source = FakeSource('empty')
+    source.signed_in = True
+    source.purchase_rows = lambda: [{'trackId':'492224193','name':'Owned'}]
+    source.restoration_rows = lambda: []
+    controller = Restore4b(source,onboarded=True)
+    controller.openHistory()
+    controller.restoreFromHistory('492224193','Owned')
+    assert controller.history['rows'] == []
+    assert controller.history['open'] is True
+    assert not controller._checking_space

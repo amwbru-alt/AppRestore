@@ -75,6 +75,8 @@ def _source(qapp):
                  {"trackId": "", "bundleId": "com.example.weather", "name": "Погода"},
                  {"trackId": "222", "bundleId": "com.example.phone.app", "name": "Телефон+"}]
     src = SessionSource(StubSession(off, missing, phone, purchases))
+    # This naming fixture explicitly represents verified absent account apps.
+    src.session.restorationPurchases = [{"trackId": str(a.store_id or ""), "bundleId": a.bundle_id} for a in missing]
     src._missing = missing
     src.connected = src.signed_in = True
     src.auth_phase = "in"

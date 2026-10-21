@@ -160,6 +160,8 @@ class PurchasesView:
     progress: str = ""
     note: str = ""
     from_cache: bool = False
+    confirmed: bool = False
+    account: str = ""
     #: The refresh failed because the session needs the user (offer sign-in).
     session_problem: bool = False
 
@@ -455,6 +457,8 @@ class PurchasesLoader:
             run,
             PurchasesView(
                 rows=tuple(_row(item) for item in final),
+                confirmed=True,
+                account=run.account,
                 total=total,
                 progress=progress_text(len(final), total),
                 note=note,

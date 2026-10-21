@@ -47,6 +47,7 @@ from apprevive_gui.service_adapter import GuiService
 from apprevive_gui.shelf_probe import probe_store
 from apprevive_core.ipatool_api import ErrorCode, IpatoolClient, IpatoolError
 from apprevive_core.paths import resolve_tool
+from apprevive_core.history_filter import device_inventory, missing_history
 from apprevive_core.purchases_cache import PurchasesCache
 from apprevive_gui.purchases import (
     SESSION_UNKNOWN,
@@ -200,9 +201,16 @@ class QuickSession(QObject):
         self._files_mode = False
         self._session_view: SessionView = SESSION_UNKNOWN
         self._purchases_view = PurchasesView()
+        self._history_inventory = None
+        self._history_inventory_udid = ""
+        self._history_scan_running = False
+        self._history_scan_pending = False
+        self._history_inventory_note = "Подключите iPhone для проверки установленных приложений."
         self._session_checker = SessionChecker(
             self._ipatool_client, self._on_session_view, fallback_factory=self._ipatool_client_pty
         )
+        self.installSettled.connect(lambda *_: self._ensure_history_inventory(force=True))
+        self.restoreSettled.connect(lambda *_: self._ensure_history_inventory(force=True))
         self._purchases = PurchasesLoader(
             PurchasesCache(),
             self._ipatool_client,
@@ -246,11 +254,69 @@ class QuickSession(QObject):
             self._on_session_view(SessionView("expired", STORE_MISMATCH_TEXT, relogin=True))
 
     def _on_purchases_view(self, view: PurchasesView) -> None:
+        self._ensure_history_inventory()
         with self._lock:
             self._purchases_view = view
         self.purchasesChanged.emit()
         if view.session_problem:
             self._on_session_view(SessionView("expired", view.note, relogin=True))
+
+    def _ensure_history_inventory(self, force: bool = False) -> None:
+        with self._lock:
+            udid = self._udid
+            if self._history_scan_running:
+                if force or self._history_inventory_udid != udid:
+                    self._history_inventory = None
+                    self._history_scan_pending = True
+                return
+            if not udid:
+                self._history_inventory = None
+                self._history_inventory_udid = ""
+                self._history_inventory_note = "Подключите iPhone для проверки установленных приложений."
+                return
+            if not force and self._history_inventory_udid == udid and self._history_inventory is not None:
+                return
+            self._history_inventory = None
+            self._history_inventory_udid = udid
+            self._history_scan_running = True
+            self._history_inventory_note = "Проверяем установленные приложения на iPhone…"
+        def scan() -> None:
+            inventory = None
+            note = ""
+            try:
+                inventory = device_inventory(self.service.core.tools.list_apps(udid))
+            except Exception:
+                note = "Не удалось проверить приложения iPhone. Разблокируйте его, подтвердите доверие и нажмите «Обновить». Список скрыт до проверки."
+            with self._lock:
+                self._history_scan_running = False
+                if self._udid == udid:
+                    self._history_inventory = inventory
+                    self._history_inventory_note = note
+                pending = self._history_scan_pending or self._udid != udid
+                self._history_scan_pending = False
+                if pending:
+                    self._history_inventory = None
+            self.purchasesChanged.emit()
+            if pending:
+                self._ensure_history_inventory(force=True)
+        threading.Thread(target=scan, name="apprevive-history-device", daemon=True).start()
+
+    @Property("QVariantList", notify=purchasesChanged)
+    def restorationPurchases(self) -> list[dict[str, object]]:
+        with self._lock:
+            view = self._purchases_view
+            if not self._udid or self._history_inventory_udid != self._udid or not view.confirmed or view.account != self._purchases.account:
+                return []
+            return missing_history(view.rows, self._history_inventory)
+
+    @Property(str, notify=purchasesChanged)
+    def restorationHistoryNote(self) -> str:
+        with self._lock:
+            if not self._udid:
+                return "Подключите iPhone для проверки установленных приложений."
+            if self._history_inventory_udid != self._udid:
+                return "Выбран другой iPhone. Нажмите «Обновить» для проверки."
+            return self._history_inventory_note
 
     def _follow_purchases_account(self, email: str) -> None:
         self._purchases.set_account(email)
@@ -306,6 +372,7 @@ class QuickSession(QObject):
     def loadPurchases(self) -> None:
         """Cached list at once, then a refresh page by page."""
 
+        self._ensure_history_inventory(force=True)
         self._purchases.start()
 
     @Slot()

@@ -197,11 +197,14 @@ def test_cached_list_shows_first_then_refresh_replaces_it(tmp_path: Path) -> Non
     loader, _cache, views = _loader(tmp_path, runner)
     loader.set_account(EMAIL)
     shown = views[-1]
+    assert not shown.confirmed
     assert shown.from_cache and [r["trackId"] for r in shown.rows] == ["999"]
     loader.start()
     loader.join(5)
     assert views[-1].rows and [r["trackId"] for r in views[-1].rows] == ["1", "2"]
     assert not views[-1].from_cache
+    assert views[-1].confirmed
+    assert views[-1].account == cache.account_key(EMAIL)
 
 
 def test_cancel_sets_event_and_stops_before_next_page(tmp_path: Path) -> None:
