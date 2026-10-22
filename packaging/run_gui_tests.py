@@ -22,6 +22,7 @@ TEST_MODULES = (
     'tests/test_auth_pty_posix.py',
     'tests/test_quick_session.py',
     'tests/test_history_filter.py',
+    'tests/test_catalog_discovery.py',
     'tests/test_purchases_loader.py',
     'tests/test_quick_session_purchases.py',
     'tests/test_ui4b_history.py',

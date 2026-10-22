@@ -238,3 +238,12 @@ test('registration reports account creation separately from subsequent cabinet f
  assert.equal(p.calls.filter(c=>c.path==='/v3/auth/register').length,1);
  assert(!p.form('register-form').querySelector('button').disabled);
 });
+test('admin reviews discovered apps with text-safe metadata and editable names',async t=>{
+ const p=await page(t,'admin',{logged:true,role:'admin',override:{
+  '/v3/admin/discoveries?page=1':async()=>({ok:true,status:200,json:async()=>({apps:[{store_id:'12345678',bundle_id:'bank.old',name:'<img src=x onerror=alert(1)>',source:'apple_history',created_at:'2026-10-22'}],total:1,page:1,pages:1})}),
+  '/v3/admin/discoveries/review':async()=>({ok:true,status:200,json:async()=>({status:'ok'})})
+ }});
+ await settle();const area=p.w.document.getElementById('discoveries');assert(area.textContent.includes('<img'));assert(!area.querySelector('img'));
+ const name=area.querySelector('input');name.value='Reviewed bank';const publish=[...area.querySelectorAll('button')].find(b=>b.textContent==='Опубликовать');assert(publish);publish.click();await settle();
+ const call=p.calls.find(c=>c.path==='/v3/admin/discoveries/review');assert.equal(call.body.name,'Reviewed bank');assert.equal(call.body.action,'approve');assert.equal(call.body.store_id,'12345678');
+});

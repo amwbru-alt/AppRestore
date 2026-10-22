@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { createDatabase } from './db.mjs';
 const pool = createDatabase();
 try {
-  for (const file of ['schema.sql','catalog-schema.sql','accounts-schema.sql','partners-schema.sql','catalog-groups-schema.sql','platform-schema.sql']) {
+  for (const file of ['schema.sql','catalog-schema.sql','accounts-schema.sql','partners-schema.sql','catalog-groups-schema.sql','platform-schema.sql','discoveries-schema.sql']) {
     const text = await readFile(new URL('../../promo/' + file, import.meta.url), 'utf8');
     for (const statement of text.replace(/^\s*--.*$/gm, '').split(';').filter(s => s.trim())) await pool.query(statement);
   }

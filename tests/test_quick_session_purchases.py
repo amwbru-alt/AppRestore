@@ -47,6 +47,7 @@ def _drain(app) -> None:
 
 @pytest.fixture()
 def session(qapp, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(qs, "DiscoveryReporter", lambda: SimpleNamespace(submit=lambda rows: None))
     monkeypatch.setattr(qs, "GuiService", lambda demo_mode=False: FakeService())
     monkeypatch.setattr(qs, "load_bindings", lambda: {})
     monkeypatch.setattr(qs, "forget_session", lambda email: None)
@@ -295,3 +296,23 @@ def test_device_switch_discards_inflight_inventory(session):
         time.sleep(.005)
     assert s._history_inventory_udid=='phone-b'
     assert s.restorationPurchases == []
+
+
+def test_confirmed_missing_history_triggers_candidate_reporting(session):
+    import threading
+    from apprevive_gui.purchases import PurchasesView
+    from apprevive_core.history_filter import device_inventory
+    s, _, _ = session
+    s._udid='phone-a'
+    s._history_inventory_udid='phone-a'
+    s._history_inventory=device_inventory({})
+    s._purchases._account=account_key(EMAIL)
+    reported,done=[],threading.Event()
+    def submit(rows):
+        reported.extend(rows)
+        done.set()
+    s._discovery_reporter=SimpleNamespace(submit=submit)
+    row={'trackId':'12345678','bundleId':'bank.old','name':'Old'}
+    s._on_purchases_view(PurchasesView(rows=(row,),confirmed=True,account=account_key(EMAIL)))
+    assert done.wait(1)
+    assert reported==[row]

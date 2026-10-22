@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { createDatabase } from './db.mjs';
 import { failureKind } from './diagnostics.mjs';
-export const schemaFiles = ['schema.sql','catalog-schema.sql','accounts-schema.sql','partners-schema.sql','catalog-groups-schema.sql','platform-schema.sql'];
+export const schemaFiles = ['schema.sql','catalog-schema.sql','accounts-schema.sql','partners-schema.sql','catalog-groups-schema.sql','platform-schema.sql','discoveries-schema.sql'];
 // Read expected tables and columns from the same versioned DDL used by migration.
 export async function expectedSchema() {
   const tables = [];

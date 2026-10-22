@@ -47,6 +47,7 @@ from apprevive_gui.service_adapter import GuiService
 from apprevive_gui.shelf_probe import probe_store
 from apprevive_core.ipatool_api import ErrorCode, IpatoolClient, IpatoolError
 from apprevive_core.paths import resolve_tool
+from apprevive_core.catalog_discovery import DiscoveryReporter
 from apprevive_core.history_filter import device_inventory, missing_history
 from apprevive_core.purchases_cache import PurchasesCache
 from apprevive_gui.purchases import (
@@ -201,6 +202,7 @@ class QuickSession(QObject):
         self._files_mode = False
         self._session_view: SessionView = SESSION_UNKNOWN
         self._purchases_view = PurchasesView()
+        self._discovery_reporter = DiscoveryReporter()
         self._history_inventory = None
         self._history_inventory_udid = ""
         self._history_scan_running = False
@@ -257,9 +259,15 @@ class QuickSession(QObject):
         self._ensure_history_inventory()
         with self._lock:
             self._purchases_view = view
+        self._report_history_candidates()
         self.purchasesChanged.emit()
         if view.session_problem:
             self._on_session_view(SessionView("expired", view.note, relogin=True))
+
+    def _report_history_candidates(self) -> None:
+        rows = self.restorationPurchases
+        if rows:
+            threading.Thread(target=self._discovery_reporter.submit, args=(rows,), name="apprevive-discoveries", daemon=True).start()
 
     def _ensure_history_inventory(self, force: bool = False) -> None:
         with self._lock:
@@ -296,6 +304,7 @@ class QuickSession(QObject):
                 self._history_scan_pending = False
                 if pending:
                     self._history_inventory = None
+            self._report_history_candidates()
             self.purchasesChanged.emit()
             if pending:
                 self._ensure_history_inventory(force=True)

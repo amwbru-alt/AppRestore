@@ -1,3 +1,4 @@
+import { discover, discoveries, reviewDiscovery } from './discoveries.mjs';
 import { shopOrders } from './shop-orders.mjs';
 import { SecurityService } from './security.mjs';
 import { records,metrics } from './admin-data.mjs';
@@ -72,6 +73,7 @@ export class Platform {
       if (action === 'login') res.setHeader('Set-Cookie', `apprevive_session=${result.token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=604800${this.env.DEV_ALLOW_INSECURE_AUTH === 'true' || httpAuthOrigin(this.env) ? '' : '; Secure'}`);
       reply(res, 200, result); return true;
     }
+    if(path==='/v3/catalog/discover'&&req.method==='POST'){this.limit('discover:'+ip,10,60);reply(res,200,await discover(this.pool,await json(req,65536)));return true;}
     const user = await this.auth.session(req);
     const query = new URL(req.url, 'http://internal').searchParams;
     if(path==='/v3/security/sessions'&&req.method==='GET'){reply(res,200,await this.security.sessions(user));return true;}
@@ -111,6 +113,7 @@ export class Platform {
     if (path === '/v3/checkout/sync' && req.method === 'POST') { const body = await json(req); reply(res, 200, await this.payments.sync(body.checkout_id, user)); return true; }
     if (path.startsWith('/v3/admin/')) {
       if (user.role !== 'admin') throw new ApiError(403, 'admin_required');
+      if(path==='/v3/admin/discoveries'&&req.method==='GET'){reply(res,200,await discoveries(this.pool,query));return true;}
       if(path==='/v3/admin/metrics'&&req.method==='GET'){reply(res,200,await metrics(this.pool));return true;}
       if(['/v3/admin/users','/v3/admin/orders'].includes(path)&&req.method==='GET'){reply(res,200,await records(this.pool,path.split('/').at(-1),query));return true;}
       if (path === '/v3/admin/snapshot' && req.method === 'GET') {
@@ -134,7 +137,8 @@ export class Platform {
       const target = body.checkout_id || body.account_id || body.partner_id || body.payment_reference || body.store_id || 'catalog';
       await this.audit(user, 'begin:' + path.slice('/v3/admin/'.length), target);
       let result;
-      if (path === '/v3/admin/policy') {
+      if(path==='/v3/admin/discoveries/review')result=await reviewDiscovery(this.pool,body);
+      else if (path === '/v3/admin/policy') {
         const policy = commissionPolicy({ PARTNER_COMMISSION_BPS: body.rate, PARTNER_HOLD_DAYS: body.days });
         await this.pool.execute("INSERT INTO apprevive_settings(name,value) VALUES ('commission_policy',?) ON DUPLICATE KEY UPDATE value=VALUES(value)", [JSON.stringify(policy)]);
         result = { status: 'ok', policy };
