@@ -107,7 +107,7 @@ Item {
                 objectName: "historyStoreIdGo"
                 anchors.right: parent.right
                 anchors.verticalCenter: parent.verticalCenter
-                readonly property bool ready: idInput.text.trim().length > 0
+                readonly property bool ready: idInput.text.trim().length > 0 && !root.h.manualBusy
                 width: idGoText.implicitWidth + 2 * Theme.rowButtonPadX
                 height: 44
                 radius: Theme.radiusSearch
@@ -147,6 +147,7 @@ Item {
                 TextInput {
                     id: idInput
                     objectName: "historyStoreId"
+                    enabled: !root.h.manualBusy
                     x: 14
                     width: parent.width - 28
                     anchors.verticalCenter: parent.verticalCenter

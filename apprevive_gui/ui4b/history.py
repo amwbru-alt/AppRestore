@@ -14,7 +14,7 @@ CLOSE = "Закрыть"
 ACTION = "Восстановить"
 PLACEHOLDER = "Название в истории покупок"
 ID_PLACEHOLDER = "ID приложения, если его нет в списке"
-ID_ACTION = "Скачать"
+ID_ACTION = "Установить"
 ID_BAD = "Нужен ID приложения — число из ссылки App Store"
 SIGNIN_TEXT = "Войдите в Apple ID, чтобы увидеть историю покупок"
 SIGNIN_LINK = "Войти"
@@ -214,7 +214,7 @@ def history_view(
         "title": TITLE,
         "bankAvailable": bool(bank_ids),
         "banksOnly": only_banks,
-        "allowManualId": False,
+        "allowManualId": signed_in,
         "close": CLOSE,
         "placeholder": "Название приложения или ID" if catalog else PLACEHOLDER,
         "signedIn": signed_in,

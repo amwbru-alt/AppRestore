@@ -16,6 +16,7 @@ from PySide6.QtQuick import QQuickItem
 from PySide6.QtWidgets import QApplication
 
 from apprevive_gui.ui4b.fake_data import FakeIconBook, FakeSource
+from apprevive_gui.ui4b.catalog import ACTION_STORE
 from apprevive_gui.ui4b.qt_bridge import PickerModel, Restore4b, SessionSource
 from apprevive_gui.ui4b.space import DeviceSpace
 from apprevive_gui.ui4b.window import load, qml_path
@@ -1020,3 +1021,47 @@ def test_history_never_restores_an_owned_but_currently_installed_app(qapp):
     assert controller.history['rows'] == []
     assert controller.history['open'] is True
     assert not controller._checking_space
+
+
+def test_manual_id_can_start_without_a_history_row(qapp):
+    source=FakeSource('empty')
+    source.purchase_rows=lambda: []
+    source.restoration_rows=lambda: []
+    controller=Restore4b(source,onboarded=True)
+    controller.openHistory()
+    chosen=[]
+    controller._start=lambda items: chosen.extend(items)
+    controller.restoreByStoreId('https://apps.apple.com/app/id492224193')
+    assert [item.store_id for item in chosen]==['492224193']
+    assert chosen[0].action==ACTION_STORE
+    assert controller.history['open'] is False
+
+
+def test_manual_id_needs_a_device_and_ignores_duplicate_clicks(qapp):
+    source=FakeSource('disconnected')
+    controller=Restore4b(source,onboarded=True)
+    controller.openHistory()
+    chosen=[]
+    controller._start=lambda items: chosen.extend(items)
+    controller.restoreByStoreId('492224193')
+    assert not chosen
+    assert 'Подключите' in controller.history['idNote']
+    source.connected=True
+    controller._checking_space=True
+    controller.restoreByStoreId('492224193')
+    assert not chosen
+
+
+def test_manual_id_field_is_visible_in_history(qapp):
+    source=FakeSource('empty')
+    controller=Restore4b(source,onboarded=True)
+    controller.openHistory()
+    engine,_icons,warnings=open_window(qapp,controller)
+    window=engine.rootObjects()[0]
+    field=window.findChild(QQuickItem,'historyStoreId')
+    assert field is not None and field.property('visible')
+    window.close()
+    del window
+    del engine
+    qapp.processEvents()
+    assert warnings==[]

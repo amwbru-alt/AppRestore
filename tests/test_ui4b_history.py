@@ -111,3 +111,8 @@ def test_history_says_when_the_account_has_none() -> None:
     view = history_view([], signed_in=True)
     assert view["empty"].startswith("В этом Apple ID")
     assert view["title"] == "Восстановить из истории"
+
+
+def test_manual_id_is_available_only_after_signin():
+    assert history_view([],signed_in=True)['allowManualId'] is True
+    assert history_view([],signed_in=False)['allowManualId'] is False

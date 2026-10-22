@@ -1547,6 +1547,7 @@ class Restore4b(QObject):
             view["empty"] = "Нет подтверждённых приложений из истории Apple ID, отсутствующих на этом iPhone. Приложения без bundle ID скрыты: их нельзя надёжно сверить с телефоном."
         view["open"] = self._history_open
         view["query"] = self._history_query
+        view["manualBusy"] = bool(self.flow.running or self._checking_space or self._consent)
         return view
 
     @Slot()
@@ -1597,7 +1598,11 @@ class Restore4b(QObject):
     def restoreByStoreId(self, text: str) -> None:
         """Try the usual restore for an App Store id that the history list omitted."""
 
-        if not self.source.signed_in:
+        if not self.source.signed_in or self.flow.running or self._checking_space or self._consent:
+            return
+        if not self.source.connected:
+            self._history_id_note = "Подключите iPhone и подтвердите доверие компьютеру."
+            self._refresh()
             return
         store_id = parse_store_id(text)
         if not store_id:
@@ -1605,7 +1610,14 @@ class Restore4b(QObject):
             self._refresh()
             return
         name = name_for_store_id(self.source.purchase_rows(), store_id) or store_id
-        self.restoreFromHistory(store_id, name)
+        # Explicit manual input does not require the history to be complete.
+        # _start retains the normal device-space, license and metered restore path.
+        item = RestoreItem(key=f"store:{store_id}", name=name, group=GROUP_REMOVED,
+                           action=ACTION_STORE, store_id=store_id)
+        self._history_open = False
+        self._history_query = ""
+        self._history_id_note = ""
+        self._start([item])
 
     @Property("QVariantMap", notify=changed)
     def journal(self) -> dict[str, object]:
