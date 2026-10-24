@@ -22,7 +22,7 @@ function clearPrivateView(){
  viewEpoch++;profile=null;checkoutRequest=null;$('cabinet').hidden=true;$('auth').hidden=false;
  for(const id of ['orders','code-stats','shop-pagination','partner','partner-stats','referrals','ledger','payouts','sessions'])$(id).replaceChildren();
  for(const id of ['password-form','buy-form','shop-filter'])$(id).reset();
- $('who').textContent='';shopPage=1;shopVersion++;
+ $('who').textContent='';shopPage=1;shopVersion++;$('code-copy-text').value='';$('code-copy-panel').hidden=true;paymentAvailable=null;updatePurchaseTotal();
 }
 async function refreshPartner(){
  const epoch=viewEpoch,data=await api('/v3/partner'),p=data.partner;if(epoch!==viewEpoch)return;
@@ -44,6 +44,7 @@ async function refreshPartner(){
 }
 
 async function refreshOrders(page=shopPage){
+ closeCodeCopy();
  const epoch=viewEpoch,version=++shopVersion,query=new URLSearchParams(new FormData($('shop-filter')));query.set('page',String(page));query.set('size','20');
  const data=await api('/v3/shop/orders?'+query);if(epoch!==viewEpoch||version!==shopVersion)return;
  shopPage=data.page;
@@ -55,7 +56,7 @@ table('orders',['Заказ','Куплено в заказе','Сумма','Со
  line.append(field,badge);
  if(code.activated_at){const time=document.createElement('small');time.textContent='Активирован '+new Date(code.activated_at).toLocaleString('ru-RU');line.append(time);}
  if(code.code){const copy=document.createElement('button');copy.className='button ghost';copy.textContent='Копировать';copy.onclick=run(async()=>{try{await navigator.clipboard.writeText(code.code);message('Промокод скопирован.');}catch{field.focus();field.select();message('Скопируйте выделенный промокод.');}});line.append(copy);}else{const note=document.createElement('small');note.textContent='Текст старого кода не сохранялся до обновления.';line.append(note);}
- cell.append(line);}if(order.state==='pending'){const b=document.createElement('button');b.className='button ghost';b.textContent='Проверить оплату';b.onclick=run(async()=>{const updated=await api('/v3/checkout/sync',{checkout_id:order.checkout_id});if(updated.confirmation_url){const a=document.createElement('a');a.href=updated.confirmation_url;a.textContent='Перейти к оплате ↗';a.className='button primary';cell.append(a);}else await refreshOrders();});cell.append(b);}return [order.checkout_id,order.quantity,rub(order.amount_kopecks),status(order.state),cell];}));}
+ cell.append(line);}if(order.state==='pending'){const b=document.createElement('button');b.className='button ghost';b.textContent='Проверить оплату';b.onclick=run(async()=>{const updated=await api('/v3/checkout/sync',{checkout_id:order.checkout_id});if(updated.confirmation_url){const a=document.createElement('a');a.href=updated.confirmation_url;a.textContent='Перейти к оплате ↗';a.className='button primary';cell.append(a);}else await refreshOrders();});cell.append(b);}const support=document.createElement('a');support.href='https://t.me/llifegoldll?text='+encodeURIComponent('Здравствуйте! Вопрос по заказу AppRevive '+order.checkout_id+'. Статус: '+status(order.state)+'.');support.target='_blank';support.rel='noopener noreferrer';support.className='order-support';support.textContent='Поддержка по заказу ↗';cell.append(support);return [order.checkout_id,order.quantity,rub(order.amount_kopecks),status(order.state),cell];}));}
 function renderShopPagination(data){
  const box=$('shop-pagination'),label=document.createElement('span');label.textContent=`Страница ${data.page} из ${data.pages} · заказов по фильтру ${data.total}`;box.replaceChildren(label);
  for(const [text,target,disabled]of [['← Назад',data.page-1,data.page<=1],['Далее →',data.page+1,data.page>=data.pages]]){const button=document.createElement('button');button.type='button';button.className='button ghost';button.textContent=text;button.disabled=disabled;button.onclick=run(()=>refreshOrders(target));box.append(button);}
@@ -65,7 +66,7 @@ $('shop-reset').onclick=run(async()=>{$('shop-filter').reset();await refreshOrde
 async function refresh(){
  const epoch=viewEpoch,next=await api('/v3/me');if(epoch!==viewEpoch)return;profile=next;$('auth').hidden=true;$('cabinet').hidden=false;$('who').textContent=profile.user.email;
  $('invited-by').textContent=profile.invited_by?'Вы зарегистрированы по приглашению '+profile.invited_by+'. Пригласивший закреплён.':'';
- const jobs=[['sessions',refreshSessions],['partner',refreshPartner],['orders',refreshOrders],['payment-status',async()=>{const settings=await api('/v3/status');$('payment-status').textContent=settings.payments_enabled?'':'Онлайн-оплата пока не настроена.';}]];
+ const jobs=[['sessions',refreshSessions],['partner',refreshPartner],['orders',refreshOrders],['payment-status',async()=>{const settings=await api('/v3/status');paymentAvailable=!!settings.payments_enabled;$('payment-status').textContent=paymentAvailable?'':'Онлайн-оплата пока не настроена.';updatePurchaseTotal();}]];
  const results=await Promise.allSettled(jobs.map(async([id,load])=>{try{await load();}catch(error){if(epoch!==viewEpoch)return;$(id).textContent='Не удалось загрузить раздел: '+error.message;throw error;}}));
  if(epoch!==viewEpoch)return;
  $('sync-status').textContent='Обновлено '+new Date().toLocaleTimeString('ru-RU');
@@ -120,10 +121,45 @@ async function liveRefresh(){
   $('sync-status').textContent=results.some(r=>r.status==='rejected')?'Не удалось обновить. Повторим автоматически.':'Обновлено '+new Date().toLocaleTimeString('ru-RU');
  }finally{liveBusy=false;}
 }
-const liveTimer=setInterval(liveRefresh,30000);
+let liveTimer=setInterval(liveRefresh,30000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)liveRefresh();});
 window.addEventListener('online',liveRefresh);
-window.addEventListener('pagehide',()=>clearInterval(liveTimer));
+window.addEventListener('pagehide',()=>{clearInterval(liveTimer);liveTimer=null;$('code-copy-text').value='';$('code-copy-panel').hidden=true;});
+window.addEventListener('pageshow',()=>{if(!liveTimer)liveTimer=setInterval(liveRefresh,30000);liveRefresh();});
 
 const requestedQuantity=Number(new URLSearchParams(location.search).get('quantity'));
 if(Number.isInteger(requestedQuantity)&&requestedQuantity>=1&&requestedQuantity<=100)$('buy-form').elements.quantity.value=String(requestedQuantity);
+
+let paymentAvailable=null;
+function updatePurchaseTotal(){
+ const form=$('buy-form'),quantity=Number(form.elements.quantity.value),valid=Number.isInteger(quantity)&&quantity>=1&&quantity<=100;
+ $('purchase-total').textContent=valid?'Итого: '+rub(quantity*10000):'Укажите от 1 до 100 кодов';
+ const button=form.querySelector('button');button.disabled=!valid||paymentAvailable===false;
+}
+$('buy-form').elements.quantity.addEventListener('input',updatePurchaseTotal);
+updatePurchaseTotal();
+function closeCodeCopy(){$('code-copy-text').value='';$('code-copy-panel').hidden=true;}
+$('close-code-copy').onclick=closeCodeCopy;
+async function freshUnusedCodes(){
+ if(!profile)throw Error('Войдите в AppRevive.');
+ const epoch=viewEpoch,query=new URLSearchParams(new FormData($('shop-filter')));query.set('page',String(shopPage));query.set('size','20');
+ const signature=query.toString(),page=shopPage;
+ const data=await api('/v3/shop/orders?'+query);
+ const current=new URLSearchParams(new FormData($('shop-filter')));current.set('page',String(shopPage));current.set('size','20');
+ if(signature!==current.toString()||page!==shopPage)throw Error('Фильтры или страница изменились. Повторите копирование кодов.');
+ if(epoch!==viewEpoch||!profile)throw Error('Сессия изменилась. Войдите снова.');
+ const paid=new Set(data.orders.filter(order=>order.state==='paid').map(order=>order.checkout_id));
+ const codes=[...new Set(data.codes.filter(code=>paid.has(code.checkout_id)&&code.activation_status==='unused'&&code.code).map(code=>code.code))];
+ if(!codes.length)throw Error('На этой странице нет неактивированных кодов оплаченных заказов. Измените фильтры или страницу.');
+ return codes;
+}
+$('copy-unused').onclick=run(async()=>{
+ closeCodeCopy();const codes=await freshUnusedCodes(),text=codes.join('\n');
+ try{await navigator.clipboard.writeText(text);message('Скопировано кодов: '+codes.length+'. Статус проверен перед копированием.');}
+ catch{$('code-copy-panel').hidden=false;const field=$('code-copy-text');field.value=text;field.focus();field.select();message('Буфер обмена недоступен. Скопируйте выделенные коды вручную.');}
+});
+$('download-unused').onclick=run(async()=>{
+ const codes=await freshUnusedCodes(),url=URL.createObjectURL(new Blob([codes.join('\r\n')+'\r\n'],{type:'text/plain;charset=utf-8'}));
+ const link=document.createElement('a');link.href=url;link.download='AppRevive-unused-codes-'+new Date().toISOString().slice(0,10)+'.txt';document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+ message('Сохранено кодов: '+codes.length+'. Файл содержит действующие промокоды — передавайте его только выбранному исполнителю.');
+});

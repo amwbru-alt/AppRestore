@@ -113,6 +113,10 @@ test('production HTTP authorization, verified ownership, paid orders and payout 
  const privateShop=await (await call('/v3/shop/orders',undefined,stranger.token)).json();assert.equal(privateShop.total,0);assert.equal(privateShop.codes.length,0);
  assert.equal((await call('/v3/shop/orders?page=-1',undefined,referred.token)).status,400);
 
+ await pool.execute('UPDATE apprevive_checkouts SET created_at=FROM_UNIXTIME(?) WHERE checkout_id=?',[Date.parse('2026-01-01T12:00:00Z')/1000,referralCheckout.checkout_id]);
+ const dated=await (await call('/v3/shop/orders?from=2026-01-01&to=2026-01-01',undefined,referred.token)).json();assert.equal(dated.total,1);assert.equal(dated.orders[0].checkout_id,referralCheckout.checkout_id);
+ const outside=await (await call('/v3/shop/orders?from=2026-01-02&to=2026-01-02',undefined,referred.token)).json();assert.equal(outside.total,0);assert.equal(outside.codes.length,0);
+ assert.equal((await call('/v3/shop/orders?from=2026-02-30',undefined,referred.token)).status,400);
  const [linkedAfter]=await pool.execute('SELECT account_id FROM apprevive_user_accounts WHERE user_id=?',[referred.user.user_id]);assert.equal(linkedAfter.length,0);
  assert(!(await (await call('/v3/orders',undefined,stranger.token)).json()).codes.some(c=>c.code===deliveredCode));
 

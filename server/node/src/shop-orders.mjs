@@ -2,10 +2,19 @@ import { ApiError } from './service.mjs';
 import { pageInput } from './admin-data.mjs';
 const activation="CASE WHEN r.code_hash IS NOT NULL THEN 'activated' WHEN o.state='refunded' THEN 'invalidated' WHEN p.code IS NOT NULL THEN 'unused' ELSE 'unavailable' END";
 const source="apprevive_checkouts c JOIN apprevive_orders o ON o.payment_reference=CONCAT('yk_',c.provider_id) JOIN apprevive_order_codes oc ON oc.order_id=o.order_id LEFT JOIN apprevive_issued_codes v ON v.code_hash=oc.code_hash LEFT JOIN apprevive_promo_codes p ON SHA2(p.code,256)=oc.code_hash LEFT JOIN apprevive_promo_redemptions r ON r.code_hash=oc.code_hash";
+export function orderDateRange(query){
+ const values=['from','to'].map(key=>{const value=query.get(key)||'';if(!value)return null;
+  if(!/^20[0-9]{2}-[0-9]{2}-[0-9]{2}$/.test(value))throw new ApiError(400,'invalid_date_range');
+  const stamp=Date.parse(value+'T00:00:00Z');if(!Number.isFinite(stamp)||new Date(stamp).toISOString().slice(0,10)!==value)throw new ApiError(400,'invalid_date_range');return stamp/1000;});
+ if(values[0]!==null&&values[1]!==null&&values[0]>values[1])throw new ApiError(400,'invalid_date_range');
+ return {from:values[0],until:values[1]===null?null:values[1]+86400};
+}
 export async function shopOrders(pool,user,query){
  const {page,size,search}=pageInput(query),state=query.get('state')||'',filter=query.get('activation')||'';
  if(state&&!['pending','paid','cancelled','refunded'].includes(state)||filter&&!['unused','activated','invalidated','unavailable'].includes(filter))throw new ApiError(400,'invalid_filter');
- const where=['c.user_id=?'],params=[user.user_id];
+ const where=['c.user_id=?'],params=[user.user_id],range=orderDateRange(query);
+ if(range.from!==null){where.push('c.created_at>=FROM_UNIXTIME(?)');params.push(range.from);}
+ if(range.until!==null){where.push('c.created_at<FROM_UNIXTIME(?)');params.push(range.until);}
  if(state){where.push('c.state=?');params.push(state);}
  if(search){where.push('LOCATE(?,c.checkout_id)>0');params.push(search);}
  if(filter){where.push('EXISTS (SELECT 1 FROM '+source.replace('apprevive_checkouts c ', 'apprevive_checkouts inner_c ').replace('c.provider_id','inner_c.provider_id')+" WHERE inner_c.checkout_id=c.checkout_id AND "+activation+'=?)');params.push(filter);}

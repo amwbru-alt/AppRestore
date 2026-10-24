@@ -73,7 +73,7 @@ test('login, reset and resend handlers submit their own form data',async t=>{
  assert.deepEqual(p.errors,[]);
 });
 test('cabinet checkout needs no Apple ID and refresh works on HTTP',async t=>{
- const p=await page(t,'account',{logged:true});
+ const p=await page(t,'account',{logged:true,override:{'/v3/status':async()=>({ok:true,status:200,json:async()=>({payments_enabled:true})})}});
  assert(!p.form('cabinet').hidden);assert.equal(p.form('apple-form'),null);assert.equal(p.form('redeem-form'),null);
  fill(p.form('buy-form'),{quantity:'1'});await submit(p.form('buy-form'));
  const purchase=p.calls.find(c=>c.path==='/v3/checkout');assert.match(purchase.body.request_id,/^[a-f0-9]{32}$/);assert.equal(purchase.body.account_id,undefined);
@@ -246,4 +246,43 @@ test('admin reviews discovered apps with text-safe metadata and editable names',
  await settle();const area=p.w.document.getElementById('discoveries');assert(area.textContent.includes('<img'));assert(!area.querySelector('img'));
  const name=area.querySelector('input');name.value='Reviewed bank';const publish=[...area.querySelectorAll('button')].find(b=>b.textContent==='Опубликовать');assert(publish);publish.click();await settle();
  const call=p.calls.find(c=>c.path==='/v3/admin/discoveries/review');assert.equal(call.body.name,'Reviewed bank');assert.equal(call.body.action,'approve');assert.equal(call.body.store_id,'12345678');
+});
+
+test('checkout total follows quantity and configured payment availability',async t=>{
+ const p=await page(t,'account',{logged:true});
+ const quantity=p.form('buy-form').elements.quantity;quantity.value='3';quantity.dispatchEvent(new p.w.Event('input'));
+ assert.match(p.form('purchase-total').textContent,/300/);assert(p.form('buy-form').querySelector('button').disabled);
+ quantity.value='101';quantity.dispatchEvent(new p.w.Event('input'));assert.match(p.form('purchase-total').textContent,/от 1 до 100/);
+});
+test('bulk copy rechecks the current page and excludes activated, refunded and absent codes',async t=>{
+ let reads=0;
+ const data={orders:[{checkout_id:'a',quantity:4,amount_kopecks:40000,state:'paid'},{checkout_id:'b',quantity:1,amount_kopecks:10000,state:'refunded'}],codes:[{checkout_id:'a',code:'RV-UNUSED',activation_status:'unused'},{checkout_id:'a',code:'RV-SECOND',activation_status:'unused'},{checkout_id:'a',code:'RV-UNUSED',activation_status:'unused'},{checkout_id:'a',code:'RV-ACTIVE',activation_status:'activated'},{checkout_id:'a',code:null,activation_status:'unused'},{checkout_id:'b',code:'RV-REFUNDED',activation_status:'unused'}]};
+ const p=await page(t,'account',{logged:true,override:{'/v3/orders':async()=>{reads++;return {ok:true,status:200,json:async()=>data};}}});
+ const before=reads;p.form('copy-unused').click();await settle();assert(reads>before);
+ assert.equal(p.form('code-copy-text').value,'RV-UNUSED\nRV-SECOND');assert(!p.form('code-copy-panel').hidden);
+ assert(!p.form('code-copy-text').value.includes('ACTIVE'));assert(!p.form('code-copy-text').value.includes('REFUNDED'));
+ const support=p.form('orders').querySelector('.order-support');assert(support.href.includes('t.me/llifegoldll'));assert(!support.href.includes('RV-UNUSED'));
+ p.form('close-code-copy').click();assert.equal(p.form('code-copy-text').value,'');assert(p.form('code-copy-panel').hidden);
+});
+test('bulk copy refuses a code activated since the displayed page was loaded',async t=>{
+ let activated=false;
+ const p=await page(t,'account',{logged:true,override:{'/v3/orders':async()=>({ok:true,status:200,json:async()=>({orders:[{checkout_id:'a',quantity:1,amount_kopecks:10000,state:'paid'}],codes:[{checkout_id:'a',code:'RV-CHANGED',activation_status:activated?'activated':'unused'}]})})}});
+ activated=true;p.form('copy-unused').click();await settle();assert(p.form('code-copy-panel').hidden);assert.equal(p.form('code-copy-text').value,'');assert.match(p.notice(),/нет неактивированных/);
+});
+test('date filters travel through the existing private shop endpoint',async t=>{
+ const p=await page(t,'account',{logged:true});fill(p.form('shop-filter'),{from:'2026-10-01',to:'2026-10-24'});await submit(p.form('shop-filter'));
+ assert(p.calls.some(c=>c.path.includes('from=2026-10-01')&&c.path.includes('to=2026-10-24')));
+});
+test('live refresh restarts once after browser back-forward cache restores the page',async t=>{
+ const p=await page(t,'account',{logged:true});let starts=0;const original=p.w.setInterval.bind(p.w);p.w.setInterval=(...args)=>{starts++;return original(...args);};
+ p.w.dispatchEvent(new p.w.Event('pagehide'));p.w.dispatchEvent(new p.w.Event('pageshow'));p.w.dispatchEvent(new p.w.Event('pageshow'));assert.equal(starts,1);
+});
+test('TXT download contains one unused code per line with the expected filename',async t=>{
+ const p=await page(t,'account',{logged:true,override:{'/v3/orders':async()=>({ok:true,status:200,json:async()=>({orders:[{checkout_id:'a',state:'paid'}],codes:[{checkout_id:'a',code:'RV-FIRST',activation_status:'unused'},{checkout_id:'a',code:'RV-SECOND',activation_status:'unused'}]})})}});
+ let blob,download;const revoked=[];
+ p.w.URL.createObjectURL=value=>{blob=value;return 'blob:unit';};p.w.URL.revokeObjectURL=value=>revoked.push(value);
+ p.w.HTMLAnchorElement.prototype.click=function(){download=this.download;};
+ p.form('download-unused').click();await settle();assert.match(download,/^AppRevive-unused-codes-.*\.txt$/);
+ const text=await new Promise((resolve,reject)=>{const reader=new p.w.FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsText(blob);});
+ assert.equal(text,'RV-FIRST\r\nRV-SECOND\r\n');assert.match(p.notice(),/Сохранено кодов: 2/);
 });
