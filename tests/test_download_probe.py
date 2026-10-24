@@ -6,9 +6,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from apprestore_core.download_probe import positive_id, sanitize_download_probe
-from apprestore_core.models import CommandResult
-from apprestore_core.tools import AppRestoreTools, ToolUnavailable
+from apprevive_core.download_probe import positive_id, sanitize_download_probe
+from apprevive_core.models import CommandResult
+from apprevive_core.tools import AppReviveTools, ToolUnavailable
 
 
 def probe_payload():
@@ -72,7 +72,7 @@ def test_malformed_status_is_not_copied(value):
 
 
 def test_tools_probe_is_readonly_and_never_echoes_raw_errors(monkeypatch):
-    from apprestore_core import tools as tm
+    from apprevive_core import tools as tm
 
     monkeypatch.setattr(tm, "resolve_tool", lambda name: "ipatool.exe")
     calls = []
@@ -81,7 +81,7 @@ def test_tools_probe_is_readonly_and_never_echoes_raw_errors(monkeypatch):
         calls.append((args, kwargs))
         return CommandResult(tuple(args), 0, json.dumps({"success": True, "probe": probe_payload()}), "")
 
-    tools = AppRestoreTools(runner=SimpleNamespace(run=run))
+    tools = AppReviveTools(runner=SimpleNamespace(run=run))
     tools._ipatool_env = lambda: {}
     result = tools.probe_download("1117817509", version_id="123")
     assert result["country"] == "RU"
@@ -97,7 +97,7 @@ def test_tools_probe_is_readonly_and_never_echoes_raw_errors(monkeypatch):
 
 
 def test_auth_info_refreshes_country_after_gui_account_switch(monkeypatch):
-    from apprestore_core import tools as tm
+    from apprevive_core import tools as tm
 
     monkeypatch.setattr(tm, "resolve_tool", lambda name: "ipatool.exe")
     responses = iter([
@@ -106,7 +106,7 @@ def test_auth_info_refreshes_country_after_gui_account_switch(monkeypatch):
         {"success": True, "email": "three@example.com"},
     ])
     runner = SimpleNamespace(run=lambda args, **kw: CommandResult(tuple(args), 0, json.dumps(next(responses)), ""))
-    tools = AppRestoreTools(runner=runner)
+    tools = AppReviveTools(runner=runner)
     tools._ipatool_env = lambda: {}
     assert tools.ipatool_auth_info() and tools._account_country == "ru"
     assert tools.ipatool_auth_info() and tools._account_country == "us"
@@ -115,7 +115,7 @@ def test_auth_info_refreshes_country_after_gui_account_switch(monkeypatch):
 
 def test_diagnostic_targets_and_atomic_report(tmp_path):
     pytest.importorskip("PySide6")
-    from apprestore_gui.download_diagnostics import parse_targets, write_report
+    from apprevive_gui.download_diagnostics import parse_targets, write_report
 
     assert parse_targets(["1117817509", "610003290:838594835", "1117817509"]) == [
         ("1117817509", ""), ("610003290", "838594835"),
@@ -131,7 +131,7 @@ def test_diagnostic_targets_and_atomic_report(tmp_path):
 
 def test_diagnostic_worker_aborts_account_switch_and_never_calls_purchase(tmp_path):
     pytest.importorskip("PySide6")
-    from apprestore_gui.download_diagnostics import DownloadDiagnostics
+    from apprevive_gui.download_diagnostics import DownloadDiagnostics
 
     calls = []
     session = SimpleNamespace(
@@ -154,7 +154,7 @@ def test_diagnostic_worker_aborts_account_switch_and_never_calls_purchase(tmp_pa
 
 def test_locked_diagnostics_do_not_start_or_request_credentials():
     pytest.importorskip("PySide6")
-    from apprestore_gui.download_diagnostics import DownloadDiagnostics
+    from apprevive_gui.download_diagnostics import DownloadDiagnostics
 
     fake = SimpleNamespace(started=False, session=SimpleNamespace(signedIn=False))
     DownloadDiagnostics._consider(fake)
@@ -164,7 +164,7 @@ def test_locked_diagnostics_do_not_start_or_request_credentials():
 @pytest.mark.parametrize("busy", ["restoring", "files", "purchases", "checking"])
 def test_diagnostics_wait_for_other_work(busy):
     pytest.importorskip("PySide6")
-    from apprestore_gui.download_diagnostics import DownloadDiagnostics
+    from apprevive_gui.download_diagnostics import DownloadDiagnostics
 
     session = SimpleNamespace(
         signedIn=True, accountEmail="person@example.com", authPhase="in", _lock=Lock(),
@@ -179,7 +179,7 @@ def test_diagnostics_wait_for_other_work(busy):
 
 def test_ready_diagnostics_start_once_without_auth_or_purchase(monkeypatch):
     pytest.importorskip("PySide6")
-    from apprestore_gui import download_diagnostics as module
+    from apprevive_gui import download_diagnostics as module
 
     calls = []
     monkeypatch.setattr(module.threading, "Thread", lambda **kw: SimpleNamespace(start=lambda: calls.append(kw)))
@@ -197,7 +197,7 @@ def test_ready_diagnostics_start_once_without_auth_or_purchase(monkeypatch):
 
 def test_diagnostics_finish_and_mask_exceptions():
     pytest.importorskip("PySide6")
-    from apprestore_gui.download_diagnostics import DownloadDiagnostics
+    from apprevive_gui.download_diagnostics import DownloadDiagnostics
 
     def probe(sid, **kw):
         if sid == "1406492297":
@@ -218,7 +218,7 @@ def test_diagnostics_finish_and_mask_exceptions():
 
 def test_diagnostic_country_and_owned_control_are_only_local_selection():
     pytest.importorskip("PySide6")
-    from apprestore_gui.download_diagnostics import diagnostic_country, purchased_control
+    from apprevive_gui.download_diagnostics import diagnostic_country, purchased_control
 
     assert diagnostic_country("us") == "US" and diagnostic_country("") == ""
     for value in ("USA", "US;echo secret", "12"):
@@ -231,7 +231,7 @@ def test_diagnostic_country_and_owned_control_are_only_local_selection():
 
 def test_wrong_country_diagnostics_wait_without_probing_or_changing_store():
     pytest.importorskip("PySide6")
-    from apprestore_gui.download_diagnostics import DownloadDiagnostics
+    from apprevive_gui.download_diagnostics import DownloadDiagnostics
 
     session = SimpleNamespace(
         _tool_lock=Lock(), accountEmail="person@example.com",
@@ -246,7 +246,7 @@ def test_wrong_country_diagnostics_wait_without_probing_or_changing_store():
 
 def test_diagnostics_compare_requested_apps_with_a_purchased_control():
     pytest.importorskip("PySide6")
-    from apprestore_gui.download_diagnostics import DownloadDiagnostics
+    from apprevive_gui.download_diagnostics import DownloadDiagnostics
 
     calls = []
     session = SimpleNamespace(
@@ -266,7 +266,7 @@ def test_diagnostics_compare_requested_apps_with_a_purchased_control():
 
 def test_diagnostics_never_use_another_accounts_purchase_control():
     pytest.importorskip("PySide6")
-    from apprestore_gui.download_diagnostics import DownloadDiagnostics
+    from apprevive_gui.download_diagnostics import DownloadDiagnostics
 
     calls = []
     session = SimpleNamespace(

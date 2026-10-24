@@ -8,16 +8,16 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from apprestore_core.catalog import (
+from apprevive_core.catalog import (
     installed_bundle_ids,
     load_imazing_app_records,
     parse_missing_apps,
 )
-from apprestore_core.cli import _resolve_missing_targets
-from apprestore_core.ipa import read_ipa_metadata
-from apprestore_core.known_apps import remember_known_app
-from apprestore_core.models import MissingApp
-from apprestore_core.service import AppRestoreService
+from apprevive_core.cli import _resolve_missing_targets
+from apprevive_core.ipa import read_ipa_metadata
+from apprevive_core.known_apps import remember_known_app
+from apprevive_core.models import MissingApp
+from apprevive_core.service import AppReviveService
 
 from tests.helpers import make_ipa
 
@@ -125,7 +125,7 @@ class MissingCliHelpersTests(unittest.TestCase):
         ]
         service.find_local.return_value = None
         with (
-            mock.patch("apprestore_core.cli.remember_known_app"),
+            mock.patch("apprevive_core.cli.remember_known_app"),
             mock.patch("builtins.input", return_value="1"),
         ):
             targets = _resolve_missing_targets("Homuz", [], service=service)
@@ -149,7 +149,7 @@ class MissingCliHelpersTests(unittest.TestCase):
 
 class MissingServiceTests(unittest.TestCase):
     def test_restore_missing_skips_device_redownload(self) -> None:
-        service = AppRestoreService.__new__(AppRestoreService)
+        service = AppReviveService.__new__(AppReviveService)
         service.tools = mock.Mock()
         service.tools.ipatool_authenticated.return_value = True
         service.download = mock.Mock(return_value=Path("x.ipa"))  # type: ignore[method-assign]
@@ -163,7 +163,7 @@ class MissingServiceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             known_path = Path(temporary) / "known-apps.json"
             with mock.patch(
-                "apprestore_core.service.remember_known_app",
+                "apprevive_core.service.remember_known_app",
                 side_effect=lambda **kwargs: remember_known_app(
                     path=known_path,
                     **kwargs,
@@ -175,7 +175,7 @@ class MissingServiceTests(unittest.TestCase):
                     store_id="99999999",
                     source="manual",
                 )
-                status = AppRestoreService.restore_missing(service, "UDID", app)
+                status = AppReviveService.restore_missing(service, "UDID", app)
 
         self.assertIn("installed", status)
         service.tools.device_request_redownload.assert_not_called()

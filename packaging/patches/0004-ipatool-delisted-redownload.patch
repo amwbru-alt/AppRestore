@@ -38,7 +38,7 @@ index 9aef9ff..4fa8ba5 100644
  		return redownloadRes, platform, fmt.Errorf("failed to send redownload request: %w", err)
  	}
 +	if catalogIndependent {
-+		// AppRestore: a missing catalog card is not a redownload refusal.
++		// AppRevive: a missing catalog card is not a redownload refusal.
 +		// Apple selects the licensed build; Download still validates iPhoneOS
 +		// in the package before writing metadata or replicating Apple's SINF.
 +		if err := validateCatalogIndependentDownloadResponse(redownloadRes, app); err != nil {
@@ -212,7 +212,7 @@ index 683eb65..bdaa495 100644
  
  })
  
-+var _ = Describe("AppRestore catalog-independent redownload", func() {
++var _ = Describe("AppRevive catalog-independent redownload", func() {
 +	It("rejects another app, missing identity and ambiguous items", func() {
 +		app := App{ID: 987654321, BundleID: "com.example.delisted"}
 +		for _, metadata := range []map[string]interface{}{

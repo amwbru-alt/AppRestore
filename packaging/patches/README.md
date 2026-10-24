@@ -1,4 +1,4 @@
-# Локальные патчи ipatool для AppRestore
+# Локальные патчи ipatool для AppRevive
 
 База: majd/ipatool `cde7d00355e152714377b953ec57438626d3cb5a` (наш 2.6.0+redirect).
 Применять строго по порядку 0001–0009: новые патчи зависят от предыдущих и
@@ -7,18 +7,18 @@ Go-тесты и маркеры бинарника проверяет `packaging
 
 | Файл | Что делает | sha256 |
 |---|---|---|
-| `0001-ipatool-auth-info-country.patch` | `auth info --format json` отдаёт `storeFront` (сырой `X-Set-Apple-Store-Front`, например `"143441-1,34"`) и `countryCode` (ISO) | `05d87977a554102c9b036306ec2c125febaa62433d2a080d588527a8225b7fb8` |
-| `0002-ipatool-list-purchases-all.patch` | `list-purchases --all`: вся история одним вызовом, без флага поведение прежнее | `025d9919871dba636a80559614a3ca402c37cf2be6965fb7a3203f4088e54445` |
-| `0003-ipatool-keychain-passphrase-env-stdin.patch` | пароль связки из env `IPATOOL_KEYCHAIN_PASSPHRASE` или `--keychain-passphrase-stdin` (первая строка stdin). Приоритет: флаг → stdin (если задан `--keychain-passphrase-stdin`, env тогда не читается) → env. Без них поведение прежнее | `76fdf028e6e6a5c11b9be9f647ab8281e17c2e4bd6ee1a22fa57c7d1c38e115c` |
-| `0004-ipatool-delisted-redownload.patch` | Повторная загрузка собственного iOS-приложения без публичной карточки; проверка ID и платформы | `b97e7938e587c99650410f706e18992a9aad0289d58a2cff47619857d47feb8b` |
+| `0001-ipatool-auth-info-country.patch` | `auth info --format json` отдаёт `storeFront` (сырой `X-Set-Apple-Store-Front`, например `"143441-1,34"`) и `countryCode` (ISO) | `5aae085cc751020ef13ef163ecde6b9f09dcccd7c98febf3c44a58e2b90c5868` |
+| `0002-ipatool-list-purchases-all.patch` | `list-purchases --all`: вся история одним вызовом, без флага поведение прежнее | `ddef2676e2583f07f363d06482f7bf2605119bf57b237f21720c7f52913fe02d` |
+| `0003-ipatool-keychain-passphrase-env-stdin.patch` | пароль связки из env `IPATOOL_KEYCHAIN_PASSPHRASE` или `--keychain-passphrase-stdin` (первая строка stdin). Приоритет: флаг → stdin (если задан `--keychain-passphrase-stdin`, env тогда не читается) → env. Без них поведение прежнее | `d9a940d03fce5488963242ff677b8ebc2df46956b048aa4904af871f923a8e2b` |
+| `0004-ipatool-delisted-redownload.patch` | Повторная загрузка собственного iOS-приложения без публичной карточки; проверка ID и платформы | `33ed6836733907b27abc84c0df3b2fca8d6e004505e478fa75f2cdfc0ded1f63` |
 | `0005-ipatool-readonly-download-probe.patch` | Сравнение каналов по метаданным без покупки, загрузки IPA и приватных полей | `84cb1dd65ed7ea48a8020462b1aaa5c3cc67781ac9ca9a47b7e3367af3cfb2aa` |
 | `0006-ipatool-product-post-redirects.patch` | Сохранение POST при редиректах продуктов; ограничение адресов, пути, параметров и числа переходов | `60e3892b9f7d9251b8bba83a27d79af796af1a0de009d1dc84d2c25ca9007981` |
 | `0007-ipatool-purchase-evidence.patch` | HTTP 500 не считается лицензией; безопасные результаты каждого STDQ/GAME запроса | `f7fb822c4897e31a9d8b57827e9fc56fd8521a99dddbf5174c59db2656c97afe` |
 | `0008-ipatool-unpinned-update.patch` | Загрузка лицензированного iOS-пакета через updateProduct без версии в каталоге; проверка ID, версии и SINF | `a1274240a24aa0c4f8e376775168f6db5710086bc7eaaf0a06580fb05ba69a22` |
-| `0009-ipatool-purchase-locker.patch` | `list-purchases --all` дополняет историю собственным locker этого Apple ID (видимые и скрытые покупки) на storefront аккаунта; сбой locker не ломает список DAAP | `e173d0729fc81a169cf519213e02b38087befe72fec621b7908da94c2bb124c4` |
+| `0009-ipatool-purchase-locker.patch` | `list-purchases --all` дополняет историю собственным locker этого Apple ID (видимые и скрытые покупки) на storefront аккаунта; сбой locker не ломает список DAAP | `20d5179f4c8f3f693186ad5c700b281f2ea0198b2bd811f0b2545143e7311614` |
 
 Патчи 0006–0008 не добавляют повторных покупок и не меняют цену или storefront.
-Неопределённая покупка возвращает `purchase response unconfirmed`; AppRestore
+Неопределённая покупка возвращает `purchase response unconfirmed`; AppRevive
 учитывает её как `purchase_uncertain`. В JSON выводятся только разрешённые
 поля `purchaseAttempt`, а не сырой ответ Apple.
 
@@ -28,14 +28,14 @@ Go-тесты и маркеры бинарника проверяет `packaging
 
 Ниже сохранён первоначальный пример. Для текущей сборки использовать полный
 список 0001–0009 из `packaging/build-ipatool.sh`, а для запуска из исходников —
-`bash packaging/bootstrap-ipatool.sh`. AppRestore передаёт пароль связки только
+`bash packaging/bootstrap-ipatool.sh`. AppRevive передаёт пароль связки только
 через stdin/PTY; поддержка env в upstream-патче приложением не используется.
 После `git checkout --detach FETCH_HEAD` и проверки хэша коммита:
 ```bash
 patches=(
-  "0001-ipatool-auth-info-country.patch 05d87977a554102c9b036306ec2c125febaa62433d2a080d588527a8225b7fb8"
-  "0002-ipatool-list-purchases-all.patch 025d9919871dba636a80559614a3ca402c37cf2be6965fb7a3203f4088e54445"
-  "0003-ipatool-keychain-passphrase-env-stdin.patch 76fdf028e6e6a5c11b9be9f647ab8281e17c2e4bd6ee1a22fa57c7d1c38e115c"
+  "0001-ipatool-auth-info-country.patch 5aae085cc751020ef13ef163ecde6b9f09dcccd7c98febf3c44a58e2b90c5868"
+  "0002-ipatool-list-purchases-all.patch ddef2676e2583f07f363d06482f7bf2605119bf57b237f21720c7f52913fe02d"
+  "0003-ipatool-keychain-passphrase-env-stdin.patch d9a940d03fce5488963242ff677b8ebc2df46956b048aa4904af871f923a8e2b"
 )
 for entry in "${patches[@]}"; do
   read -r file sum <<<"$entry"

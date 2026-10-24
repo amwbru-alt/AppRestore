@@ -12,7 +12,7 @@ pytest.importorskip("PySide6")
 
 from PySide6.QtWidgets import QApplication
 
-from apprestore_gui.icons_cache import ArtworkCache, placeholder_pixmap, _safe_key
+from apprevive_gui.icons_cache import ArtworkCache, placeholder_pixmap, _safe_key
 
 
 @pytest.fixture(scope="module")
@@ -30,8 +30,8 @@ def test_a_stored_miss_is_not_fetched_again(tmp_path: Path, monkeypatch: pytest.
         return b'{"resultCount":0,"results":[]}'
 
     monkeypatch.setattr(cache, "_http_get", fake_get)
-    assert cache.lookup(store_id="1406492297", country="ru") == {"artwork": None}
-    assert cache.lookup(store_id="1406492297", country="ru") == {"artwork": None}
+    assert cache.lookup(store_id="1406492297", country="ru")["artwork"] is None
+    assert cache.lookup(store_id="1406492297", country="ru")["artwork"] is None
     assert len(calls) == 1
 
 
@@ -53,7 +53,7 @@ def test_prime_store_ids_asks_once_per_country(tmp_path: Path, monkeypatch: pyte
     cache.prime_store_ids(["492224193", "1406492297"])
     assert len(calls) == 2  # ru, then us
     assert cache.lookup(store_id="492224193", country="ru")["artwork"].endswith("sber.jpg")
-    assert cache.lookup(store_id="1406492297", country="ru") == {"artwork": None}
+    assert cache.lookup(store_id="1406492297", country="ru")["artwork"] is None
     assert len(calls) == 2
 
 

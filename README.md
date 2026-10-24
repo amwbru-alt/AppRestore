@@ -1,8 +1,10 @@
+> **Текущий временный режим — HTTP:** [запуск на IP и сборка Mac/Windows](HTTP-TEMP.md). Эта инструкция заменяет прежнее обязательное требование HTTPS.
+
 <p align="center">
-  <img src="packaging/icons/AppRestore-1024.png" width="112" alt="Иконка AppRestore">
+  <img src="packaging/icons/AppRevive-1024.png" width="112" alt="Иконка AppRevive">
 </p>
 
-<h1 align="center">AppRestore</h1>
+<h1 align="center">AppRevive</h1>
 
 <p align="center">
   Возвращает на iPhone сгруженные и удалённые приложения.<br>
@@ -10,18 +12,67 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/J3ckJ/AppRestore/actions/workflows/ci.yml"><img src="https://github.com/J3ckJ/AppRestore/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="https://github.com/J3ckJ/AppRestore/releases/latest"><img src="https://img.shields.io/github/v/release/J3ckJ/AppRestore" alt="Release"></a>
+  <a href="https://github.com/amwbru-alt/AppRestore/actions/workflows/ci.yml"><img src="https://github.com/amwbru-alt/AppRestore/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/amwbru-alt/AppRestore/releases/latest"><img src="https://img.shields.io/github/v/release/amwbru-alt/AppRestore" alt="Release"></a>
   <a href="./LICENSE"><img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License: GPL v3"></a>
 </p>
 
-> **Статус:** beta · Версия 0.4.0. Windows и macOS · проект не связан с Apple Inc.
+> **Статус:** beta · Версия 0.5.0. Windows и macOS · проект не связан с Apple Inc.
+
+## Переход на 0.5.0
+
+[Полная инструкция: HTTPS, MySQL, почта, платежи, кабинет, админка и подписанные сборки](PLATFORM.md).
+Перед обновлением сервера выполните миграцию. Новый вход требует HTTPS; старый HTTP-адрес больше не подходит для личных данных.
+
+## AppRevive: обновление исходного приложения
+
+Эта ветка основана на `main`. AppRevive (возрождение приложений) — новое
+название исходного настольного приложения. Иконки загружаются в фоне
+и появляются в открытых списках автоматически. Временные ошибки магазина
+повторно проверяются, повреждённые файлы картинок скачиваются заново.
+Для недоступных изображений остаётся заглушка.
+
+Существующие настройки, библиотека IPA и кэш продолжают использовать
+прежние пути `AppRevive`. Имена Python-модулей и команды запуска сохранены.
+Ссылки на готовые выпуски ниже относятся к исходному проекту; сборка этой
+ветки ещё не опубликована отдельным выпуском.
+
+## Бесплатное восстановление и коды
+
+Первое успешное восстановление одного приложения бесплатно для каждого Apple ID. Затем AppRevive
+показывает окно «Введите код» со ссылкой на [@llifegoldll](https://t.me/llifegoldll).
+Успешная активация даёт ещё одно восстановление; текущая операция продолжается
+автоматически. Ошибка установки не расходует восстановление. При выборе
+нескольких приложений каждое считается отдельно. Сохранение IPA без установки
+не расходует восстановление.
+
+Коды активируются через отдельный Node.js HTTPS API. Сервер атомарно
+удаляет код из MySQL и сохраняет подтверждение для безопасного повтора после
+сетевого сбоя. Пароль базы хранится только на сервере; MySQL-драйвер и
+реквизиты подключения в клиентскую сборку не входят.
+
+[Запуск Node.js API и настройка HTTPS](server/node/README.md).
+Перед сборкой задайте настоящий HTTPS-адрес через `APPREVIVE_PUBLIC_API_URL`; пример `revive.example.com` нужно заменить своим доменом.
+[Установка и сборка через Git и Терминал](INSTALL-GIT.md).
+
+Баланс, подарок и число успешных восстановлений хранятся в MySQL по Apple ID.
+Очистка аккаунтов, кеша или переустановка штатного приложения не возвращают
+подарок. Перед обновлением клиентов импортируйте `server/promo/accounts-schema.sql`
+и обновите Node.js API. Без сервера установки блокируются. Старые локальные
+остатки автоматически не импортируются; серверная история начинается при
+переходе. Подробнее о восстановлении после сбоев и границах защиты — в
+[инструкции API](server/node/README.md#серверный-баланс-apple-id-обязательное-обновление-api).
+Публичный файл `promo.txt` больше не используется.
+
+## Каталог и иконки
+
+Каталог из 670 стандартных приложений используется как справочник. Во вкладке истории отображаются только приложения текущего Apple ID. В «Моих банках» варианты сопоставляются по точному App Store ID; [настройка групп](BANK-GROUPS.md). Node.js API получает названия и HTTPS-адреса иконок из MySQL; инструкция и SQL — [CATALOG.md](CATALOG.md). Сборка macOS и Windows описана в [BUILDING.md](BUILDING.md).
 
 ## Что это
 
 Бывает, что iPhone сам выгрузил приложение, чтобы освободить место, а в
 App Store кнопки «Загрузить» уже нет: приложение убрали из магазина или оно
-недоступно в вашей стране. AppRestore помогает вернуть такое приложение.
+недоступно в вашей стране. AppRevive помогает вернуть такое приложение.
 
 - **Сгруженные** (ярлык на экране остался, а самого приложения нет):
   программа просит iPhone докачать их сам, а если не выходит, скачивает
@@ -35,12 +86,12 @@ App Store кнопки «Загрузить» уже нет: приложени�
 приложений (DRM) не обходится: ставится только то, на что у вашего Apple ID
 есть право.
 
-![Главный экран AppRestore](docs/screenshots/overview.png)
+![Главный экран AppRevive](docs/screenshots/overview.png)
 
 ## Скачать
 
 Все файлы лежат на странице
-[последнего выпуска](https://github.com/J3ckJ/AppRestore/releases/latest).
+[последнего выпуска](https://github.com/amwbru-alt/AppRestore/releases/latest).
 Есть две версии, выберите одну.
 
 ### Графическая версия (для всех, без командной строки)
@@ -50,8 +101,8 @@ App Store кнопки «Загрузить» уже нет: приложени�
 
 | Система | Файл |
 |---|---|
-| Windows 10/11 (64 бит) | [AppRestore-GUI-Windows.zip](https://github.com/J3ckJ/AppRestore/releases/latest/download/AppRestore-GUI-Windows.zip) |
-| macOS на Apple Silicon (M1 и новее) | [AppRestore-GUI-macOS.zip](https://github.com/J3ckJ/AppRestore/releases/latest/download/AppRestore-GUI-macOS.zip) |
+| Windows 10/11 (64 бит) | [AppRevive-GUI-Windows.zip](https://github.com/amwbru-alt/AppRestore/releases/latest/download/AppRevive-GUI-Windows.zip) |
+| macOS на Apple Silicon (M1 и новее) | [AppRevive-GUI-macOS.zip](https://github.com/amwbru-alt/AppRestore/releases/latest/download/AppRevive-GUI-macOS.zip) |
 
 На Mac с процессором Intel графическая версия не запустится. Используйте
 терминальную версию.
@@ -63,14 +114,14 @@ App Store кнопки «Загрузить» уже нет: приложени�
 
 | Система | Файл |
 |---|---|
-| Windows 10/11 | [install.ps1](https://github.com/J3ckJ/AppRestore/releases/latest/download/install.ps1) |
-| macOS (Apple Silicon и Intel) | [install.sh](https://github.com/J3ckJ/AppRestore/releases/latest/download/install.sh) |
+| Windows 10/11 | [install.ps1](https://github.com/amwbru-alt/AppRestore/releases/latest/download/install.ps1) |
+| macOS (Apple Silicon и Intel) | [install.sh](https://github.com/amwbru-alt/AppRestore/releases/latest/download/install.sh) |
 
 Как поставить, написано ниже, в разделе
 [Установка терминальной версии](#установка-терминальной-версии).
 
 Контрольные суммы SHA-256 всех файлов лежат в
-[SHA256SUMS.txt](https://github.com/J3ckJ/AppRestore/releases/latest/download/SHA256SUMS.txt).
+[SHA256SUMS.txt](https://github.com/amwbru-alt/AppRestore/releases/latest/download/SHA256SUMS.txt).
 
 ## Что нужно
 
@@ -86,41 +137,41 @@ App Store кнопки «Загрузить» уже нет: приложени�
 
 ### Windows
 
-1. Скачайте [AppRestore-GUI-Windows.zip](https://github.com/J3ckJ/AppRestore/releases/latest/download/AppRestore-GUI-Windows.zip).
-2. Распакуйте архив в свою папку, например `C:\Users\<вы>\AppRestore`.
+1. Скачайте [AppRevive-GUI-Windows.zip](https://github.com/amwbru-alt/AppRestore/releases/latest/download/AppRevive-GUI-Windows.zip).
+2. Распакуйте архив в свою папку, например `C:\Users\<вы>\AppRevive`.
    Не кладите программу в `Program Files`: оттуда не работает обновление в
    один клик, у программы нет прав заменить свои файлы.
 3. Проверьте, что архив не подменён. Сборка не подписана для Windows,
    поэтому система её не знает и проверить её можете только вы. В PowerShell
-   выполните `Get-FileHash -Algorithm SHA256 .\AppRestore-GUI-Windows.zip` и
+   выполните `Get-FileHash -Algorithm SHA256 .\AppRevive-GUI-Windows.zip` и
    сравните результат со строкой этого файла в
-   [SHA256SUMS.txt](https://github.com/J3ckJ/AppRestore/releases/latest/download/SHA256SUMS.txt).
+   [SHA256SUMS.txt](https://github.com/amwbru-alt/AppRestore/releases/latest/download/SHA256SUMS.txt).
    Если не совпадает, не запускайте программу.
-4. Запустите `AppRestore.exe`. Если появится синее окно Windows SmartScreen
+4. Запустите `AppRevive.exe`. Если появится синее окно Windows SmartScreen
    «Система Windows защитила ваш компьютер», нажмите **Подробнее**, затем
    **Выполнить в любом случае**. Окно появляется потому, что у программы нет
    подписи издателя.
 
 ### macOS
 
-1. Скачайте [AppRestore-GUI-macOS.zip](https://github.com/J3ckJ/AppRestore/releases/latest/download/AppRestore-GUI-macOS.zip).
+1. Скачайте [AppRevive-GUI-macOS.zip](https://github.com/amwbru-alt/AppRestore/releases/latest/download/AppRevive-GUI-macOS.zip).
 2. Проверьте, что архив не подменён. Сборка не подписана и не нотаризована
    Apple, поэтому macOS её не знает и проверить её можете только вы. В
-   «Терминале» выполните `shasum -a 256 ~/Downloads/AppRestore-GUI-macOS.zip`
+   «Терминале» выполните `shasum -a 256 ~/Downloads/AppRevive-GUI-macOS.zip`
    и сравните результат со строкой этого файла в
-   [SHA256SUMS.txt](https://github.com/J3ckJ/AppRestore/releases/latest/download/SHA256SUMS.txt).
+   [SHA256SUMS.txt](https://github.com/amwbru-alt/AppRestore/releases/latest/download/SHA256SUMS.txt).
    Если не совпадает, не открывайте программу.
-3. Откройте архив и перенесите `AppRestore.app` в папку «Программы».
+3. Откройте архив и перенесите `AppRevive.app` в папку «Программы».
 4. При первом запуске macOS скажет, что не может проверить программу, и не
    откроет её. Откройте «Системные настройки», раздел «Конфиденциальность и
    безопасность», прокрутите вниз и нажмите **Всё равно открыть** рядом с
-   AppRestore. В старых версиях macOS можно вместо этого щёлкнуть по программе
+   AppRevive. В старых версиях macOS можно вместо этого щёлкнуть по программе
    правой кнопкой мыши и выбрать **Открыть**.
 
 ### Как пользоваться
 
 1. Подключите iPhone кабелем, разблокируйте его и нажмите **Доверять**.
-2. Откройте AppRestore. На экране «Обзор» появится ваш телефон.
+2. Откройте AppRevive. На экране «Обзор» появится ваш телефон.
 3. Откройте раздел **Apple ID** и войдите. Если Apple пришлёт код, введите его
    в том же окне. Пароль программа не сохраняет.
 4. Раздел **Сгруженные**: отметьте приложения и нажмите **Восстановить**.
@@ -151,21 +202,21 @@ App Store кнопки «Загрузить» уже нет: приложени�
 ## Установка терминальной версии
 
 Установщик скачивает архив с исходным кодом нужной версии, сверяет его
-контрольную сумму SHA-256 и ставит AppRestore только для вашего пользователя,
+контрольную сумму SHA-256 и ставит AppRevive только для вашего пользователя,
 без прав администратора. Вместе с ним ставится проверенный **ipatool 2.6.0**.
 
 ### Windows (одна строка в PowerShell)
 
 ```powershell
-irm https://github.com/J3ckJ/AppRestore/releases/latest/download/install.ps1 | iex
-apprestore
+irm https://github.com/amwbru-alt/AppRestore/releases/latest/download/install.ps1 | iex
+apprevive
 ```
 
 ### macOS (одна строка в «Терминале»)
 
 ```bash
-curl -fsSL https://github.com/J3ckJ/AppRestore/releases/latest/download/install.sh | /bin/bash && export PATH="$HOME/.local/bin:$PATH"
-apprestore
+curl -fsSL https://github.com/amwbru-alt/AppRestore/releases/latest/download/install.sh | /bin/bash && export PATH="$HOME/.local/bin:$PATH"
+apprevive
 ```
 
 ### Сначала посмотреть установщик и проверить сумму
@@ -173,14 +224,14 @@ apprestore
 **Windows:**
 
 ```powershell
-$installer = Join-Path $env:TEMP "apprestore-install.ps1"
+$installer = Join-Path $env:TEMP "apprevive-install.ps1"
 Invoke-WebRequest `
-  -Uri "https://github.com/J3ckJ/AppRestore/releases/latest/download/install.ps1" `
+  -Uri "https://github.com/amwbru-alt/AppRestore/releases/latest/download/install.ps1" `
   -OutFile $installer
 Get-FileHash -Algorithm SHA256 -LiteralPath $installer
 notepad $installer
 & $installer
-apprestore
+apprevive
 ```
 
 Сверьте сумму с `SHA256SUMS.txt` того же выпуска.
@@ -192,12 +243,12 @@ apprestore
 
 ```powershell
 .\install-windows.ps1
-apprestore
+apprevive
 ```
 
 ```bash
 ./install-macos.sh && export PATH="$HOME/.local/bin:$PATH"
-apprestore
+apprevive
 ```
 
 **Обновление терминальной версии:** выполните ту же команду установки ещё раз.
@@ -207,7 +258,7 @@ apprestore
 ### Как пользоваться терминальной версией
 
 1. Подключите iPhone по USB, разблокируйте его и нажмите **Доверять**.
-2. Запустите `apprestore` без параметров: откроется меню.
+2. Запустите `apprevive` без параметров: откроется меню.
 3. **A**: вход в Apple ID. **B**: проверка и установка нужных компонентов
    (`doctor` и `setup`).
 4. **1**: сгруженные приложения (ярлык остался на экране).
@@ -217,35 +268,35 @@ apprestore
 Команды:
 
 ```text
-apprestore --version
-apprestore doctor
-apprestore devices
-apprestore offloaded
-apprestore missing
-apprestore auth --email you@example.com
-apprestore search "название"
-apprestore download com.example.app
-apprestore download --store-id 1234567890
-apprestore install path\to\app.ipa
-apprestore restore
-apprestore restore-missing
-apprestore restore-missing --store-id 1234567890
+apprevive --version
+apprevive doctor
+apprevive devices
+apprevive offloaded
+apprevive missing
+apprevive auth --email you@example.com
+apprevive search "название"
+apprevive download com.example.app
+apprevive download --store-id 1234567890
+apprevive install path\to\app.ipa
+apprevive restore
+apprevive restore-missing
+apprevive restore-missing --store-id 1234567890
 ```
 
 Флаг `--acquire-license` разрешает получить бесплатное приложение на ваш
 Apple ID (`ipatool --purchase`). Без него программа ничего не получает в
 магазине сама.
 
-На Windows драйвер Apple для USB ставится командой `apprestore setup`, если
-`apprestore doctor` его не находит.
+На Windows драйвер Apple для USB ставится командой `apprevive setup`, если
+`apprevive doctor` его не находит.
 
 ## Частые вопросы
 
 **Телефон не виден.** Проверьте кабель, разблокируйте экран и нажмите
 «Доверять этому компьютеру». В графической версии откройте раздел «Проверки»,
-в терминальной выполните `apprestore devices` и `apprestore doctor`. На
+в терминальной выполните `apprevive devices` и `apprevive doctor`. На
 Windows нужен драйвер Apple для USB: поставьте приложение «Устройства Apple»
-(Apple Devices) или iTunes, либо выполните `apprestore setup`.
+(Apple Devices) или iTunes, либо выполните `apprevive setup`.
 
 **Apple просит код.** Это обычная двухфакторная защита. В графической версии
 после пароля появится поле для кода из 6 цифр, в терминальной код вводится там
@@ -253,7 +304,7 @@ Windows нужен драйвер Apple для USB: поставьте прил�
 примет и завершит вход. Если код не пришёл, не входите заново несколько раз
 подряд, Apple может перестать присылать коды. Возьмите код на iPhone:
 «Настройки» → ваше имя → «Вход и безопасность» → «Получить код проверки».
-AppRestore не записывает пароль и код в журнал.
+AppRevive не записывает пароль и код в журнал.
 
 **Спрашивают «пароль связки ключей».** Это не пароль Apple ID. Его спрашивает
 ipatool на Windows, чтобы зашифровать сохранённый вход. Придумайте его при
@@ -268,13 +319,13 @@ ipatool на Windows, чтобы зашифровать сохранённый �
 нужен свой сохранённый файл IPA.
 
 **Поиск удалённых приложений по названию.** Если App Store, ваши покупки и
-встроенный список ничего не нашли, AppRestore ищет приложение в публичном
+встроенный список ничего не нашли, AppRevive ищет приложение в публичном
 архиве. Поиск удалённых приложений идёт через публичный архив Internet Archive
 (web.archive.org). Туда отправляется только текст запроса, ваш Apple ID — нет.
 Выключить это можно в «Настройках», переключатель «Искать в архиве».
 
 **Ошибка сети при входе.** Проверьте подключение к интернету и попробуйте ещё
-раз. Если вы выходите в сеть через прокси, AppRestore использует системные
+раз. Если вы выходите в сеть через прокси, AppRevive использует системные
 настройки; явные `HTTP_PROXY` и `HTTPS_PROXY` всегда важнее.
 
 ## Безопасность и приватность
@@ -307,7 +358,7 @@ ipatool на Windows, чтобы зашифровать сохранённый �
 
 ## Лицензия и сторонние компоненты
 
-AppRestore распространяется по лицензии [GNU GPL v3](./LICENSE).
+AppRevive распространяется по лицензии [GNU GPL v3](./LICENSE).
 
 Главные компоненты:
 
@@ -325,40 +376,66 @@ AppRestore распространяется по лицензии [GNU GPL v3](.
 - как выпускать новую версию: [docs/RELEASING.md](./docs/RELEASING.md);
 - история изменений: [CHANGELOG.md](./CHANGELOG.md).
 
-В каждом выпуске шесть файлов: `AppRestore-GUI-Windows.zip`,
-`AppRestore-GUI-macOS.zip`, `install.ps1`, `install.sh`,
-`AppRestore-<версия>-source.zip` и `SHA256SUMS.txt`.
+В каждом выпуске шесть файлов: `AppRevive-GUI-Windows.zip`,
+`AppRevive-GUI-macOS.zip`, `install.ps1`, `install.sh`,
+`AppRevive-<версия>-source.zip` и `SHA256SUMS.txt`.
 
 ---
 
 ## English summary
 
-**AppRestore** brings offloaded or deleted apps back to an iPhone over USB from
+**AppRevive** brings offloaded or deleted apps back to an iPhone over USB from
 Windows or macOS, using your own Apple ID and the verified **ipatool 2.6.0**.
 It does not bypass DRM.
 
 Download from
-[the latest release](https://github.com/J3ckJ/AppRestore/releases/latest):
+[the latest release](https://github.com/amwbru-alt/AppRestore/releases/latest):
 
 - **Desktop app (no command line):**
-  [Windows](https://github.com/J3ckJ/AppRestore/releases/latest/download/AppRestore-GUI-Windows.zip),
-  [macOS, Apple Silicon](https://github.com/J3ckJ/AppRestore/releases/latest/download/AppRestore-GUI-macOS.zip).
+  [Windows](https://github.com/amwbru-alt/AppRestore/releases/latest/download/AppRevive-GUI-Windows.zip),
+  [macOS, Apple Silicon](https://github.com/amwbru-alt/AppRestore/releases/latest/download/AppRevive-GUI-macOS.zip).
   Both builds are unsigned (and not notarized by Apple), so first compare the
   archive's SHA-256 (`Get-FileHash` on Windows, `shasum -a 256` on macOS) with
-  [SHA256SUMS.txt](https://github.com/J3ckJ/AppRestore/releases/latest/download/SHA256SUMS.txt).
+  [SHA256SUMS.txt](https://github.com/amwbru-alt/AppRestore/releases/latest/download/SHA256SUMS.txt).
   Then on Windows click **More info**, then **Run anyway**; on macOS open
   System Settings, Privacy & Security, and click **Open Anyway**.
 - **Terminal version:**
 
 ```powershell
-irm https://github.com/J3ckJ/AppRestore/releases/latest/download/install.ps1 | iex
+irm https://github.com/amwbru-alt/AppRestore/releases/latest/download/install.ps1 | iex
 ```
 
 ```bash
-curl -fsSL https://github.com/J3ckJ/AppRestore/releases/latest/download/install.sh | /bin/bash
+curl -fsSL https://github.com/amwbru-alt/AppRestore/releases/latest/download/install.sh | /bin/bash
 ```
 
-Then run `apprestore`, trust the computer on the phone, use menu item **A** to
+Then run `apprevive`, trust the computer on the phone, use menu item **A** to
 sign in, **1** for offloaded apps, **2** for fully removed apps. Passwords stay
-inside interactive `ipatool`; AppRestore does not put them on argv. See
-`apprestore --help` and [SECURITY.md](./SECURITY.md).
+inside interactive `ipatool`; AppRevive does not put them on argv. See
+`apprevive --help` and [SECURITY.md](./SECURITY.md).
+
+### Очистка в настройках
+
+Ссылка «Настройки» доступна в окне на macOS и Windows. «Очистить аккаунты Apple»
+завершает текущую сессию, удаляет сохранённые сессии Apple, привязки устройств
+и локальную историю покупок. «Удалить скачанные IPA» удаляет IPA с диска
+из библиотеки AppRevive; импортированные из других папок файлы сохраняются.
+Каждое действие требует подтверждения и недоступно во время операций.
+Настройки API и баланс восстановлений сохраняются.
+
+### Партнёрская программа
+
+В настройках Mac и Windows доступны личный партнёрский код, ввод кода
+пригласившего и статистика оплаченных покупок приглашённых. Привязка сохраняется
+на сервере. [Установка, регистрация покупок и SQL](PARTNERS.md).
+
+### Сайт приложения
+
+Node.js API также отдаёт публичный сайт AppRevive на главной странице.
+[Развёртывание и подключение установщиков](WEBSITE.md).
+
+### Этапы восстановления в приложении
+
+Прогресс отражает реальные события: проверку, загрузку, подготовку IPA, передачу на iPhone и подтверждение результата на устройстве. Проценты отображаются только для загрузки, когда их сообщает ipatool. На остальных этапах используется индикатор ожидания. 100% загрузки не означает завершённую установку; успех появляется после проверки результата и завершения операции.
+
+Для локального IPA загрузки нет. Не наблюдавшиеся этапы не отмечаются как выполненные. При нативной повторной загрузке iOS может не сообщать отдельный этап установки — приложение не выдумывает проценты и отдельные события. Вход по Apple ID и окно промокода сохраняют прежнее поведение.

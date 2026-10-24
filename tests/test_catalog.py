@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from apprestore_core.catalog import (
+from apprevive_core.catalog import (
     CatalogError,
     lookup_itunes_store_id,
     parse_installed_apps,
@@ -13,7 +13,7 @@ from apprestore_core.catalog import (
     parse_offloaded_apps,
     parse_udids,
 )
-from apprestore_core.ipa import read_ipa_metadata
+from apprevive_core.ipa import read_ipa_metadata
 
 from tests.helpers import make_ipa
 
@@ -217,7 +217,7 @@ class PlaceholderParsingTests(unittest.TestCase):
     def test_find_store_id_decodes_binary_itunes_metadata(self) -> None:
         import plistlib
 
-        from apprestore_core.catalog import find_store_id
+        from apprevive_core.catalog import find_store_id
 
         blob = plistlib.dumps({"itemId": 99887766, "playlistName": "x"})
         self.assertEqual(find_store_id({"iTunesMetadata": blob}), "99887766")

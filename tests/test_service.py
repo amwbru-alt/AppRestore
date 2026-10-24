@@ -8,10 +8,10 @@ import zipfile
 from pathlib import Path
 from unittest.mock import patch
 
-from apprestore_core.ipa import IpaError
-from apprestore_core.models import DeviceAppState
-from apprestore_core.service import AppRestoreError, AppRestoreService
-from apprestore_core.tools import InstallRequestState, ToolUnavailable
+from apprevive_core.ipa import IpaError
+from apprevive_core.models import DeviceAppState
+from apprevive_core.service import AppReviveError, AppReviveService
+from apprevive_core.tools import InstallRequestState, ToolUnavailable
 
 from tests.helpers import make_ipa
 
@@ -53,7 +53,7 @@ class FakeTools:
         return True
 
     def purchase_license(self, store_id: str, *, grant: object) -> dict[str, object]:
-        from apprestore_core.purchase_grant import require_grant
+        from apprevive_core.purchase_grant import require_grant
 
         require_grant(grant, store_id)
         self.purchase_calls.append({"store_id": store_id})
@@ -77,7 +77,7 @@ class FakeTools:
         return DeviceAppState.INSTALLED, "1.0"
 
 
-class MutatingService(AppRestoreService):
+class MutatingService(AppReviveService):
     def _sha256(self, path: Path) -> str:
         digest = super()._sha256(path)
         with path.open("ab") as handle:
@@ -97,20 +97,20 @@ class ServiceTests(unittest.TestCase):
             bundle_id="com.example.wrong",
         )
         self._lookup_patch = patch(
-            "apprestore_core.service.lookup_itunes_store_id",
+            "apprevive_core.service.lookup_itunes_store_id",
             return_value=None,
         )
         self.lookup = self._lookup_patch.start()
         self._remember_patch = patch(
-            "apprestore_core.service.remember_known_app",
+            "apprevive_core.service.remember_known_app",
         )
         self.remember = self._remember_patch.start()
         self.journal = self.root / "licenses_acquired.jsonl"
-        self._env_patch = patch.dict(os.environ, {"APPRESTORE_LICENSE_JOURNAL": str(self.journal)})
+        self._env_patch = patch.dict(os.environ, {"APPREVIVE_LICENSE_JOURNAL": str(self.journal)})
         self._env_patch.start()
         self.price: object = 0.0
         self._offer_patch = patch(
-            "apprestore_core.license_gate.lookup_offer",
+            "apprevive_core.license_gate.lookup_offer",
             side_effect=lambda store_id, countries=None: {
                 "storeId": store_id, "bundleId": "com.example.alpha",
                 "price": self.price, "country": (countries or ("ru",))[0],
@@ -125,8 +125,8 @@ class ServiceTests(unittest.TestCase):
         self._lookup_patch.stop()
         self.temporary.cleanup()
 
-    def service(self, tools: FakeTools) -> AppRestoreService:
-        return AppRestoreService(
+    def service(self, tools: FakeTools) -> AppReviveService:
+        return AppReviveService(
             tools=tools,  # type: ignore[arg-type]
             library=self.library,
             cache=self.cache,
@@ -158,7 +158,7 @@ class ServiceTests(unittest.TestCase):
 
     def test_purchase_is_skipped_after_definitive_identity_mismatch(self) -> None:
         tools = FakeTools([self.wrong, self.wrong])
-        with self.assertRaisesRegex(AppRestoreError, "another app|different|mismatch|bundle"):
+        with self.assertRaisesRegex(AppReviveError, "another app|different|mismatch|bundle"):
             self.service(tools).download(
                 "com.example.alpha",
                 "12345678",
@@ -177,14 +177,14 @@ class ServiceTests(unittest.TestCase):
             bundle_id="com.example.wrong",
         )
         tools = FakeTools([None])
-        with self.assertRaises(AppRestoreError):
+        with self.assertRaises(AppReviveError):
             self.service(tools).download("com.example.alpha")
         self.assertTrue(decoy.exists())
         self.assertEqual(tools.install_calls, [])
 
     def test_wrong_bundle_is_never_committed(self) -> None:
         tools = FakeTools([self.wrong])
-        with self.assertRaisesRegex(AppRestoreError, "expected 'com.example.alpha'"):
+        with self.assertRaisesRegex(AppReviveError, "expected 'com.example.alpha'"):
             self.service(tools).download("com.example.alpha")
         self.assertFalse((self.library / "com.example.alpha.ipa").exists())
         self.assertEqual(tools.install_calls, [])
@@ -201,7 +201,7 @@ class ServiceTests(unittest.TestCase):
     def test_install_revalidates_exact_bundle_before_calling_tool(self) -> None:
         tools = FakeTools()
         service = self.service(tools)
-        with self.assertRaisesRegex(AppRestoreError, "refusing"):
+        with self.assertRaisesRegex(AppReviveError, "refusing"):
             service.install(
                 "TEST-UDID",
                 self.wrong,
@@ -236,7 +236,7 @@ class ServiceTests(unittest.TestCase):
 
         refused: list[int] = []
         service.on_device_install = lambda: refused.append(1)
-        with self.assertRaisesRegex(AppRestoreError, "refusing"):
+        with self.assertRaisesRegex(AppReviveError, "refusing"):
             service.install(
                 "TEST-UDID",
                 self.wrong,
@@ -264,14 +264,14 @@ class ServiceTests(unittest.TestCase):
     def test_acquire_license_refuses_paid_app(self) -> None:
         self.price = 1.99
         tools = FakeTools(["LICENSE"])
-        with self.assertRaisesRegex(AppRestoreError, "платное"):
+        with self.assertRaisesRegex(AppReviveError, "платное"):
             self.service(tools).download_by_store_id("12345678", acquire_license=True)
         self.assertEqual(tools.purchase_calls, [])
         self.assertFalse(self.journal.exists())
 
     def test_purchase_attempts_require_explicit_opt_in(self) -> None:
         tools = FakeTools([self.wrong, self.wrong])
-        with self.assertRaises(AppRestoreError):
+        with self.assertRaises(AppReviveError):
             self.service(tools).download("com.example.alpha", "12345678")
         self.assertTrue(tools.download_calls)
         self.assertEqual(tools.purchase_calls, [])
@@ -298,7 +298,7 @@ class ServiceTests(unittest.TestCase):
 
     def test_invalid_explicit_store_id_is_rejected_before_download(self) -> None:
         tools = FakeTools([self.good])
-        with self.assertRaisesRegex(AppRestoreError, "8-12 digit"):
+        with self.assertRaisesRegex(AppReviveError, "8-12 digit"):
             self.service(tools).download("com.example.alpha", "123")
 
         self.assertEqual(tools.download_calls, [])
@@ -311,7 +311,7 @@ class ServiceTests(unittest.TestCase):
             library=self.library,
             cache=self.cache,
         )
-        with self.assertRaisesRegex(AppRestoreError, "changed"):
+        with self.assertRaisesRegex(AppReviveError, "changed"):
             service._verify_ipa(
                 self.good,
                 expected_bundle_id="com.example.alpha",
@@ -348,11 +348,11 @@ class ServiceTests(unittest.TestCase):
 
         with (
             patch(
-                "apprestore_core.service.os.replace",
+                "apprevive_core.service.os.replace",
                 side_effect=replace_then_mutate,
             ),
             patch.object(service, "_cache_verified_ipa") as cache_verified,
-            self.assertRaisesRegex(AppRestoreError, "final verification"),
+            self.assertRaisesRegex(AppReviveError, "final verification"),
         ):
             service.download("com.example.alpha")
 

@@ -4,16 +4,16 @@ from __future__ import annotations
 
 import unittest
 
-from apprestore_gui.errors import explain_store_operation_error, explain_update_error, explain_user_error
+from apprevive_gui.errors import explain_store_operation_error, explain_update_error, explain_user_error
 
 try:
-    from apprestore_gui.main_window import friendly_restore_error
+    from apprevive_gui.main_window import friendly_restore_error
 except ModuleNotFoundError:
     friendly_restore_error = None
 
 _ESSAY = (
     "Typical causes: a network failure reaching Apple (a TLS handshake "
-    "timeout means ipatool could not connect - check `apprestore doctor`), "
+    "timeout means ipatool could not connect - check `apprevive doctor`), "
     "app removed from the App Store, unavailable for this Apple ID "
     "region, or no purchase/license. To explicitly acquire a license, "
     "retry with --acquire-license."
@@ -62,10 +62,10 @@ class ExplainUserErrorTests(unittest.TestCase):
         if friendly_restore_error is None:
             self.skipTest("PySide6 is not installed")
         text = friendly_restore_error(
-            "ipatool is not authenticated; run `apprestore auth`"
+            "ipatool is not authenticated; run `apprevive auth`"
         )
         self.assertIn("Apple ID", text)
-        self.assertNotIn("apprestore auth", text)
+        self.assertNotIn("apprevive auth", text)
 
     def test_license_inside_the_essay_is_not_called_a_network_failure(self) -> None:
         text = explain_user_error(

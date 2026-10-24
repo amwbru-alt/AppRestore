@@ -10,10 +10,10 @@ pytest.importorskip("pytestqt")
 
 from PySide6.QtWidgets import QApplication
 
-from apprestore_gui import updater
-from apprestore_gui.update_dialog import UpdateDialog
+from apprevive_gui import updater
+from apprevive_gui.update_dialog import UpdateDialog
 
-DL = "https://github.com/J3ckJ/AppRestore/releases/download/v0.3.0/"
+DL = "https://github.com/amwbru-alt/AppRestore/releases/download/v0.3.0/"
 
 
 @pytest.fixture(scope="module")
@@ -27,9 +27,9 @@ def _info(installable=True, latest="0.3.0"):
         latest=latest,
         tag="v" + latest,
         notes="## Что нового\n* Окно",
-        page_url="https://github.com/J3ckJ/AppRestore/releases/tag/v" + latest,
-        asset_name="AppRestore-GUI-Windows.zip" if installable else None,
-        asset_url=DL + "AppRestore-GUI-Windows.zip" if installable else None,
+        page_url="https://github.com/amwbru-alt/AppRestore/releases/tag/v" + latest,
+        asset_name="AppRevive-GUI-Windows.zip" if installable else None,
+        asset_url=DL + "AppRevive-GUI-Windows.zip" if installable else None,
         asset_size=5 * 1024 * 1024,
         checksums_url=DL + "SHA256SUMS.txt",
     )
@@ -89,15 +89,15 @@ def test_update_button_disabled_when_not_possible(qapp, qtbot, installable, froz
 
 
 def test_no_long_dashes_in_update_strings():
-    root = Path(__file__).resolve().parents[1] / "apprestore_gui"
+    root = Path(__file__).resolve().parents[1] / "apprevive_gui"
     for name in ("update_dialog.py", "updater.py"):
         assert "\u2014" not in (root / name).read_text(encoding="utf-8")
 
 
 def test_settings_button_checks_and_reports_latest(qapp, qtbot, monkeypatch):
-    from apprestore_gui.icons_cache import ArtworkCache
-    from apprestore_gui.main_window import MainWindow
-    from apprestore_gui.service_adapter import GuiService
+    from apprevive_gui.icons_cache import ArtworkCache
+    from apprevive_gui.main_window import MainWindow
+    from apprevive_gui.service_adapter import GuiService
 
     monkeypatch.setattr(updater, "check_for_update", lambda *a, **k: _info(latest="0.2.4"))
     window = MainWindow(GuiService(demo_mode=True), ArtworkCache())

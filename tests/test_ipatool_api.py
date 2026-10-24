@@ -14,11 +14,11 @@ import threading
 
 import pytest
 
-# Works both in Dima's checkout (package apprestore_core) and in maks-share
+# Works both in Dima's checkout (package apprevive_core) and in maks-share
 # (flat modules next to this file).
 try:
-    from apprestore_core import ipatool_api as api
-    from apprestore_core import license_guard as lg
+    from apprevive_core import ipatool_api as api
+    from apprevive_core import license_guard as lg
 except ImportError:
     import ipatool_api as api
     import license_guard as lg

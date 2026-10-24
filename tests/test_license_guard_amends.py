@@ -19,7 +19,7 @@ import datetime as dt
 import json
 from pathlib import Path
 
-import apprestore_core.license_guard as lg
+import apprevive_core.license_guard as lg
 
 FIXED = dt.datetime(2026, 10, 10, 12, 0, 0, tzinfo=dt.timezone.utc)
 

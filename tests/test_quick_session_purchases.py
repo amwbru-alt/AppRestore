@@ -9,10 +9,10 @@ import pytest
 
 pytest.importorskip("PySide6")
 
-import apprestore_core.ipatool_api as api  # noqa: E402
-from apprestore_core.purchases_cache import CachedPurchase, PurchasesCache  # noqa: E402
-from apprestore_gui import quick_session as qs  # noqa: E402
-from apprestore_gui.purchases import PurchasesLoader, SessionChecker  # noqa: E402
+import apprevive_core.ipatool_api as api  # noqa: E402
+from apprevive_core.purchases_cache import CachedPurchase, PurchasesCache, account_key  # noqa: E402
+from apprevive_gui import quick_session as qs  # noqa: E402
+from apprevive_gui.purchases import PurchasesLoader, SessionChecker  # noqa: E402
 
 EMAIL = "person@example.com"
 
@@ -47,6 +47,7 @@ def _drain(app) -> None:
 
 @pytest.fixture()
 def session(qapp, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(qs, "DiscoveryReporter", lambda: SimpleNamespace(submit=lambda rows: None))
     monkeypatch.setattr(qs, "GuiService", lambda demo_mode=False: FakeService())
     monkeypatch.setattr(qs, "load_bindings", lambda: {})
     monkeypatch.setattr(qs, "forget_session", lambda email: None)
@@ -202,8 +203,8 @@ def _failing_install(s, exc: BaseException) -> list[tuple]:
 
 
 def test_store_mismatch_offers_sign_in_again_like_expired(session) -> None:
-    from apprestore_core.license_gate import STORE_MISMATCH_TEXT
-    from apprestore_core.tools import ToolUnavailable
+    from apprevive_core.license_gate import STORE_MISMATCH_TEXT
+    from apprevive_core.tools import ToolUnavailable
 
     s, prompts, _ = session
     settled = _failing_install(s, ToolUnavailable(APPLE_128))
@@ -215,8 +216,103 @@ def test_store_mismatch_offers_sign_in_again_like_expired(session) -> None:
 
 
 def test_other_install_errors_do_not_offer_relogin(session) -> None:
-    from apprestore_core.tools import ToolUnavailable
+    from apprevive_core.tools import ToolUnavailable
 
     s, prompts, _ = session
     _failing_install(s, ToolUnavailable("failed to purchase item: something else"))
     assert not s.sessionRelogin and prompts == []
+
+
+def test_restoration_history_requires_fresh_account_and_matching_phone(session):
+    from apprevive_gui.purchases import PurchasesView
+    from apprevive_core.history_filter import device_inventory
+    s, _, _ = session
+    rows = ({'trackId':'12345678','bundleId':'bank.old','name':'Old'},
+            {'trackId':'22345678','bundleId':'bank.current','name':'Current'})
+    s._purchases._account = account_key(EMAIL)
+    s._udid = 'phone-a'
+    s._history_inventory_udid = 'phone-a'
+    s._history_inventory = device_inventory({'bank.current':{'CFBundleIdentifier':'bank.current'}})
+    s._purchases_view = PurchasesView(rows=rows, from_cache=True)
+    assert s.restorationPurchases == []
+    s._purchases_view = PurchasesView(rows=rows, confirmed=True, account=account_key(EMAIL))
+    assert [r['trackId'] for r in s.restorationPurchases] == ['12345678']
+    s._purchases._account = account_key('other@example.test')
+    assert s.restorationPurchases == []
+    s._purchases._account = account_key(EMAIL)
+    s._udid = 'phone-b'
+    assert s.restorationPurchases == []
+    s._udid = ''
+    assert s.restorationPurchases == []
+    assert 'Подключите' in s.restorationHistoryNote
+
+
+def test_history_device_read_failure_hides_previous_inventory(session):
+    import time
+    from apprevive_gui.purchases import PurchasesView
+    from apprevive_core.history_filter import device_inventory
+    s, _, _ = session
+    s._purchases._account = account_key(EMAIL)
+    s._udid = 'phone-a'
+    s._history_inventory_udid = 'phone-a'
+    s._history_inventory = device_inventory({})
+    s._purchases_view = PurchasesView(rows=({'trackId':'12345678','bundleId':'bank.old'},), confirmed=True, account=account_key(EMAIL))
+    def fail(_):
+        raise RuntimeError('device locked')
+    s.service.core.tools.list_apps = fail
+    s._ensure_history_inventory(force=True)
+    deadline = time.monotonic()+2
+    while s._history_scan_running and time.monotonic()<deadline:
+        time.sleep(.005)
+    assert not s._history_scan_running
+    assert s.restorationPurchases == []
+    assert 'Не удалось проверить' in s.restorationHistoryNote
+
+
+def test_device_switch_discards_inflight_inventory(session):
+    import threading
+    import time
+    from apprevive_gui.purchases import PurchasesView
+    s, _, _ = session
+    entered, release = threading.Event(), threading.Event()
+    s._purchases._account = account_key(EMAIL)
+    s._udid = 'phone-a'
+    s._purchases_view = PurchasesView(rows=({'trackId':'12345678','bundleId':'bank.old'},), confirmed=True, account=account_key(EMAIL))
+    def scan(udid):
+        if udid=='phone-a':
+            entered.set()
+            release.wait(2)
+            return {}
+        return {'bank.old':{'CFBundleIdentifier':'bank.old'}}
+    s.service.core.tools.list_apps = scan
+    s._ensure_history_inventory()
+    assert entered.wait(1)
+    s._udid = 'phone-b'
+    s._ensure_history_inventory(force=True)
+    assert s.restorationPurchases == []
+    release.set()
+    deadline=time.monotonic()+2
+    while (s._history_scan_running or s._history_inventory_udid!='phone-b') and time.monotonic()<deadline:
+        time.sleep(.005)
+    assert s._history_inventory_udid=='phone-b'
+    assert s.restorationPurchases == []
+
+
+def test_confirmed_missing_history_triggers_candidate_reporting(session):
+    import threading
+    from apprevive_gui.purchases import PurchasesView
+    from apprevive_core.history_filter import device_inventory
+    s, _, _ = session
+    s._udid='phone-a'
+    s._history_inventory_udid='phone-a'
+    s._history_inventory=device_inventory({})
+    s._purchases._account=account_key(EMAIL)
+    reported,done=[],threading.Event()
+    def submit(rows):
+        reported.extend(rows)
+        done.set()
+    s._discovery_reporter=SimpleNamespace(submit=submit)
+    row={'trackId':'12345678','bundleId':'bank.old','name':'Old'}
+    s._on_purchases_view(PurchasesView(rows=(row,),confirmed=True,account=account_key(EMAIL)))
+    assert done.wait(1)
+    assert reported==[row]

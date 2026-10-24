@@ -7,8 +7,8 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$ManagedInstallMarkerName = ".apprestore-managed"
-$ManagedInstallMarkerValue = "AppRestore managed installation v1"
+$ManagedInstallMarkerName = ".apprevive-managed"
+$ManagedInstallMarkerValue = "AppRevive managed installation v1"
 $KnownLocalAppData = [Environment]::GetFolderPath(
     [Environment+SpecialFolder]::LocalApplicationData
 )
@@ -17,7 +17,7 @@ if ([string]::IsNullOrWhiteSpace($KnownLocalAppData)) {
 }
 $KnownLocalAppData = [System.IO.Path]::GetFullPath($KnownLocalAppData)
 $InstallRoot = [System.IO.Path]::GetFullPath(
-    (Join-Path $KnownLocalAppData "Programs\AppRestore")
+    (Join-Path $KnownLocalAppData "Programs\AppRevive")
 )
 
 function Assert-PlainDirectoryTree {
@@ -49,7 +49,7 @@ function Assert-PlainDirectoryTree {
     }
 }
 
-function Assert-ManagedAppRestoreInstall {
+function Assert-ManagedAppReviveInstall {
     param(
         [Parameter(Mandatory = $true)]
         [string]$Path
@@ -87,16 +87,16 @@ function Assert-ManagedAppRestoreInstall {
         }
     }
     $LegacyV013Hashes = [ordered]@{
-        "apprestore.ps1" = "9ee7beff4201448cc44f10cd6a135c4c74bbbc34b5f63e55534e9c562d498d80"
+        "apprevive.ps1" = "9ee7beff4201448cc44f10cd6a135c4c74bbbc34b5f63e55534e9c562d498d80"
         "uninstall-windows.ps1" = "a0236a380ce568e15603b311b593ba37e7d3674d2750d16b14c2ae1a39d1c5b4"
-        "src\apprestore.py" = "2ba4e1da347b33a5a698473f1d961b3dfc4074435eb52dbb41ccf772bf60f33c"
-        "src\apprestore_core\__init__.py" = "b04720f00147032b00bc8fb0c1200eccbd5f7c316757d9bba72bc0e10fa2098e"
+        "src\apprevive.py" = "2ba4e1da347b33a5a698473f1d961b3dfc4074435eb52dbb41ccf772bf60f33c"
+        "src\apprevive_core\__init__.py" = "b04720f00147032b00bc8fb0c1200eccbd5f7c316757d9bba72bc0e10fa2098e"
         "src\pyproject.toml" = "e4df42479fbe74a45a2fcf669828486fd6acf438709971542650ab6346e48936"
     }
     foreach ($LegacyRelativePath in $LegacyV013Hashes.Keys) {
         $LegacyFile = Join-Path $Path $LegacyRelativePath
         if (-not (Test-Path -LiteralPath $LegacyFile -PathType Leaf)) {
-            throw "Отказ: $Path не является известной установкой AppRestore v0.1.3."
+            throw "Отказ: $Path не является известной установкой AppRevive v0.1.3."
         }
         $LegacyHash = & $GetSha256 -FilePath $LegacyFile
         if (-not [string]::Equals(
@@ -104,7 +104,7 @@ function Assert-ManagedAppRestoreInstall {
             $LegacyV013Hashes[$LegacyRelativePath],
             [System.StringComparison]::Ordinal
         )) {
-            throw "Отказ: fingerprint AppRestore v0.1.3 не совпал: $LegacyRelativePath"
+            throw "Отказ: fingerprint AppRevive v0.1.3 не совпал: $LegacyRelativePath"
         }
     }
 
@@ -114,10 +114,10 @@ setlocal
 set "PATH=%~dp0;%PATH%"
 set "PYTHONUTF8=1"
 set "PYTHONIOENCODING=utf-8"
-"%~dp0..\.venv\Scripts\apprestore.exe" %*
+"%~dp0..\.venv\Scripts\apprevive.exe" %*
 exit /b %ERRORLEVEL%
 '@
-    $LegacyCommand = Join-Path $Path "bin\apprestore.cmd"
+    $LegacyCommand = Join-Path $Path "bin\apprevive.cmd"
     if (
         -not (Test-Path -LiteralPath $LegacyCommand -PathType Leaf) -or
         -not [string]::Equals(
@@ -126,15 +126,15 @@ exit /b %ERRORLEVEL%
             [System.StringComparison]::Ordinal
         )
     ) {
-        throw "Отказ: launcher AppRestore v0.1.3 не совпал."
+        throw "Отказ: launcher AppRevive v0.1.3 не совпал."
     }
     foreach ($LegacyRuntimeFile in @(
         (Join-Path $Path ".venv\Scripts\python.exe"),
-        (Join-Path $Path ".venv\Scripts\apprestore.exe"),
+        (Join-Path $Path ".venv\Scripts\apprevive.exe"),
         (Join-Path $Path "bin\ipatool.exe")
     )) {
         if (-not (Test-Path -LiteralPath $LegacyRuntimeFile -PathType Leaf)) {
-            throw "Отказ: runtime fingerprint AppRestore v0.1.3 неполон."
+            throw "Отказ: runtime fingerprint AppRevive v0.1.3 неполон."
         }
     }
 }
@@ -142,12 +142,12 @@ exit /b %ERRORLEVEL%
 $BinTarget = Join-Path $InstallRoot "bin"
 $ProgramExists = Test-Path -LiteralPath $InstallRoot
 if ($ProgramExists) {
-    Assert-ManagedAppRestoreInstall -Path $InstallRoot
+    Assert-ManagedAppReviveInstall -Path $InstallRoot
 }
 $RemoveProgram = $false
 $UpdatePath = $false
 if ($ProgramExists) {
-    $RemoveProgram = $PSCmdlet.ShouldProcess($InstallRoot, "удалить AppRestore")
+    $RemoveProgram = $PSCmdlet.ShouldProcess($InstallRoot, "удалить AppRevive")
     $UpdatePath = $RemoveProgram
 }
 else {
@@ -155,7 +155,7 @@ else {
     $RemoveProgram = $true
     $UpdatePath = $PSCmdlet.ShouldProcess(
         "пользовательский PATH",
-        "убрать оставшийся каталог AppRestore\bin"
+        "убрать оставшийся каталог AppRevive\bin"
     )
 }
 
@@ -201,21 +201,21 @@ if ($UpdatePath -and $null -ne $UserPath) {
 
 if ($ProgramExists -and $RemoveProgram) {
     Remove-Item -LiteralPath $InstallRoot -Recurse -Force
-    Write-Host "AppRestore удалён. Откройте новый терминал, чтобы обновился PATH."
+    Write-Host "AppRevive удалён. Откройте новый терминал, чтобы обновился PATH."
 }
 elseif ($ProgramExists) {
-    Write-Host "Удаление AppRestore отменено; запись PATH сохранена."
+    Write-Host "Удаление AppRevive отменено; запись PATH сохранена."
 }
 else {
-    Write-Host "AppRestore не установлен в $InstallRoot."
+    Write-Host "AppRevive не установлен в $InstallRoot."
 }
 
 if ($PurgeUserData) {
     $DefaultIpaLibrary = [System.IO.Path]::GetFullPath(
-        (Join-Path $HOME "AppRestore\ipas")
+        (Join-Path $HOME "AppRevive\ipas")
     )
     $DefaultCache = [System.IO.Path]::GetFullPath(
-        (Join-Path $KnownLocalAppData "AppRestore")
+        (Join-Path $KnownLocalAppData "AppRevive")
     )
     # ipatool 2.4+ кэширует здесь SAP-рантайм авторизации (Unicorn).
     $IpaToolCache = [System.IO.Path]::GetFullPath(
@@ -227,15 +227,15 @@ if ($PurgeUserData) {
             (Test-Path -LiteralPath $UserDataTarget) -and
             $PSCmdlet.ShouldProcess(
                 $UserDataTarget,
-                "безвозвратно удалить пользовательские данные AppRestore"
+                "безвозвратно удалить пользовательские данные AppRevive"
             )
         ) {
             Remove-Item -LiteralPath $UserDataTarget -Recurse -Force
         }
     }
-    Write-Warning "Каталоги из APPRESTORE_IPA_DIR/APPRESTORE_CACHE_DIR автоматически не удаляются."
+    Write-Warning "Каталоги из APPREVIVE_IPA_DIR/APPREVIVE_CACHE_DIR автоматически не удаляются."
 }
 else {
-    Write-Host "IPA, кэш AppRestore, SAP-рантайм и авторизация ipatool сохранены."
+    Write-Host "IPA, кэш AppRevive, SAP-рантайм и авторизация ipatool сохранены."
     Write-Host "Для их явного удаления используйте -PurgeUserData."
 }

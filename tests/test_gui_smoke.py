@@ -11,12 +11,12 @@ pytest.importorskip("pytestqt")
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QPushButton
 
-from apprestore_gui.export_dialog import ExportFromDeviceDialog
+from apprevive_gui.export_dialog import ExportFromDeviceDialog
 
-from apprestore_gui.icons_cache import ArtworkCache
-from apprestore_gui.main_window import MainWindow, NAV
-from apprestore_gui.service_adapter import GuiService
-from apprestore_gui.theme import load_fonts, STYLESHEET
+from apprevive_gui.icons_cache import ArtworkCache
+from apprevive_gui.main_window import MainWindow, NAV
+from apprevive_gui.service_adapter import GuiService
+from apprevive_gui.theme import load_fonts, STYLESHEET
 
 
 @pytest.fixture(scope="module")

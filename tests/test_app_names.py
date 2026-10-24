@@ -7,8 +7,8 @@ import urllib.parse
 import pytest
 
 try:
-    from apprestore_core import app_names as an
-    from apprestore_core import region_probe as rp
+    from apprevive_core import app_names as an
+    from apprevive_core import region_probe as rp
 except ImportError:
     import app_names as an
     import region_probe as rp
@@ -458,7 +458,7 @@ def test_module_display_names_uses_shared_probe(monkeypatch):
 
 # --- запасное имя из встроенного списка delisted_search (Лена) -----------------
 try:
-    from apprestore_core import delisted_search as ds
+    from apprevive_core import delisted_search as ds
 except ImportError:
     import delisted_search as ds
 

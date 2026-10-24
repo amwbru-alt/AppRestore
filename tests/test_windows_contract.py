@@ -16,18 +16,18 @@ import zlib
 from pathlib import Path
 from unittest.mock import patch
 
-from apprestore_core import __version__
-from apprestore_core import cli
+from apprevive_core import __version__
+from apprevive_core import cli
 
 
 ROOT = Path(__file__).resolve().parents[1]
-EXPECTED_VERSION = "0.4.0"
+EXPECTED_VERSION = "0.5.0"
 
 # Exact bytes from the immutable v0.1.3 release, compressed so the release
 # source archive can verify and exercise the one-time legacy upgrade without
 # depending on a Git checkout or historical tags.
 _LEGACY_V013_COMPRESSED = {
-    "apprestore.ps1": """
+    "apprevive.ps1": """
         eNrdVu9qG0cQ/35PMVxEkIrvsDGB4OBQxZETFcUSPjVpsU17ldfWwWn3srcXR5SAk1Bov9S09GtoodDPbmIliu3a
         r7B6hbxAX6GzuzrpTv4XN4VCBIK73dm5md/85rfz98HxFU4eJgEnMTj3CY8DRuGaO2OtLHTWQyJuBXQ9oJvF0poV
         +dzvFC3A30pDPRNBePG+HyZkkbPOMun4AUXbMt9MOoSKGOahIHhC8Kw+FAuO2ytra4VyFC2TWDBORsZWybI8IhwP
@@ -77,11 +77,11 @@ _LEGACY_V013_COMPRESSED = {
         VlvterN6v9Yo31+tNT9VhirlyloVB2MRAo2LViagJMYy6qjlQvY5Cl5J3X1Rw8JWRZCzwa/BC4IWFqm0o0j3Zcgg
         OAz1S4pxfsPNwVrwjARHUJzlTxHAM0khYVoSpJGiAeH9v6cQXEk=
     """,
-    "apprestore.py": """
+    "apprevive.py": """
         eNoVyTEOgzAMQNHdpzB0gaUZulVi5AQcwEqRUS3VTuSYqty+8Ie/vFuX9ubpJZbYvliPeBd7wOZFMdfq3KI403ru
         vn4ERWvxQM1iACAbEllWJsJpwp7oAqL+CXjmWRrjcrRgnX8Sw6XDOMIfds8nZQ==
     """,
-    "apprestore_core/__init__.py": """
+    "apprevive_core/__init__.py": """
         eNpTUlJyLsovLtYtyEksScsvylVIzi9KVQCyFBwLCoJSi0uAXD0lJSUurvj4stSi4sz8vPh4BVsFJQM9Qz1jJS4A
         zrEUPQ==
     """,
@@ -143,7 +143,7 @@ def _transaction_function_loader() -> str:
 $tokens = $null
 $parseErrors = $null
 $ast = [System.Management.Automation.Language.Parser]::ParseFile(
-    $env:APPRESTORE_INSTALLER_PATH,
+    $env:APPREVIVE_INSTALLER_PATH,
     [ref]$tokens,
     [ref]$parseErrors
 )
@@ -151,11 +151,11 @@ if ($parseErrors.Count -gt 0) {
     throw "Could not parse install-windows.ps1."
 }
 $functionNames = @(
-    "Assert-AppRestorePlainTree",
-    "Assert-AppRestoreManagedInstall",
-    "Assert-AppRestoreRecoverableInstall",
-    "Invoke-AppRestoreBackupRecovery",
-    "Invoke-AppRestoreInstallTransaction"
+    "Assert-AppRevivePlainTree",
+    "Assert-AppReviveManagedInstall",
+    "Assert-AppReviveRecoverableInstall",
+    "Invoke-AppReviveBackupRecovery",
+    "Invoke-AppReviveInstallTransaction"
 )
 foreach ($functionName in $functionNames) {
     $functionAst = $ast.Find(
@@ -193,8 +193,8 @@ def _run_transaction_probe(
     environment = os.environ.copy()
     environment.update(
         {
-            "APPRESTORE_INSTALLER_PATH": str(ROOT / "install-windows.ps1"),
-            "APPRESTORE_TRANSACTION_ROOT": str(root),
+            "APPREVIVE_INSTALLER_PATH": str(ROOT / "install-windows.ps1"),
+            "APPREVIVE_TRANSACTION_ROOT": str(root),
         }
     )
     return subprocess.run(
@@ -236,20 +236,20 @@ class VersionContractTests(unittest.TestCase):
             encoding="utf-8"
         )
         installer_match = re.search(
-            r'(?m)^\s*\$AppRestoreVersion\s*=\s*"([^"]+)"\s*$',
+            r'(?m)^\s*\$AppReviveVersion\s*=\s*"([^"]+)"\s*$',
             installer_text,
         )
         self.assertIsNotNone(
             installer_match,
-            "$AppRestoreVersion is missing from install-windows.ps1",
+            "$AppReviveVersion is missing from install-windows.ps1",
         )
         macos_installer_match = re.search(
-            r'(?m)^\s*APPRESTORE_VERSION="([^"]+)"\s*$',
+            r'(?m)^\s*APPREVIVE_VERSION="([^"]+)"\s*$',
             (ROOT / "install-macos.sh").read_text(encoding="utf-8"),
         )
         self.assertIsNotNone(
             macos_installer_match,
-            "APPRESTORE_VERSION is missing from install-macos.sh",
+            "APPREVIVE_VERSION is missing from install-macos.sh",
         )
 
         readme_match = re.search(
@@ -258,7 +258,7 @@ class VersionContractTests(unittest.TestCase):
         )
         self.assertIsNotNone(
             readme_match,
-            "README.md does not state the current AppRestore version",
+            "README.md does not state the current AppRevive version",
         )
 
         changelog_match = re.search(
@@ -298,7 +298,7 @@ class PowerShellSyntaxTests(unittest.TestCase):
 $tokens = $null
 $parseErrors = $null
 [void][System.Management.Automation.Language.Parser]::ParseFile(
-    $env:APPRESTORE_AST_TARGET,
+    $env:APPREVIVE_AST_TARGET,
     [ref]$tokens,
     [ref]$parseErrors
 )
@@ -316,7 +316,7 @@ if ($parseErrors.Count -gt 0) {
             for script in scripts:
                 with self.subTest(host=Path(host).name, script=script.name):
                     environment = os.environ.copy()
-                    environment["APPRESTORE_AST_TARGET"] = str(script)
+                    environment["APPREVIVE_AST_TARGET"] = str(script)
                     result = subprocess.run(
                         [
                             host,
@@ -403,7 +403,7 @@ class InstallerDependencyContractTests(unittest.TestCase):
         uninstaller = (ROOT / "uninstall-windows.ps1").read_text(
             encoding="utf-8"
         )
-        launcher = (ROOT / "apprestore.ps1").read_text(encoding="utf-8")
+        launcher = (ROOT / "apprevive.ps1").read_text(encoding="utf-8")
 
         for name, script in (
             ("payload", payload),
@@ -421,7 +421,7 @@ class InstallerDependencyContractTests(unittest.TestCase):
         self.assertIn(
             (
                 r'"%~dp0..\.venv\Scripts\python.exe" '
-                r'-X utf8 -I -m apprestore_core.cli %*'
+                r'-X utf8 -I -m apprevive_core.cli %*'
             ),
             payload,
         )
@@ -432,7 +432,7 @@ class InstallerDependencyContractTests(unittest.TestCase):
         for variable in ("PYTHONPATH", "PYTHONHOME", "PYTHONSTARTUP"):
             self.assertIn(f'set "{variable}="', command_wrapper)
             self.assertIn(f'"{variable}"', launcher)
-        self.assertIn(" -I -m apprestore_core.cli %*", command_wrapper)
+        self.assertIn(" -I -m apprevive_core.cli %*", command_wrapper)
         self.assertNotIn("%PYTHONPATH%", command_wrapper)
         self.assertIn("$ManagedInstallMarkerName", payload)
         self.assertIn("$ManagedInstallMarkerValue", payload)
@@ -516,10 +516,10 @@ class InstallerDependencyContractTests(unittest.TestCase):
     def test_installer_holds_a_per_user_mutex_for_the_full_install(self) -> None:
         installer = (ROOT / "install-windows.ps1").read_text(encoding="utf-8")
 
-        mutex = '$InstallerMutexName = "Local\\AppRestore.Install."'
-        early_recovery = "Invoke-AppRestoreBackupRecovery `"
+        mutex = '$InstallerMutexName = "Local\\AppRevive.Install."'
+        early_recovery = "Invoke-AppReviveBackupRecovery `"
         selected_python = "$SelectedPython = Find-CompatiblePython"
-        transaction = "Invoke-AppRestoreInstallTransaction `"
+        transaction = "Invoke-AppReviveInstallTransaction `"
         release = "$InstallerMutex.ReleaseMutex()"
         self.assertIn(mutex, installer)
         self.assertIn("AbandonedMutexException", installer)
@@ -608,7 +608,7 @@ class InstallerDependencyContractTests(unittest.TestCase):
                 self.assertNotIn('"', snippet)
 
     def test_source_launcher_supports_only_python_310_through_313(self) -> None:
-        launcher = (ROOT / "apprestore.ps1").read_text(encoding="utf-8")
+        launcher = (ROOT / "apprevive.ps1").read_text(encoding="utf-8")
 
         self.assertIn("(3, 10) <= sys.version_info < (3, 14)", launcher)
         self.assertIn('@("-3.13", "-3.12", "-3.11", "-3.10")', launcher)
@@ -617,10 +617,10 @@ class InstallerDependencyContractTests(unittest.TestCase):
 
     def test_legacy_v013_fingerprint_is_bound_to_real_tag_bytes(self) -> None:
         expected_paths = (
-            "apprestore.ps1",
+            "apprevive.ps1",
             "uninstall-windows.ps1",
-            "apprestore.py",
-            "apprestore_core/__init__.py",
+            "apprevive.py",
+            "apprevive_core/__init__.py",
             "pyproject.toml",
         )
         expected_hashes = {
@@ -636,19 +636,19 @@ class InstallerDependencyContractTests(unittest.TestCase):
                 self.assertIn(digest, payload)
                 self.assertIn(digest, uninstaller)
         self.assertIn(
-            r'"%~dp0..\.venv\Scripts\apprestore.exe" %*',
+            r'"%~dp0..\.venv\Scripts\apprevive.exe" %*',
             payload,
         )
         self.assertIn(
-            r'"%~dp0..\.venv\Scripts\apprestore.exe" %*',
+            r'"%~dp0..\.venv\Scripts\apprevive.exe" %*',
             uninstaller,
         )
 
 
 @unittest.skipUnless(os.name == "nt", "Windows transaction contract")
 class WindowsInstallerTransactionTests(unittest.TestCase):
-    marker_name = ".apprestore-managed"
-    marker_value = "AppRestore managed installation v1"
+    marker_name = ".apprevive-managed"
+    marker_value = "AppRevive managed installation v1"
 
     def _write_managed_install(self, root: Path, version: str) -> None:
         (root / "bin").mkdir(parents=True)
@@ -656,7 +656,7 @@ class WindowsInstallerTransactionTests(unittest.TestCase):
             self.marker_value,
             encoding="utf-8",
         )
-        (root / "bin" / "apprestore.cmd").write_text(
+        (root / "bin" / "apprevive.cmd").write_text(
             (
                 "@echo off\n"
                 'if /I "%~1"=="--version" (\n'
@@ -673,10 +673,10 @@ class WindowsInstallerTransactionTests(unittest.TestCase):
 
     def _write_legacy_v013_install(self, root: Path) -> None:
         tagged_files = {
-            "apprestore.ps1": "apprestore.ps1",
+            "apprevive.ps1": "apprevive.ps1",
             "uninstall-windows.ps1": "uninstall-windows.ps1",
-            "src/apprestore.py": "apprestore.py",
-            "src/apprestore_core/__init__.py": "apprestore_core/__init__.py",
+            "src/apprevive.py": "apprevive.py",
+            "src/apprevive_core/__init__.py": "apprevive_core/__init__.py",
             "src/pyproject.toml": "pyproject.toml",
         }
         for relative, tagged_path in tagged_files.items():
@@ -689,11 +689,11 @@ class WindowsInstallerTransactionTests(unittest.TestCase):
             'set "PATH=%~dp0;%PATH%"\n'
             'set "PYTHONUTF8=1"\n'
             'set "PYTHONIOENCODING=utf-8"\n'
-            '"%~dp0..\\.venv\\Scripts\\apprestore.exe" %*\n'
+            '"%~dp0..\\.venv\\Scripts\\apprevive.exe" %*\n'
             "exit /b %ERRORLEVEL%"
         )
         (root / "bin").mkdir(parents=True)
-        (root / "bin" / "apprestore.cmd").write_text(
+        (root / "bin" / "apprevive.cmd").write_text(
             wrapper,
             encoding="utf-8",
             newline="\n",
@@ -702,7 +702,7 @@ class WindowsInstallerTransactionTests(unittest.TestCase):
         scripts = root / ".venv" / "Scripts"
         scripts.mkdir(parents=True)
         (scripts / "python.exe").write_bytes(b"legacy python fixture")
-        (scripts / "apprestore.exe").write_bytes(b"legacy launcher fixture")
+        (scripts / "apprevive.exe").write_bytes(b"legacy launcher fixture")
 
     def test_early_recovery_survives_a_failing_prerequisite(self) -> None:
         hosts = _powershell_hosts()
@@ -713,28 +713,28 @@ class WindowsInstallerTransactionTests(unittest.TestCase):
             with (
                 self.subTest(host=Path(host).name),
                 tempfile.TemporaryDirectory(
-                    prefix="apprestore-early-recovery-"
+                    prefix="apprevive-early-recovery-"
                 ) as directory,
             ):
                 programs = Path(directory) / "Programs"
-                backup = programs / "AppRestore.backup-crashed"
+                backup = programs / "AppRevive.backup-crashed"
                 self._write_managed_install(backup, "0.1.2")
 
                 result = _run_transaction_probe(
                     host,
                     Path(directory),
                     r"""
-$Programs = Join-Path $env:APPRESTORE_TRANSACTION_ROOT "Programs"
-$Live = Join-Path $Programs "AppRestore"
-$CrashedBackup = Join-Path $Programs "AppRestore.backup-crashed"
+$Programs = Join-Path $env:APPREVIVE_TRANSACTION_ROOT "Programs"
+$Live = Join-Path $Programs "AppRevive"
+$CrashedBackup = Join-Path $Programs "AppRevive.backup-crashed"
 $FailingPrerequisite = {
     throw "intentional prerequisite failure"
 }
 try {
-    Invoke-AppRestoreBackupRecovery `
+    Invoke-AppReviveBackupRecovery `
         -InstallRoot $Live `
-        -ManagedMarkerName ".apprestore-managed" `
-        -ManagedMarkerValue "AppRestore managed installation v1"
+        -ManagedMarkerName ".apprevive-managed" `
+        -ManagedMarkerValue "AppRevive managed installation v1"
     & $FailingPrerequisite
     throw "failing prerequisite unexpectedly succeeded"
 }
@@ -746,7 +746,7 @@ catch {
 if (-not (Test-Path -LiteralPath $Live -PathType Container)) {
     throw "live install was still missing after prerequisite failure"
 }
-$Version = ((& (Join-Path $Live "bin\apprestore.cmd") "--version") |
+$Version = ((& (Join-Path $Live "bin\apprevive.cmd") "--version") |
     Out-String).Trim()
 if ($LASTEXITCODE -ne 0 -or $Version -ne "0.1.2") {
     throw "recovered live install is not runnable"
@@ -776,12 +776,12 @@ Write-Output "EARLY_RECOVERY_BEFORE_PREREQUISITE_OK"
             with (
                 self.subTest(host=Path(host).name),
                 tempfile.TemporaryDirectory(
-                    prefix="apprestore-transaction-recovery-"
+                    prefix="apprevive-transaction-recovery-"
                 ) as directory,
             ):
                 programs = Path(directory) / "Programs"
-                backup = programs / "AppRestore.backup-crashed"
-                staging = programs / "AppRestore.staging-new"
+                backup = programs / "AppRevive.backup-crashed"
+                staging = programs / "AppRevive.staging-new"
                 self._write_managed_install(backup, "0.1.2")
                 self._write_managed_install(staging, "0.1.3")
 
@@ -789,19 +789,19 @@ Write-Output "EARLY_RECOVERY_BEFORE_PREREQUISITE_OK"
                     host,
                     Path(directory),
                     r"""
-$Programs = Join-Path $env:APPRESTORE_TRANSACTION_ROOT "Programs"
-$Live = Join-Path $Programs "AppRestore"
-$Staging = Join-Path $Programs "AppRestore.staging-new"
-$Backup = Join-Path $Programs "AppRestore.backup-new"
-Invoke-AppRestoreInstallTransaction `
+$Programs = Join-Path $env:APPREVIVE_TRANSACTION_ROOT "Programs"
+$Live = Join-Path $Programs "AppRevive"
+$Staging = Join-Path $Programs "AppRevive.staging-new"
+$Backup = Join-Path $Programs "AppRevive.backup-new"
+Invoke-AppReviveInstallTransaction `
     -StagingRoot $Staging `
     -InstallRoot $Live `
     -BackupRoot $Backup `
-    -ManagedMarkerName ".apprestore-managed" `
-    -ManagedMarkerValue "AppRestore managed installation v1" `
+    -ManagedMarkerName ".apprevive-managed" `
+    -ManagedMarkerValue "AppRevive managed installation v1" `
     -PrepareStaging {
         param($Path)
-        $Recovered = ((& (Join-Path $Live "bin\apprestore.cmd") "--version") |
+        $Recovered = ((& (Join-Path $Live "bin\apprevive.cmd") "--version") |
             Out-String).Trim()
         if ($LASTEXITCODE -ne 0 -or $Recovered -ne "0.1.2") {
             throw "managed backup was not recovered before prepare"
@@ -809,12 +809,12 @@ Invoke-AppRestoreInstallTransaction `
     } `
     -VerifyStaging { param($Path) } `
     -VerifyInstallation { param($Path) }
-$Version = ((& (Join-Path $Live "bin\apprestore.cmd") "--version") |
+$Version = ((& (Join-Path $Live "bin\apprevive.cmd") "--version") |
     Out-String).Trim()
 if ($LASTEXITCODE -ne 0 -or $Version -ne "0.1.3") {
     throw "new live install was not committed after recovery"
 }
-if (@(Get-ChildItem -LiteralPath $Programs -Filter "AppRestore.backup-*").Count) {
+if (@(Get-ChildItem -LiteralPath $Programs -Filter "AppRevive.backup-*").Count) {
     throw "backup remained after recovered update"
 }
 Write-Output "CRASH_RECOVERY_OK"
@@ -836,13 +836,13 @@ Write-Output "CRASH_RECOVERY_OK"
             with (
                 self.subTest(host=Path(host).name),
                 tempfile.TemporaryDirectory(
-                    prefix="apprestore-transaction-ambiguous-"
+                    prefix="apprevive-transaction-ambiguous-"
                 ) as directory,
             ):
                 programs = Path(directory) / "Programs"
-                first = programs / "AppRestore.backup-first"
-                second = programs / "AppRestore.backup-second"
-                staging = programs / "AppRestore.staging-new"
+                first = programs / "AppRevive.backup-first"
+                second = programs / "AppRevive.backup-second"
+                staging = programs / "AppRevive.staging-new"
                 self._write_managed_install(first, "0.1.1")
                 self._write_managed_install(second, "0.1.2")
                 staging.mkdir()
@@ -851,18 +851,18 @@ Write-Output "CRASH_RECOVERY_OK"
                     host,
                     Path(directory),
                     r"""
-$Programs = Join-Path $env:APPRESTORE_TRANSACTION_ROOT "Programs"
-$Live = Join-Path $Programs "AppRestore"
-$Staging = Join-Path $Programs "AppRestore.staging-new"
-$Backup = Join-Path $Programs "AppRestore.backup-new"
+$Programs = Join-Path $env:APPREVIVE_TRANSACTION_ROOT "Programs"
+$Live = Join-Path $Programs "AppRevive"
+$Staging = Join-Path $Programs "AppRevive.staging-new"
+$Backup = Join-Path $Programs "AppRevive.backup-new"
 $PrepareMarker = Join-Path $Programs "prepare-called.txt"
 try {
-    Invoke-AppRestoreInstallTransaction `
+    Invoke-AppReviveInstallTransaction `
         -StagingRoot $Staging `
         -InstallRoot $Live `
         -BackupRoot $Backup `
-        -ManagedMarkerName ".apprestore-managed" `
-        -ManagedMarkerValue "AppRestore managed installation v1" `
+        -ManagedMarkerName ".apprevive-managed" `
+        -ManagedMarkerValue "AppRevive managed installation v1" `
         -PrepareStaging {
             param($Path)
             Set-Content -LiteralPath $PrepareMarker -Value "unsafe"
@@ -885,10 +885,10 @@ if (Test-Path -LiteralPath $PrepareMarker) {
 if (Test-Path -LiteralPath $Staging) {
     throw "staging was not cleaned after fail-closed recovery"
 }
-if (-not (Test-Path -LiteralPath (Join-Path $Programs "AppRestore.backup-first"))) {
+if (-not (Test-Path -LiteralPath (Join-Path $Programs "AppRevive.backup-first"))) {
     throw "first recovery candidate was changed"
 }
-if (-not (Test-Path -LiteralPath (Join-Path $Programs "AppRestore.backup-second"))) {
+if (-not (Test-Path -LiteralPath (Join-Path $Programs "AppRevive.backup-second"))) {
     throw "second recovery candidate was changed"
 }
 Write-Output "AMBIGUOUS_RECOVERY_REFUSED_OK"
@@ -913,12 +913,12 @@ Write-Output "AMBIGUOUS_RECOVERY_REFUSED_OK"
             with (
                 self.subTest(host=Path(host).name),
                 tempfile.TemporaryDirectory(
-                    prefix="apprestore-transaction-unmanaged-backup-"
+                    prefix="apprevive-transaction-unmanaged-backup-"
                 ) as directory,
             ):
                 programs = Path(directory) / "Programs"
-                backup = programs / "AppRestore.backup-unmanaged"
-                staging = programs / "AppRestore.staging-new"
+                backup = programs / "AppRevive.backup-unmanaged"
+                staging = programs / "AppRevive.staging-new"
                 backup.mkdir(parents=True)
                 (backup / "private.txt").write_text(
                     "preserve",
@@ -930,17 +930,17 @@ Write-Output "AMBIGUOUS_RECOVERY_REFUSED_OK"
                     host,
                     Path(directory),
                     r"""
-$Programs = Join-Path $env:APPRESTORE_TRANSACTION_ROOT "Programs"
-$Live = Join-Path $Programs "AppRestore"
-$Staging = Join-Path $Programs "AppRestore.staging-new"
-$Candidate = Join-Path $Programs "AppRestore.backup-unmanaged"
+$Programs = Join-Path $env:APPREVIVE_TRANSACTION_ROOT "Programs"
+$Live = Join-Path $Programs "AppRevive"
+$Staging = Join-Path $Programs "AppRevive.staging-new"
+$Candidate = Join-Path $Programs "AppRevive.backup-unmanaged"
 try {
-    Invoke-AppRestoreInstallTransaction `
+    Invoke-AppReviveInstallTransaction `
         -StagingRoot $Staging `
         -InstallRoot $Live `
-        -BackupRoot (Join-Path $Programs "AppRestore.backup-new") `
-        -ManagedMarkerName ".apprestore-managed" `
-        -ManagedMarkerValue "AppRestore managed installation v1" `
+        -BackupRoot (Join-Path $Programs "AppRevive.backup-new") `
+        -ManagedMarkerName ".apprevive-managed" `
+        -ManagedMarkerValue "AppRevive managed installation v1" `
         -PrepareStaging { param($Path) throw "prepare must not run" } `
         -VerifyStaging { param($Path) } `
         -VerifyInstallation { param($Path) }
@@ -980,14 +980,14 @@ Write-Output "UNMANAGED_BACKUP_REFUSED_OK"
             with (
                 self.subTest(host=Path(host).name),
                 tempfile.TemporaryDirectory(
-                    prefix="apprestore-transaction-mutex-"
+                    prefix="apprevive-transaction-mutex-"
                 ) as directory,
             ):
                 root = Path(directory)
                 programs = root / "Programs"
-                live = programs / "AppRestore"
-                first_staging = programs / "AppRestore.staging-first"
-                second_staging = programs / "AppRestore.staging-second"
+                live = programs / "AppRevive"
+                first_staging = programs / "AppRevive.staging-first"
+                second_staging = programs / "AppRevive.staging-second"
                 first_ready = programs / "first-holds-mutex.txt"
                 second_ready = programs / "second-entered-prepare.txt"
                 self._write_managed_install(live, "0.1.2")
@@ -995,13 +995,13 @@ Write-Output "UNMANAGED_BACKUP_REFUSED_OK"
                 self._write_managed_install(second_staging, "0.1.4")
 
                 first_body = r"""
-$Programs = Join-Path $env:APPRESTORE_TRANSACTION_ROOT "Programs"
-Invoke-AppRestoreInstallTransaction `
-    -StagingRoot (Join-Path $Programs "AppRestore.staging-first") `
-    -InstallRoot (Join-Path $Programs "AppRestore") `
-    -BackupRoot (Join-Path $Programs "AppRestore.backup-first") `
-    -ManagedMarkerName ".apprestore-managed" `
-    -ManagedMarkerValue "AppRestore managed installation v1" `
+$Programs = Join-Path $env:APPREVIVE_TRANSACTION_ROOT "Programs"
+Invoke-AppReviveInstallTransaction `
+    -StagingRoot (Join-Path $Programs "AppRevive.staging-first") `
+    -InstallRoot (Join-Path $Programs "AppRevive") `
+    -BackupRoot (Join-Path $Programs "AppRevive.backup-first") `
+    -ManagedMarkerName ".apprevive-managed" `
+    -ManagedMarkerValue "AppRevive managed installation v1" `
     -PrepareStaging {
         param($Path)
         Set-Content `
@@ -1014,13 +1014,13 @@ Invoke-AppRestoreInstallTransaction `
 Write-Output "FIRST_INSTALL_OK"
 """
                 second_body = r"""
-$Programs = Join-Path $env:APPRESTORE_TRANSACTION_ROOT "Programs"
-Invoke-AppRestoreInstallTransaction `
-    -StagingRoot (Join-Path $Programs "AppRestore.staging-second") `
-    -InstallRoot (Join-Path $Programs "AppRestore") `
-    -BackupRoot (Join-Path $Programs "AppRestore.backup-second") `
-    -ManagedMarkerName ".apprestore-managed" `
-    -ManagedMarkerValue "AppRestore managed installation v1" `
+$Programs = Join-Path $env:APPREVIVE_TRANSACTION_ROOT "Programs"
+Invoke-AppReviveInstallTransaction `
+    -StagingRoot (Join-Path $Programs "AppRevive.staging-second") `
+    -InstallRoot (Join-Path $Programs "AppRevive") `
+    -BackupRoot (Join-Path $Programs "AppRevive.backup-second") `
+    -ManagedMarkerName ".apprevive-managed" `
+    -ManagedMarkerValue "AppRevive managed installation v1" `
     -PrepareStaging {
         param($Path)
         Set-Content `
@@ -1049,10 +1049,10 @@ Write-Output "SECOND_INSTALL_OK"
                 environment = os.environ.copy()
                 environment.update(
                     {
-                        "APPRESTORE_INSTALLER_PATH": str(
+                        "APPREVIVE_INSTALLER_PATH": str(
                             ROOT / "install-windows.ps1"
                         ),
-                        "APPRESTORE_TRANSACTION_ROOT": str(root),
+                        "APPREVIVE_TRANSACTION_ROOT": str(root),
                     }
                 )
 
@@ -1131,11 +1131,11 @@ Write-Output "SECOND_INSTALL_OK"
                 self.assertTrue(second_ready.exists())
                 self.assertIn(
                     "echo 0.1.4",
-                    (live / "bin" / "apprestore.cmd").read_text(
+                    (live / "bin" / "apprevive.cmd").read_text(
                         encoding="utf-8"
                     ),
                 )
-                self.assertFalse(list(programs.glob("AppRestore.backup-*")))
+                self.assertFalse(list(programs.glob("AppRevive.backup-*")))
 
     def test_preparation_failure_preserves_old_command_and_version(self) -> None:
         hosts = _powershell_hosts()
@@ -1146,12 +1146,12 @@ Write-Output "SECOND_INSTALL_OK"
             with (
                 self.subTest(host=Path(host).name),
                 tempfile.TemporaryDirectory(
-                    prefix="apprestore-transaction-prepare-"
+                    prefix="apprevive-transaction-prepare-"
                 ) as directory,
             ):
                 programs = Path(directory) / "Programs"
-                live = programs / "AppRestore"
-                staging = programs / "AppRestore.staging-test"
+                live = programs / "AppRevive"
+                staging = programs / "AppRevive.staging-test"
                 self._write_managed_install(live, "0.1.2")
                 staging.mkdir()
 
@@ -1159,17 +1159,17 @@ Write-Output "SECOND_INSTALL_OK"
                     host,
                     Path(directory),
                     r"""
-$Programs = Join-Path $env:APPRESTORE_TRANSACTION_ROOT "Programs"
-$Live = Join-Path $Programs "AppRestore"
-$Staging = Join-Path $Programs "AppRestore.staging-test"
-$Backup = Join-Path $Programs "AppRestore.backup-test"
+$Programs = Join-Path $env:APPREVIVE_TRANSACTION_ROOT "Programs"
+$Live = Join-Path $Programs "AppRevive"
+$Staging = Join-Path $Programs "AppRevive.staging-test"
+$Backup = Join-Path $Programs "AppRevive.backup-test"
 try {
-    Invoke-AppRestoreInstallTransaction `
+    Invoke-AppReviveInstallTransaction `
         -StagingRoot $Staging `
         -InstallRoot $Live `
         -BackupRoot $Backup `
-        -ManagedMarkerName ".apprestore-managed" `
-        -ManagedMarkerValue "AppRestore managed installation v1" `
+        -ManagedMarkerName ".apprevive-managed" `
+        -ManagedMarkerValue "AppRevive managed installation v1" `
         -PrepareStaging { param($Path) throw "forced preparation failure" } `
         -VerifyStaging { param($Path) throw "must not verify" } `
         -VerifyInstallation { param($Path) throw "must not commit" }
@@ -1180,7 +1180,7 @@ catch {
         throw
     }
 }
-$OldCommand = Join-Path $Live "bin\apprestore.cmd"
+$OldCommand = Join-Path $Live "bin\apprevive.cmd"
 $OldVersion = ((& $OldCommand "--version") | Out-String).Trim()
 if ($LASTEXITCODE -ne 0 -or $OldVersion -ne "0.1.2") {
     throw "old command/version was not preserved: '$OldVersion'"
@@ -1212,12 +1212,12 @@ Write-Output "PREPARATION_ROLLBACK_OK"
             with (
                 self.subTest(host=Path(host).name),
                 tempfile.TemporaryDirectory(
-                    prefix="apprestore-transaction-live-"
+                    prefix="apprevive-transaction-live-"
                 ) as directory,
             ):
                 programs = Path(directory) / "Programs"
-                live = programs / "AppRestore"
-                staging = programs / "AppRestore.staging-test"
+                live = programs / "AppRevive"
+                staging = programs / "AppRevive.staging-test"
                 self._write_managed_install(live, "0.1.2")
                 self._write_managed_install(staging, "0.1.3")
 
@@ -1225,31 +1225,31 @@ Write-Output "PREPARATION_ROLLBACK_OK"
                     host,
                     Path(directory),
                     r"""
-$Programs = Join-Path $env:APPRESTORE_TRANSACTION_ROOT "Programs"
-$Live = Join-Path $Programs "AppRestore"
-$Staging = Join-Path $Programs "AppRestore.staging-test"
-$Backup = Join-Path $Programs "AppRestore.backup-test"
+$Programs = Join-Path $env:APPREVIVE_TRANSACTION_ROOT "Programs"
+$Live = Join-Path $Programs "AppRevive"
+$Staging = Join-Path $Programs "AppRevive.staging-test"
+$Backup = Join-Path $Programs "AppRevive.backup-test"
 try {
-    Invoke-AppRestoreInstallTransaction `
+    Invoke-AppReviveInstallTransaction `
         -StagingRoot $Staging `
         -InstallRoot $Live `
         -BackupRoot $Backup `
-        -ManagedMarkerName ".apprestore-managed" `
-        -ManagedMarkerValue "AppRestore managed installation v1" `
+        -ManagedMarkerName ".apprevive-managed" `
+        -ManagedMarkerValue "AppRevive managed installation v1" `
         -PrepareStaging {
             param($Path)
-            if (-not (Test-Path -LiteralPath (Join-Path $Live "bin\apprestore.cmd"))) {
+            if (-not (Test-Path -LiteralPath (Join-Path $Live "bin\apprevive.cmd"))) {
                 throw "old command disappeared before staging preparation"
             }
         } `
         -VerifyStaging {
             param($Path)
-            $Version = ((& (Join-Path $Path "bin\apprestore.cmd") "--version") |
+            $Version = ((& (Join-Path $Path "bin\apprevive.cmd") "--version") |
                 Out-String).Trim()
             if ($LASTEXITCODE -ne 0 -or $Version -ne "0.1.3") {
                 throw "staging verification failed"
             }
-            if (-not (Test-Path -LiteralPath (Join-Path $Live "bin\apprestore.cmd"))) {
+            if (-not (Test-Path -LiteralPath (Join-Path $Live "bin\apprevive.cmd"))) {
                 throw "old command disappeared before the swap"
             }
         } `
@@ -1261,7 +1261,7 @@ catch {
         throw
     }
 }
-$OldCommand = Join-Path $Live "bin\apprestore.cmd"
+$OldCommand = Join-Path $Live "bin\apprevive.cmd"
 $OldVersion = ((& $OldCommand "--version") | Out-String).Trim()
 if ($LASTEXITCODE -ne 0 -or $OldVersion -ne "0.1.2") {
     throw "old command/version was not restored: '$OldVersion'"
@@ -1293,12 +1293,12 @@ Write-Output "LIVE_ROLLBACK_OK"
             with (
                 self.subTest(host=Path(host).name),
                 tempfile.TemporaryDirectory(
-                    prefix="apprestore-transaction-legacy-"
+                    prefix="apprevive-transaction-legacy-"
                 ) as directory,
             ):
                 programs = Path(directory) / "Programs"
-                live = programs / "AppRestore"
-                staging = programs / "AppRestore.staging-test"
+                live = programs / "AppRevive"
+                staging = programs / "AppRevive.staging-test"
                 self._write_legacy_v013_install(live)
                 self._write_managed_install(staging, "0.1.3")
 
@@ -1306,20 +1306,20 @@ Write-Output "LIVE_ROLLBACK_OK"
                     host,
                     Path(directory),
                     r"""
-$Programs = Join-Path $env:APPRESTORE_TRANSACTION_ROOT "Programs"
-$Live = Join-Path $Programs "AppRestore"
-$Staging = Join-Path $Programs "AppRestore.staging-test"
-$Backup = Join-Path $Programs "AppRestore.backup-test"
-Invoke-AppRestoreInstallTransaction `
+$Programs = Join-Path $env:APPREVIVE_TRANSACTION_ROOT "Programs"
+$Live = Join-Path $Programs "AppRevive"
+$Staging = Join-Path $Programs "AppRevive.staging-test"
+$Backup = Join-Path $Programs "AppRevive.backup-test"
+Invoke-AppReviveInstallTransaction `
     -StagingRoot $Staging `
     -InstallRoot $Live `
     -BackupRoot $Backup `
-    -ManagedMarkerName ".apprestore-managed" `
-    -ManagedMarkerValue "AppRestore managed installation v1" `
+    -ManagedMarkerName ".apprevive-managed" `
+    -ManagedMarkerValue "AppRevive managed installation v1" `
     -PrepareStaging { param($Path) } `
     -VerifyStaging { param($Path) } `
     -VerifyInstallation { param($Path) }
-$Version = ((& (Join-Path $Live "bin\apprestore.cmd") "--version") |
+$Version = ((& (Join-Path $Live "bin\apprevive.cmd") "--version") |
     Out-String).Trim()
 if ($LASTEXITCODE -ne 0 -or $Version -ne "0.1.3") {
     throw "new command did not replace the legacy fixture"
@@ -1348,12 +1348,12 @@ Write-Output "LEGACY_V013_ACCEPTED_OK"
             with (
                 self.subTest(host=Path(host).name),
                 tempfile.TemporaryDirectory(
-                    prefix="apprestore-transaction-cleanup-"
+                    prefix="apprevive-transaction-cleanup-"
                 ) as directory,
             ):
                 programs = Path(directory) / "Programs"
-                live = programs / "AppRestore"
-                staging = programs / "AppRestore.staging-test"
+                live = programs / "AppRevive"
+                staging = programs / "AppRevive.staging-test"
                 self._write_managed_install(live, "0.1.2")
                 self._write_managed_install(staging, "0.1.3")
 
@@ -1369,7 +1369,7 @@ function Remove-Item {
         [switch]$Force
     )
     if ([IO.Path]::GetFileName($LiteralPath).StartsWith(
-        "AppRestore.backup-",
+        "AppRevive.backup-",
         [StringComparison]::Ordinal
     )) {
         throw "forced backup cleanup failure"
@@ -1379,20 +1379,20 @@ function Remove-Item {
         -Recurse:$Recurse `
         -Force:$Force
 }
-$Programs = Join-Path $env:APPRESTORE_TRANSACTION_ROOT "Programs"
-$Live = Join-Path $Programs "AppRestore"
-$Staging = Join-Path $Programs "AppRestore.staging-test"
-$Backup = Join-Path $Programs "AppRestore.backup-test"
-Invoke-AppRestoreInstallTransaction `
+$Programs = Join-Path $env:APPREVIVE_TRANSACTION_ROOT "Programs"
+$Live = Join-Path $Programs "AppRevive"
+$Staging = Join-Path $Programs "AppRevive.staging-test"
+$Backup = Join-Path $Programs "AppRevive.backup-test"
+Invoke-AppReviveInstallTransaction `
     -StagingRoot $Staging `
     -InstallRoot $Live `
     -BackupRoot $Backup `
-    -ManagedMarkerName ".apprestore-managed" `
-    -ManagedMarkerValue "AppRestore managed installation v1" `
+    -ManagedMarkerName ".apprevive-managed" `
+    -ManagedMarkerValue "AppRevive managed installation v1" `
     -PrepareStaging { param($Path) } `
     -VerifyStaging { param($Path) } `
     -VerifyInstallation { param($Path) }
-$Version = ((& (Join-Path $Live "bin\apprestore.cmd") "--version") |
+$Version = ((& (Join-Path $Live "bin\apprevive.cmd") "--version") |
     Out-String).Trim()
 if ($LASTEXITCODE -ne 0 -or $Version -ne "0.1.3") {
     throw "verified new command was not retained"
@@ -1419,22 +1419,22 @@ Write-Output "BACKUP_CLEANUP_NONFATAL_OK"
             with (
                 self.subTest(host=Path(host).name),
                 tempfile.TemporaryDirectory(
-                    prefix="apprestore-transaction-unowned-"
+                    prefix="apprevive-transaction-unowned-"
                 ) as directory,
             ):
                 programs = Path(directory) / "Programs"
-                live = programs / "AppRestore"
-                staging = programs / "AppRestore.staging-test"
+                live = programs / "AppRevive"
+                staging = programs / "AppRevive.staging-test"
                 for relative in (
-                    "apprestore.ps1",
+                    "apprevive.ps1",
                     "uninstall-windows.ps1",
-                    "src/apprestore.py",
-                    "src/apprestore_core/__init__.py",
+                    "src/apprevive.py",
+                    "src/apprevive_core/__init__.py",
                     "src/pyproject.toml",
-                    "bin/apprestore.cmd",
+                    "bin/apprevive.cmd",
                     "bin/ipatool.exe",
                     ".venv/Scripts/python.exe",
-                    ".venv/Scripts/apprestore.exe",
+                    ".venv/Scripts/apprevive.exe",
                 ):
                     fake_file = live / Path(relative)
                     fake_file.parent.mkdir(parents=True, exist_ok=True)
@@ -1446,18 +1446,18 @@ Write-Output "BACKUP_CLEANUP_NONFATAL_OK"
                     host,
                     Path(directory),
                     r"""
-$Programs = Join-Path $env:APPRESTORE_TRANSACTION_ROOT "Programs"
-$Live = Join-Path $Programs "AppRestore"
-$Staging = Join-Path $Programs "AppRestore.staging-test"
-$Backup = Join-Path $Programs "AppRestore.backup-test"
+$Programs = Join-Path $env:APPREVIVE_TRANSACTION_ROOT "Programs"
+$Live = Join-Path $Programs "AppRevive"
+$Staging = Join-Path $Programs "AppRevive.staging-test"
+$Backup = Join-Path $Programs "AppRevive.backup-test"
 $Rejected = $false
 try {
-    Invoke-AppRestoreInstallTransaction `
+    Invoke-AppReviveInstallTransaction `
         -StagingRoot $Staging `
         -InstallRoot $Live `
         -BackupRoot $Backup `
-        -ManagedMarkerName ".apprestore-managed" `
-        -ManagedMarkerValue "AppRestore managed installation v1" `
+        -ManagedMarkerName ".apprevive-managed" `
+        -ManagedMarkerValue "AppRevive managed installation v1" `
         -PrepareStaging { param($Path) } `
         -VerifyStaging { param($Path) } `
         -VerifyInstallation { param($Path) }
@@ -1495,13 +1495,13 @@ Write-Output "UNOWNED_REFUSED_OK"
             with (
                 self.subTest(host=Path(host).name),
                 tempfile.TemporaryDirectory(
-                    prefix="apprestore-transaction-file-"
+                    prefix="apprevive-transaction-file-"
                 ) as directory,
             ):
                 programs = Path(directory) / "Programs"
                 programs.mkdir()
-                live = programs / "AppRestore"
-                staging = programs / "AppRestore.staging-test"
+                live = programs / "AppRevive"
+                staging = programs / "AppRevive.staging-test"
                 live.write_text("do not delete", encoding="utf-8")
                 staging.mkdir()
 
@@ -1509,18 +1509,18 @@ Write-Output "UNOWNED_REFUSED_OK"
                     host,
                     Path(directory),
                     r"""
-$Programs = Join-Path $env:APPRESTORE_TRANSACTION_ROOT "Programs"
-$Live = Join-Path $Programs "AppRestore"
-$Staging = Join-Path $Programs "AppRestore.staging-test"
-$Backup = Join-Path $Programs "AppRestore.backup-test"
+$Programs = Join-Path $env:APPREVIVE_TRANSACTION_ROOT "Programs"
+$Live = Join-Path $Programs "AppRevive"
+$Staging = Join-Path $Programs "AppRevive.staging-test"
+$Backup = Join-Path $Programs "AppRevive.backup-test"
 $Rejected = $false
 try {
-    Invoke-AppRestoreInstallTransaction `
+    Invoke-AppReviveInstallTransaction `
         -StagingRoot $Staging `
         -InstallRoot $Live `
         -BackupRoot $Backup `
-        -ManagedMarkerName ".apprestore-managed" `
-        -ManagedMarkerValue "AppRestore managed installation v1" `
+        -ManagedMarkerName ".apprevive-managed" `
+        -ManagedMarkerValue "AppRevive managed installation v1" `
         -PrepareStaging { param($Path) } `
         -VerifyStaging { param($Path) } `
         -VerifyInstallation { param($Path) }
@@ -1558,15 +1558,15 @@ class WindowsLauncherContractTests(unittest.TestCase):
         if not hosts:
             self.skipTest("PowerShell is not available")
 
-        with tempfile.TemporaryDirectory(prefix="apprestore-launcher-") as directory:
+        with tempfile.TemporaryDirectory(prefix="apprevive-launcher-") as directory:
             test_root = Path(directory)
             source_root = test_root / "source"
             local_app_data = test_root / "profile" / "AppData" / "Local"
             source_root.mkdir(parents=True)
             local_app_data.mkdir(parents=True)
 
-            launcher = source_root / "apprestore.ps1"
-            launcher_text = (ROOT / "apprestore.ps1").read_text(encoding="utf-8")
+            launcher = source_root / "apprevive.ps1"
+            launcher_text = (ROOT / "apprevive.ps1").read_text(encoding="utf-8")
             known_folder_block = """$KnownLocalAppData = [Environment]::GetFolderPath(
     [Environment+SpecialFolder]::LocalApplicationData
 )
@@ -1589,7 +1589,7 @@ $KnownLocalAppData = [System.IO.Path]::GetFullPath($KnownLocalAppData)
                 r"""
 Set-StrictMode -Version Latest
 $entryPoint = Join-Path $env:LOCALAPPDATA `
-    "Programs\AppRestore\bin\apprestore.cmd"
+    "Programs\AppRevive\bin\apprevive.cmd"
 New-Item -ItemType Directory -Path (Split-Path $entryPoint) -Force |
     Out-Null
 [System.IO.File]::WriteAllText(
@@ -1602,14 +1602,14 @@ New-Item -ItemType Directory -Path (Split-Path $entryPoint) -Force |
 
             command = r"""
 $global:LASTEXITCODE = 1060
-& $env:APPRESTORE_TEST_LAUNCHER `
-    -AppRestoreArguments @("/d", "/c", "exit 0")
+& $env:APPREVIVE_TEST_LAUNCHER `
+    -AppReviveArguments @("/d", "/c", "exit 0")
 """
             for host in hosts:
                 with self.subTest(host=Path(host).name):
                     environment = os.environ.copy()
                     environment["LOCALAPPDATA"] = str(local_app_data)
-                    environment["APPRESTORE_TEST_LAUNCHER"] = str(launcher)
+                    environment["APPREVIVE_TEST_LAUNCHER"] = str(launcher)
                     result = subprocess.run(
                         [
                             host,
@@ -1654,7 +1654,7 @@ $global:LASTEXITCODE = 1060
                 re.IGNORECASE,
             ),
             (
-                "after installation, `apprestore` must be available in the "
+                "after installation, `apprevive` must be available in the "
                 "same PowerShell process"
             ),
         )
@@ -1685,8 +1685,8 @@ class MenuStartupContractTests(unittest.TestCase):
         stdout = io.StringIO()
         stderr = io.StringIO()
         with (
-            patch("apprestore_core.cli.sys.platform", "win32"),
-            patch("apprestore_core.cli._clear_screen"),
+            patch("apprevive_core.cli.sys.platform", "win32"),
+            patch("apprevive_core.cli._clear_screen"),
             patch("builtins.input", side_effect=menu_input),
             contextlib.redirect_stdout(stdout),
             contextlib.redirect_stderr(stderr),
@@ -1698,8 +1698,8 @@ class MenuStartupContractTests(unittest.TestCase):
             service.tools.ensure_calls,
             0,
             (
-                "opening `apprestore` must show the menu first; dependency "
-                "installation belongs to explicit `apprestore setup`/menu item B"
+                "opening `apprevive` must show the menu first; dependency "
+                "installation belongs to explicit `apprevive setup`/menu item B"
             ),
         )
         menu_text = stdout.getvalue()

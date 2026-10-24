@@ -1,5 +1,5 @@
 From fc9cb6d53b08bc1afe3601eb94d29c892190cb7c Mon Sep 17 00:00:00 2001
-From: AppRestore <apprestore@localhost>
+From: AppRevive <apprevive@localhost>
 Date: Sat, 10 Oct 2026 17:42:29 +0300
 Subject: [PATCH 1/2] feat(auth): show the account's storefront and country in
  auth info

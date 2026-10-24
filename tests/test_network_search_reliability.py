@@ -9,7 +9,7 @@ import unittest
 import urllib.parse
 from unittest import mock
 
-from apprestore_core import catalog, web_discovery
+from apprevive_core import catalog, web_discovery
 
 
 class _FakeResponse:
@@ -57,7 +57,7 @@ class HttpSafetyAndCacheTests(unittest.TestCase):
             side_effect=[_json_response(payload), _json_response(payload)]
         )
         with (
-            mock.patch("apprestore_core.catalog.time.monotonic", side_effect=lambda: clock[0]),
+            mock.patch("apprevive_core.catalog.time.monotonic", side_effect=lambda: clock[0]),
             mock.patch("urllib.request.urlopen", responses),
         ):
             first = catalog._http_json("https://example.test/cache-positive")
@@ -84,7 +84,7 @@ class HttpSafetyAndCacheTests(unittest.TestCase):
             ]
         )
         with (
-            mock.patch("apprestore_core.catalog.time.monotonic", side_effect=lambda: clock[0]),
+            mock.patch("apprevive_core.catalog.time.monotonic", side_effect=lambda: clock[0]),
             mock.patch("urllib.request.urlopen", responses),
         ):
             first = catalog._http_json("https://example.test/cache-negative")
@@ -163,7 +163,7 @@ class ConcurrentSearchTests(unittest.TestCase):
             },
         )
         with mock.patch(
-            "apprestore_core.catalog._http_json",
+            "apprevive_core.catalog._http_json",
             side_effect=payloads,
         ):
             result = catalog.lookup_itunes_store_id(
@@ -187,7 +187,7 @@ class ConcurrentSearchTests(unittest.TestCase):
             ]
         }
         with mock.patch(
-            "apprestore_core.catalog._http_json",
+            "apprevive_core.catalog._http_json",
             return_value=payload,
         ):
             result = catalog.lookup_itunes_store_id(
@@ -214,7 +214,7 @@ class ConcurrentSearchTests(unittest.TestCase):
             ]
         }
         with mock.patch(
-            "apprestore_core.catalog._http_json",
+            "apprevive_core.catalog._http_json",
             return_value=payload,
         ):
             result = catalog.search_itunes_apps(
@@ -252,7 +252,7 @@ class ConcurrentSearchTests(unittest.TestCase):
             },
         )
         with mock.patch(
-            "apprestore_core.catalog._http_json",
+            "apprevive_core.catalog._http_json",
             side_effect=payloads,
         ):
             result = catalog.lookup_itunes_app_by_store_id(
@@ -300,7 +300,7 @@ class ConcurrentSearchTests(unittest.TestCase):
             workers = [
                 thread
                 for thread in threading.enumerate()
-                if thread.name.startswith("apprestore-net")
+                if thread.name.startswith("apprevive-net")
             ]
             self.assertLessEqual(len(workers), catalog._NETWORK_WORKERS)
         finally:
@@ -346,7 +346,7 @@ class ConcurrentSearchTests(unittest.TestCase):
                 ]
             }
 
-        with mock.patch("apprestore_core.catalog._http_json", side_effect=fake_http):
+        with mock.patch("apprevive_core.catalog._http_json", side_effect=fake_http):
             store_id = catalog.lookup_itunes_store_id(
                 "com.example.alpha",
                 countries=("ru", "us"),
@@ -393,7 +393,7 @@ class ConcurrentSearchTests(unittest.TestCase):
                 with state_lock:
                     active -= 1
 
-        with mock.patch("apprestore_core.catalog._http_json", side_effect=fake_http):
+        with mock.patch("apprevive_core.catalog._http_json", side_effect=fake_http):
             apps = catalog.search_itunes_apps(
                 "Alpha",
                 limit=4,
@@ -435,15 +435,15 @@ class ConcurrentSearchTests(unittest.TestCase):
 
         with (
             mock.patch(
-                "apprestore_core.catalog.search_itunes_apps",
+                "apprevive_core.catalog.search_itunes_apps",
                 side_effect=lambda *_args, **_kwargs: row("itunes"),
             ),
             mock.patch(
-                "apprestore_core.catalog.search_ipafilezone_apps",
+                "apprevive_core.catalog.search_ipafilezone_apps",
                 side_effect=lambda *_args, **_kwargs: row("ipafilezone"),
             ),
             mock.patch(
-                "apprestore_core.catalog.lookup_itunes_app_by_store_id",
+                "apprevive_core.catalog.lookup_itunes_app_by_store_id",
                 return_value=None,
             ),
         ):
@@ -494,7 +494,7 @@ class ConcurrentSearchTests(unittest.TestCase):
                     active -= 1
 
         with mock.patch(
-            "apprestore_core.web_discovery._http_text",
+            "apprevive_core.web_discovery._http_text",
             side_effect=fake_text,
         ):
             pages = web_discovery._search_pages("Alpha")
@@ -528,9 +528,9 @@ class WebResultCacheTests(unittest.TestCase):
         ]
         search = mock.Mock(side_effect=[[], found])
         with (
-            mock.patch("apprestore_core.web_discovery.time.monotonic", side_effect=lambda: clock[0]),
+            mock.patch("apprevive_core.web_discovery.time.monotonic", side_effect=lambda: clock[0]),
             mock.patch(
-                "apprestore_core.web_discovery.search_web_app_store_ids",
+                "apprevive_core.web_discovery.search_web_app_store_ids",
                 search,
             ),
         ):

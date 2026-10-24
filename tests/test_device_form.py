@@ -1,4 +1,4 @@
-from apprestore_gui.device_form import device_form, device_noun
+from apprevive_gui.device_form import device_form, device_noun
 
 
 def test_iphone_generations() -> None:

@@ -84,7 +84,7 @@ def test_locally_built_archive_can_be_installed_into_gui_bundle(tmp_path: Path) 
     binary.write_bytes(b"MZ patched ipatool\0appstore.CountryCodeFromStoreFront")
     archive = tmp_path / "ipatool.tar.gz"
     _pack_module().pack(binary, "ipatool-2.6.0-windows-amd64.exe", MTIME, archive)
-    destination = tmp_path / "AppRestore"
+    destination = tmp_path / "AppRevive"
     _fetch_module().install_archive(archive, "windows-amd64", [destination])
     assert (destination / "ipatool.exe").read_bytes() == binary.read_bytes()
 
@@ -153,6 +153,6 @@ def test_gui_workflows_build_and_bundle_current_patched_ipatool() -> None:
         assert "packaging/build-ipatool.sh" in workflow, name
         assert "--ipatool-archive" in workflow, name
         assert "go-version: \"1.25.0\"" in workflow, name
-    selftest = (ROOT / "apprestore_gui" / "selftest.py").read_text(encoding="utf-8")
+    selftest = (ROOT / "apprevive_gui" / "selftest.py").read_text(encoding="utf-8")
     assert "capabilities.patched_build" in selftest
     assert "appstore.CountryCodeFromStoreFront" in selftest

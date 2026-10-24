@@ -69,7 +69,7 @@ def prepare(controller, source, scenario: str, name: str = "") -> None:
     if name.startswith("find-"):
         from types import SimpleNamespace
 
-        from apprestore_core.region_probe import RegionStatus
+        from apprevive_core.region_probe import RegionStatus
 
         def hit(tid, title, dev, src="builtin", conf=0.95, snap=None, dib=None):
             return SimpleNamespace(track_id=tid, name=title, developer=dev, icon_url=None,
@@ -118,7 +118,7 @@ def prepare(controller, source, scenario: str, name: str = "") -> None:
             controller.askSignOut()
         return
     if name == "signin-code-wrong":
-        from apprestore_gui.auth_pty import WRONG_CODE_TEXT
+        from apprevive_gui.auth_pty import WRONG_CODE_TEXT
 
         source.auth_status = WRONG_CODE_TEXT
         source.auth_phase = "out"
@@ -130,7 +130,7 @@ def prepare(controller, source, scenario: str, name: str = "") -> None:
         source.login("marina@example.com", "not-a-real-password")
         return
 
-    from apprestore_gui.ui4b.space import DeviceSpace
+    from apprevive_gui.ui4b.space import DeviceSpace
 
     sel = controller.selection
     if scenario.startswith("onboarding"):
@@ -192,9 +192,9 @@ def main() -> int:
     from PySide6.QtQml import QQmlApplicationEngine
     from PySide6.QtQuickControls2 import QQuickStyle
 
-    from apprestore_gui.ui4b.fake_data import FakeIconBook, FakeSource
-    from apprestore_gui.ui4b.qt_bridge import Restore4b
-    from apprestore_gui.ui4b.window import load
+    from apprevive_gui.ui4b.fake_data import FakeIconBook, FakeSource
+    from apprevive_gui.ui4b.qt_bridge import Restore4b
+    from apprevive_gui.ui4b.window import load
 
     QQuickStyle.setStyle("Basic")
     app = QGuiApplication([sys.argv[0]])

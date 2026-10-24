@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import unittest
 
-from apprestore_core.cli import _parse_selection
-from apprestore_core.service import AppRestoreError
+from apprevive_core.cli import _parse_selection
+from apprevive_core.service import AppReviveError
 
 
 class SelectionTests(unittest.TestCase):
@@ -27,7 +27,7 @@ class SelectionTests(unittest.TestCase):
             "١",
         ]
         for value in invalid:
-            with self.subTest(value=value), self.assertRaises(AppRestoreError):
+            with self.subTest(value=value), self.assertRaises(AppReviveError):
                 _parse_selection(value, 3)
 
 

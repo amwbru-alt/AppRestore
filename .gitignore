@@ -42,3 +42,22 @@ Thumbs.db
 Desktop.ini
 screenshots/
 /bin/
+
+# Server-only database credentials
+server/promo/private/config.php
+
+# Local direct-MySQL credentials
+mysql.json
+
+# Temporary local test output
+pytest-of-root/
+
+# Node.js API server dependencies and environment
+node_modules/
+server/node/.env
+
+# Installer archives served by the Node website (upload separately)
+server/node/downloads/
+
+# Administrator's private bank-group manifest (preserved across git pull)
+server/node/catalog-groups.local.json

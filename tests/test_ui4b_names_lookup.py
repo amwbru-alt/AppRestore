@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from apprestore_gui.ui4b import names_lookup as NL
-from apprestore_gui.ui4b.names import FALLBACK, resolve
+from apprevive_gui.ui4b import names_lookup as NL
+from apprevive_gui.ui4b.names import FALLBACK, resolve
 
 REPO = Path(__file__).resolve().parents[1]
 
@@ -86,8 +86,8 @@ def test_clear_drops_late_answers() -> None:
 def test_vendored_module_is_the_announced_one() -> None:
     import hashlib
 
-    data = (REPO / "apprestore_core" / "app_names.py").read_bytes()
-    assert hashlib.sha256(data).hexdigest() == "15f5581c535278b08dff660d911df3f0c56249c4a0ee167856aa1d759f3846d5"
+    data = (REPO / "apprevive_core" / "app_names.py").read_bytes()
+    assert hashlib.sha256(data).hexdigest() == "59d30dbd4a74fb8922a3c7e061dd7ad90f8a011e1905b054a56b1d21480564cd"
     assert NL.vendored_display_names() is not None
 
 
@@ -96,7 +96,7 @@ def test_no_request_to_web_archive_from_the_names_path(monkeypatch) -> None:
 
     import urllib.request
 
-    from apprestore_core import app_names, region_probe
+    from apprevive_core import app_names, region_probe
 
     urls: list[str] = []
 
@@ -114,7 +114,7 @@ def test_no_request_to_web_archive_from_the_names_path(monkeypatch) -> None:
     lk = NL.NameLookup(resolver.display_names, spawn=lambda f: f())
     lk.request(["492224193", "6749962031"], ["ru.sberbankmobile"], locale=lambda: "ru_RU")
     assert not any("archive.org" in u for u in urls)
-    for path in (REPO / "apprestore_gui" / "ui4b" / "names_lookup.py", REPO / "apprestore_core" / "app_names.py"):
+    for path in (REPO / "apprevive_gui" / "ui4b" / "names_lookup.py", REPO / "apprevive_core" / "app_names.py"):
         src = path.read_text(encoding="utf-8")
         assert "search_delisted(" not in src and "CDX_URL" not in src and "SNAPSHOT_URL" not in src
 
@@ -126,12 +126,12 @@ def test_bad_keys_are_ignored(key) -> None:
 
 
 def test_tile_label_empty_while_pending() -> None:
-    from apprestore_gui.ui4b.catalog import GROUP_REMOVED, RestoreItem
-    from apprestore_gui.ui4b.home import HomeInput, home_view
+    from apprevive_gui.ui4b.catalog import GROUP_REMOVED, RestoreItem
+    from apprevive_gui.ui4b.home import HomeInput, home_view
 
     items = [RestoreItem(key="1", name=FALLBACK, group=GROUP_REMOVED, action="store", store_id="1", name_pending=True),
              RestoreItem(key="2", name="ВТБ Онлайн", group=GROUP_REMOVED, action="store", store_id="2")]
     tiles = {t["storeId"]: t for t in home_view(HomeInput(connected=True, items=items))["tiles"] if t.get("storeId")}
     assert tiles["1"]["namePending"] is True and tiles["2"]["namePending"] is False
-    qml = (REPO / "apprestore_gui" / "qml4b" / "components" / "PhoneTile.qml").read_text(encoding="utf-8")
+    qml = (REPO / "apprevive_gui" / "qml4b" / "components" / "PhoneTile.qml").read_text(encoding="utf-8")
     assert 'root.tile.namePending ? ""' in qml

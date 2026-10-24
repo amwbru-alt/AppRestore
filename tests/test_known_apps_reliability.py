@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from apprestore_core.known_apps import (
+from apprevive_core.known_apps import (
     KnownAppsDataError,
     load_known_apps,
     remember_known_app,
@@ -468,7 +468,7 @@ class KnownAppsReliabilityTests(unittest.TestCase):
             original = path.read_bytes()
 
             with mock.patch(
-                "apprestore_core.known_apps.os.replace",
+                "apprevive_core.known_apps.os.replace",
                 side_effect=OSError("simulated replace failure"),
             ):
                 with self.assertRaisesRegex(OSError, "simulated replace failure"):

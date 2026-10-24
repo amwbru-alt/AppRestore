@@ -2,6 +2,17 @@
 
 Все заметные изменения проекта документируются в этом файле.
 
+## 0.5.0 - 2026-10-19
+
+- Аккаунты AppRevive с подтверждением почты, сбросом пароля и привязкой Apple ID.
+- Личный кабинет и админка в Node.js: баланс, заказы, коды, история, каталог и группы банков.
+- ЮKassa: серверная проверка статуса, повторяемые запросы без повторной выдачи кодов, полный возврат.
+- Партнёрские начисления, удержание, резервирование и учёт выплат, журнал действий администратора.
+- Вход в сервис и покупка кодов из desktop, проверка устройства и подтверждение перед восстановлением.
+- HTTPS-конфигурация и отдельный процесс подписанного выпуска Windows/macOS с notarization.
+- Автоматическая проверка обновлений при запуске; установка обновления по подтверждению пользователя.
+- Для включения внешних сервисов требуются настройки оператора; см. PLATFORM.md.
+
 ## 0.4.0 - 2026-10-13
 
 ### Добавлено
@@ -54,8 +65,8 @@
 
 ### Добавлено
 
-- графическая версия AppRestore для Windows и macOS (Apple Silicon):
-  `AppRestore-GUI-Windows.zip` и `AppRestore-GUI-macOS.zip`. Python и
+- графическая версия AppRevive для Windows и macOS (Apple Silicon):
+  `AppRevive-GUI-Windows.zip` и `AppRevive-GUI-macOS.zip`. Python и
   командная строка не нужны, внутри уже есть pymobiledevice3 и ipatool 2.6.0;
 - настоящие иконки приложений из App Store в списках;
 - установка бесплатных приложений, которых ещё не было на Apple ID
@@ -86,7 +97,7 @@
 - пиннутая версия `ipatool` обновлена с 2.5.0 до 2.6.0. Upstream 2.6.0
   улучшает устойчивость загрузок (в том числе после обрыва), обработку
   неожиданных ответов Apple, возобновление скачивания при отключённом
-  progress, и добавляет опциональный `--platform macos` (AppRestore по
+  progress, и добавляет опциональный `--platform macos` (AppRevive по
   умолчанию по-прежнему работает с iOS). CLI-флаги `auth login/info/revoke`,
   `download --bundle-identifier/--app-id/--purchase/--output`,
   `search --limit --format json` совместимы. SHA-256 архивов для Windows
@@ -107,14 +118,14 @@
   `install-macos.sh` готовит Python-окружение в отдельном staging-каталоге и
   затем переносит его на место `venv` — но launcher `pymobiledevice3`,
   который pip создаёт при установке, зашивает в себя абсолютный путь до
-  staging-каталога, а тот после переноса больше не существует. AppRestore
+  staging-каталога, а тот после переноса больше не существует. AppRevive
   теперь на macOS, как и на Windows, запускает `pymobiledevice3` через
   `sys.executable -m pymobiledevice3` — это не зависит от абсолютного пути,
   зашитого в launcher.
 
 ### Добавлено
 
-- AppRestore передаёт `ipatool` системный HTTPS-прокси и на macOS, читая его
+- AppRevive передаёт `ipatool` системный HTTPS-прокси и на macOS, читая его
   через `scutil --proxy` (Настройки Сети). Раньше системный прокси
   подставлялся только на Windows: `ipatool` написан на Go и сам видит только
   `HTTP_PROXY`/`HTTPS_PROXY`, поэтому там, где DPI мешает прямому пути к
@@ -142,11 +153,11 @@
 
 ### Добавлено
 
-- проверки `ipatool SAP runtime` и `ipatool SAP assets` в `apprestore doctor`:
+- проверки `ipatool SAP runtime` и `ipatool SAP assets` в `apprevive doctor`:
   показывают, лежат ли уже в кэше оба куска SAP-подписчика — Unicorn-рантайм и
   приватные фреймворки Apple со `swcdn.apple.com`, — или первый вход в Apple ID
   будет их качать. Это два независимых сетевых похода, и падают они по-разному;
-- AppRestore передаёт `ipatool` системный прокси Windows. `ipatool` написан на
+- AppRevive передаёт `ipatool` системный прокси Windows. `ipatool` написан на
   Go, а Go читает только `HTTP_PROXY`/`HTTPS_PROXY` и настройки Windows не
   видит. Там, где DPI растягивает TLS-хендшейк к серверам Apple дольше
   десятисекундного таймаута Go, прямое соединение падало с
@@ -155,13 +166,13 @@
   реально слушает: системный прокси часто указывает на выключенный
   VPN-клиент, и подставлять его вслепую значило бы сломать работающий прямой
   путь. Явные `HTTP_PROXY`/`HTTPS_PROXY` из окружения всегда важнее;
-- проверка `ipatool proxy` в `apprestore doctor` показывает, каким путём
+- проверка `ipatool proxy` в `apprevive doctor` показывает, каким путём
   `ipatool` пойдёт в сеть: унаследованный прокси, подставленный системный или
   прямое соединение.
 
 ### Изменено
 
-- перед входом в Apple ID (`apprestore auth`, пункт `A`, авто-вход в
+- перед входом в Apple ID (`apprevive auth`, пункт `A`, авто-вход в
   `download`/`restore`) выводится предупреждение, что первый вход дольше
   обычного: `ipatool` сначала поднимает SAP-подписчик и докачивает его рантайм;
 - таймаут `ipatool auth login` поднят с 10 до 30 минут — прежнего запаса не
@@ -170,7 +181,7 @@
   `%LOCALAPPDATA%\ipatool` — кэш SAP-рантайма, которого не было до 2.4.
 - сообщение о неудачной загрузке IPA больше не сваливает всё на лицензию и
   регион: сетевой сбой до Apple теперь назван первой причиной со ссылкой на
-  `apprestore doctor`. Раньше `TLS handshake timeout` выглядел как «приложение
+  `apprevive doctor`. Раньше `TLS handshake timeout` выглядел как «приложение
   удалено из App Store».
 
 ## 0.2.1 — 2026-08-24
@@ -179,7 +190,7 @@
 
 - пиннутая версия `ipatool` обновлена с 2.3.1 до 2.3.2: апстрим 2.3.2
   добавил откат на legacy Store-авторизацию, когда основной путь входа
-  недоступен, что чинит `apprestore auth` / вход `A`, падавший с
+  недоступен, что чинит `apprevive auth` / вход `A`, падавший с
   `unexpected response from Apple (HTTP 403): empty or non-plist body`
   после изменений на стороне Apple; SHA-256 архивов для Windows amd64,
   macOS amd64 и macOS arm64 обновлены вместе с версией.
@@ -190,7 +201,7 @@
   подтвердить, что iPhone больше не докачивает приложение, и повторяет
   restore с `--skip-device-redownload`, если штатный redownload не
   стартовал или не завершился вовремя; раньше выход был только через
-  ручной перезапуск `apprestore restore --select ... --skip-device-redownload`.
+  ручной перезапуск `apprevive restore --select ... --skip-device-redownload`.
 
 ## 0.2.0 — 2026-08-05
 
@@ -264,7 +275,7 @@
   списков, отдельного поиска и трёх пунктов про IPA;
 - в пункте `2` имя без префикса `search` трактуется как поисковый запрос;
 - укорочены промпты и пояснения в мастерах restore;
-- `apprestore download` принимает App Store ID / URL как позиционный аргумент
+- `apprevive download` принимает App Store ID / URL как позиционный аргумент
   (как в меню локальных IPA).
 
 ## 0.1.5 — 2026-08-03
@@ -272,14 +283,14 @@
 ### Добавлено
 
 - отдельный сценарий восстановления удалённых приложений без ярлыка/placeholder:
-  пункт меню `2`, команды `apprestore missing` и `apprestore restore-missing`;
+  пункт меню `2`, команды `apprevive missing` и `apprevive restore-missing`;
 - кандидаты собираются из iMazing `Apps.plist`, локальной библиотеки IPA и
   `known-apps.json`, минус всё, что ещё зарегистрировано на iPhone
   (включая offloaded placeholders);
 - восстановление по App Store ID / URL без заранее известного bundle ID
   (`restore-missing --store-id`, ввод `id…` / ссылки в меню `2`);
 - поиск по имени: iTunes Search API + архив IPA Filezone + веб-поиск ссылок
-  `apps.apple.com` (пункт меню `S`, `apprestore search`, `search <имя>` в
+  `apps.apple.com` (пункт меню `S`, `apprevive search`, `search <имя>` в
   мастере пункта `2`); найденные ID запоминаются в `known-apps.json`;
 - алиасы/подсказки для переименованных приложений (Домклик → ДКлик,
   Сбер/СБОЛ/SBOL → исторический App Store ID Сбербанк Онлайн);
@@ -293,18 +304,18 @@
 
 - macOS bootstrap `install.sh`: одна проверяемая команда загружает закреплённый
   source ZIP, сверяет SHA-256 и запускает user-space установку без `sudo`;
-- команда `apprestore` устанавливается в `~/.local/bin`, а PATH настраивается
+- команда `apprevive` устанавливается в `~/.local/bin`, а PATH настраивается
   для текущего терминала явным `export` и сохраняется для новых shell;
 - macOS release/bootstrap contract и CI-проверки безопасной упаковки;
 - Windows-обновление теперь полностью готовится и проверяется в staging,
   а неудачная подмена автоматически возвращает предыдущую рабочую версию;
-- install/uninstall принимают только каталог с AppRestore marker либо строгим
+- install/uninstall принимают только каталог с AppRevive marker либо строгим
   SHA-256 fingerprint опубликованной v0.1.3 и не удаляют произвольный объект.
 
 ### Безопасность
 
 - Windows-пути установки вычисляются через Known Folder API, а launcher
-  использует переносимый `python.exe -m apprestore_core.cli`;
+  использует переносимый `python.exe -m apprevive_core.cli`;
 - macOS venv получает exact managed marker; чужой venv/launcher не заменяется,
   а ошибка удаления старого backup не отменяет уже проверенную установку;
 - release builder отвергает symlink/reparse/non-regular inputs, проверяет
@@ -332,4 +343,4 @@
 
 ## 0.1.0 — 2026-07-25
 
-Начальная версия ядра AppRestore.
+Начальная версия ядра AppRevive.

@@ -8,17 +8,17 @@ pytest.importorskip("PySide6")
 
 from PySide6.QtCore import Qt
 
-from apprestore_core.models import CommandResult
-from apprestore_gui.auth_pty import (
+from apprevive_core.models import CommandResult
+from apprevive_gui.auth_pty import (
     KeychainRunner,
     _explain_login_failure,
     classify_keychain_unlock,
     extract_json_document,
     unlock_keychain,
 )
-from apprestore_gui.main_window import file_install_prompt, friendly_restore_error
-from apprestore_gui.service_adapter import GuiService
-from apprestore_gui.theme import INK, PANEL, STYLESHEET, pin_light_native_chrome
+from apprevive_gui.main_window import file_install_prompt, friendly_restore_error
+from apprevive_gui.service_adapter import GuiService
+from apprevive_gui.theme import INK, PANEL, STYLESHEET, pin_light_native_chrome
 
 
 def test_offloaded_redownload_prompt_matches_cli_fallback() -> None:
@@ -43,7 +43,7 @@ def test_offloaded_redownload_prompt_matches_cli_fallback() -> None:
     assert "ещё качает" in still
     assert file_install_prompt("device not found") is None
     assert "Apple ID" in friendly_restore_error(
-        "ipatool is not authenticated; run `apprestore auth`"
+        "ipatool is not authenticated; run `apprevive auth`"
     )
 
 
@@ -88,7 +88,7 @@ def test_pty_transcript_keeps_the_json_document() -> None:
 
 
 def test_keychain_runner_replays_passphrase_without_putting_it_on_the_command() -> None:
-    with patch("apprestore_gui.auth_pty.run_pty_command") as run:
+    with patch("apprevive_gui.auth_pty.run_pty_command") as run:
         run.return_value = CommandResult(("ipatool.exe", "download"), 0, "", "")
         runner = KeychainRunner(lambda: "once-only")
         result = runner.run(
@@ -103,7 +103,7 @@ def test_keychain_runner_replays_passphrase_without_putting_it_on_the_command() 
 
 def test_keychain_runner_does_not_touch_other_tools() -> None:
     with patch(
-        "apprestore_core.command.Runner.run",
+        "apprevive_core.command.Runner.run",
         return_value=CommandResult(("pymobiledevice3",), 3),
     ) as run:
         runner = KeychainRunner(lambda: "once-only")
@@ -152,7 +152,7 @@ def test_missing_account_keeps_the_passphrase_without_marking_a_session() -> Non
     assert service.keychain_passphrase() == "local-secret"
     assert service._service.tools._ipatool_session_authenticated is False
 
-    with patch("apprestore_gui.auth_pty.keychain_has_saved_account", return_value=False):
+    with patch("apprevive_gui.auth_pty.keychain_has_saved_account", return_value=False):
         accepted = unlock_keychain("local-secret")
     assert accepted.ok
     assert accepted.session_open is False

@@ -1,6 +1,6 @@
 # Сторонние компоненты
 
-AppRestore использует или устанавливает следующие сторонние проекты. Их собственные лицензии и уведомления сохраняют силу.
+AppRevive использует или устанавливает следующие сторонние проекты. Их собственные лицензии и уведомления сохраняют силу.
 
 ## pymobiledevice3 10.1.0
 
@@ -52,10 +52,39 @@ faf98ef8067f1ef4783123d00561b4ece10dc7419631eb9555d88a1da2f61f3f  macos-arm64
 - Проект: <https://github.com/unicorn-engine/unicorn>
 - Лицензия upstream: GNU General Public License 2.0.
 
-AppRestore не распространяет Unicorn. Библиотеку скачивает сам `ipatool` при
+AppRevive не распространяет Unicorn. Библиотеку скачивает сам `ipatool` при
 первом входе в Apple ID, сверяет по своим SHA-256 и кладёт в пользовательский
 кэш (`%LOCALAPPDATA%\ipatool\unicorn` / `~/Library/Caches/ipatool/unicorn`).
 
 ## Apple
 
-Apple, iPhone, iOS, App Store и iTunes — товарные знаки Apple Inc. AppRestore не является продуктом Apple и не аффилирован с Apple Inc.
+Apple, iPhone, iOS, App Store и iTunes — товарные знаки Apple Inc. AppRevive не является продуктом Apple и не аффилирован с Apple Inc.
+
+
+## Standard application ID list — ipatool-webGUI
+
+Source: https://github.com/pdx15/ipatool-webGUI/blob/main/resources/Apps_ID_List.txt
+
+Bundled snapshot: 2026-10-17. Repeated IDs are merged; names and IDs are provided by the source and do not imply availability for any Apple ID.
+
+MIT License
+
+Copyright (c) 2021 Majd Alfhaily
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

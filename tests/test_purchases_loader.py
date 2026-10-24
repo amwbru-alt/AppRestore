@@ -9,9 +9,9 @@ from pathlib import Path
 
 import pytest
 
-import apprestore_core.ipatool_api as api
-from apprestore_core.purchases_cache import CachedPurchase, PurchasesCache
-from apprestore_gui import purchases as pm
+import apprevive_core.ipatool_api as api
+from apprevive_core.purchases_cache import CachedPurchase, PurchasesCache
+from apprevive_gui import purchases as pm
 
 EMAIL = "person@example.com"
 OTHER = "other@example.com"
@@ -133,7 +133,7 @@ def test_session_check_runs_off_the_calling_thread() -> None:
     assert views == [pm.SESSION_CHECKING]  # start() returned while the probe hangs
     release.set()
     checker.join(5)
-    assert seen == ["apprestore-session-alive"]
+    assert seen == ["apprevive-session-alive"]
     assert views[-1].state == "alive"
 
 
@@ -197,11 +197,14 @@ def test_cached_list_shows_first_then_refresh_replaces_it(tmp_path: Path) -> Non
     loader, _cache, views = _loader(tmp_path, runner)
     loader.set_account(EMAIL)
     shown = views[-1]
+    assert not shown.confirmed
     assert shown.from_cache and [r["trackId"] for r in shown.rows] == ["999"]
     loader.start()
     loader.join(5)
     assert views[-1].rows and [r["trackId"] for r in views[-1].rows] == ["1", "2"]
     assert not views[-1].from_cache
+    assert views[-1].confirmed
+    assert views[-1].account == cache.account_key(EMAIL)
 
 
 def test_cancel_sets_event_and_stops_before_next_page(tmp_path: Path) -> None:
@@ -291,7 +294,7 @@ def test_gui_runner_keeps_passphrase_out_of_argv(monkeypatch) -> None:
 
     def fake_pty(args, *, passphrase, timeout, env):
         seen.update(args=list(args), passphrase=passphrase, env=env)
-        from apprestore_core.models import CommandResult
+        from apprevive_core.models import CommandResult
 
         return CommandResult(tuple(args), 0, _line(success=True), "")
 
@@ -299,7 +302,7 @@ def test_gui_runner_keeps_passphrase_out_of_argv(monkeypatch) -> None:
     import sys
 
     fake_module = types.SimpleNamespace(run_pty_command=fake_pty)
-    monkeypatch.setitem(sys.modules, "apprestore_gui.auth_pty", fake_module)
+    monkeypatch.setitem(sys.modules, "apprevive_gui.auth_pty", fake_module)
     runner = pm.gui_runner(lambda: "s3cret", lambda: {"HTTPS_PROXY": "http://proxy:3128"})
     client = api.IpatoolClient("/x/ipatool", keychain_passphrase="", runner=runner)
     assert client.session_alive().state is api.SessionState.ALIVE
@@ -313,11 +316,11 @@ def test_gui_runner_maps_pty_timeout(monkeypatch) -> None:
     import sys
     import types
 
-    from apprestore_core.models import CommandResult
+    from apprevive_core.models import CommandResult
 
     monkeypatch.setitem(
         sys.modules,
-        "apprestore_gui.auth_pty",
+        "apprevive_gui.auth_pty",
         types.SimpleNamespace(run_pty_command=lambda args, **_: CommandResult(tuple(args), 124, "", "command timed out")),
     )
     client = api.IpatoolClient("/x/ipatool", keychain_passphrase="", runner=pm.gui_runner(lambda: "p", lambda: {}))
@@ -327,7 +330,7 @@ def test_gui_runner_maps_pty_timeout(monkeypatch) -> None:
 
 
 def test_ipatool_error_without_russian_text_is_not_quoted() -> None:
-    from apprestore_gui.errors import IPATOOL_FALLBACK_TEXT, explain_ipatool_error
+    from apprevive_gui.errors import IPATOOL_FALLBACK_TEXT, explain_ipatool_error
 
     error = api.IpatoolError(api.ErrorCode.UNKNOWN, f"raw {EMAIL} guid=ABC")
     error.message_ru = ""

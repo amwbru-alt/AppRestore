@@ -5,7 +5,7 @@ Windows and macOS. `build.lock` pins the local-project build backend, while
 `test.lock` pins pytest and its test-only dependencies. `wheel-build.lock` is a
 separate, exact toolchain used only to reproduce the vendored `hexdump` wheel.
 Installers consume `build.lock` and `runtime.lock` with
-`--require-hashes --only-binary=:all:` and then install AppRestore itself with
+`--require-hashes --only-binary=:all:` and then install AppRevive itself with
 `--no-deps --no-build-isolation`.
 
 Regenerate the locks from the repository root with uv 0.12.1 and the commands
@@ -54,6 +54,10 @@ default release gate is networkless and uses the byte-identical vendored ZIP.
 The macOS installer does not require Homebrew. It downloads the pinned
 `python-build-standalone` CPython 3.12.13 build `20260804` from its official
 GitHub release and verifies the architecture-specific SHA-256 embedded in
-`install-macos.sh` before extraction. Dependencies and AppRestore are installed
+`install-macos.sh` before extraction. Dependencies and AppRevive are installed
 inside staging; the previous live runtime is moved only after all smoke checks
 pass.
+
+## Python 3.13 lzfse wheel compatibility
+
+The base lock regeneration command is preserved above. The lzfse entry has an explicit compatibility override: Python <3.13 retains 0.4.2, while non-macOS Python 3.13 uses upstream 0.4.2.post1, which supplies cp313 wheels. Hashes come from https://pypi.org/pypi/lzfse/0.4.2.post1/json and are still enforced by pip. Preserve this marker split when regenerating the lock. No source build or hash verification bypass is used.

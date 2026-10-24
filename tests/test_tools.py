@@ -11,10 +11,10 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import Mock, patch
 
-from apprestore_core import __version__
-from apprestore_core.command import CommandError, Runner
-from apprestore_core.models import CommandResult, DeviceAppState
-from apprestore_core.tools import IPATOOL_VERSION, AppRestoreTools, InstallRequestState, ToolUnavailable
+from apprevive_core import __version__
+from apprevive_core.command import CommandError, Runner
+from apprevive_core.models import CommandResult, DeviceAppState
+from apprevive_core.tools import IPATOOL_VERSION, AppReviveTools, InstallRequestState, ToolUnavailable
 
 
 class RecordingRunner:
@@ -44,7 +44,7 @@ class RunnerTests(unittest.TestCase):
         )
         self.assertEqual(result.stdout.strip(), marker)
 
-    @patch("apprestore_core.command._parent_has_no_console", return_value=False)
+    @patch("apprevive_core.command._parent_has_no_console", return_value=False)
     def test_machine_output_routes_child_stdout_to_stderr(self, _console: object) -> None:
         with tempfile.TemporaryFile(mode="w+", encoding="utf-8") as error_stream:
             with redirect_stderr(error_stream):
@@ -76,7 +76,7 @@ class RunnerTests(unittest.TestCase):
         self.assertIn("partial-", caught.exception.result.stdout)
         self.assertIn("failure-", caught.exception.result.stderr)
 
-    @patch("apprestore_core.command._parent_has_no_console", return_value=True)
+    @patch("apprevive_core.command._parent_has_no_console", return_value=True)
     def test_windowed_parent_keeps_output_and_closes_stdin(self, _windowed: object) -> None:
         result = Runner().run(
             [
@@ -92,12 +92,12 @@ class RunnerTests(unittest.TestCase):
         self.assertIn("eof", result.stdout)
 
     def test_packaged_app_without_a_tty_has_no_console(self) -> None:
-        from apprestore_core import command
+        from apprevive_core import command
 
         with patch.object(command.sys, "frozen", True, create=True):
-            with patch("apprestore_core.command.os.isatty", return_value=False):
+            with patch("apprevive_core.command.os.isatty", return_value=False):
                 self.assertTrue(command._frozen_app_without_tty())
-            with patch("apprestore_core.command.os.isatty", return_value=True):
+            with patch("apprevive_core.command.os.isatty", return_value=True):
                 self.assertFalse(command._frozen_app_without_tty())
         with patch.object(command.sys, "frozen", False, create=True):
             self.assertFalse(command._frozen_app_without_tty())
@@ -106,9 +106,9 @@ class RunnerTests(unittest.TestCase):
 class ToolArgumentTests(unittest.TestCase):
     def setUp(self) -> None:
         self.runner = RecordingRunner()
-        self.tools = AppRestoreTools(self.runner)  # type: ignore[arg-type]
+        self.tools = AppReviveTools(self.runner)  # type: ignore[arg-type]
 
-    @patch("apprestore_core.tools.resolve_tool", return_value="ipatool")
+    @patch("apprevive_core.tools.resolve_tool", return_value="ipatool")
     def test_login_delegates_all_secrets_to_interactive_ipatool(
         self,
         _resolve: object,
@@ -130,7 +130,7 @@ class ToolArgumentTests(unittest.TestCase):
         self.assertNotIn("--keychain-passphrase", args)
         self.assertEqual(self.runner.calls[0][1].get("capture"), False)
 
-    @patch("apprestore_core.tools.resolve_tool", return_value="ipatool")
+    @patch("apprevive_core.tools.resolve_tool", return_value="ipatool")
     def test_download_never_carries_purchase(
         self,
         _resolve: object,
@@ -147,9 +147,9 @@ class ToolArgumentTests(unittest.TestCase):
             with self.assertRaises(TypeError):
                 self.tools.download_ipa(output, store_id="123", purchase=True)  # type: ignore[call-arg]
 
-    @patch("apprestore_core.tools.resolve_tool", return_value="ipatool")
+    @patch("apprevive_core.tools.resolve_tool", return_value="ipatool")
     def test_purchase_is_its_own_json_command_and_needs_a_grant(self, _resolve: object) -> None:
-        from apprestore_core.purchase_grant import PurchaseGrant, PurchaseNotAllowed, _mint
+        from apprevive_core.purchase_grant import PurchaseGrant, PurchaseNotAllowed, _mint
 
         self.runner.stdout = '{"alreadyOwned":false,"level":"info","success":true}\n'
         payload = self.tools.purchase_license("1234567890", grant=_mint("1234567890"))
@@ -173,9 +173,9 @@ class ToolArgumentTests(unittest.TestCase):
             self.tools.purchase_license("1234567890", grant=grant)
         self.assertEqual(len(self.runner.calls), calls + 1)
 
-    @patch("apprestore_core.tools.resolve_tool", return_value="ipatool")
+    @patch("apprevive_core.tools.resolve_tool", return_value="ipatool")
     def test_purchase_failure_keeps_ipatool_error(self, _resolve: object) -> None:
-        from apprestore_core.purchase_grant import _mint
+        from apprevive_core.purchase_grant import _mint
 
         self.runner.returncode = 1
         self.runner.stdout = (
@@ -191,7 +191,7 @@ class ToolArgumentTests(unittest.TestCase):
         with self.assertRaises(ToolUnavailable):
             self.tools.purchase_license("1", grant=_mint("1"))
 
-    @patch("apprestore_core.tools.resolve_tool", return_value="ipatool")
+    @patch("apprevive_core.tools.resolve_tool", return_value="ipatool")
     def test_download_failure_keeps_the_tool_text(self, _resolve: object) -> None:
         self.runner.returncode = 1
         self.runner.stderr = (
@@ -204,7 +204,7 @@ class ToolArgumentTests(unittest.TestCase):
         self.assertIn("passphrase is required", message)
         self.assertNotIn("owner@example.com", message)
 
-    @patch("apprestore_core.tools.resolve_tool", return_value="ipatool")
+    @patch("apprevive_core.tools.resolve_tool", return_value="ipatool")
     def test_download_failure_keeps_the_error_at_the_end_of_a_long_log(self, _resolve: object) -> None:
         self.runner.returncode = 1
         self.runner.stderr = ("INF progress " * 80) + 'ERR error="failed to purchase app"'
@@ -213,7 +213,7 @@ class ToolArgumentTests(unittest.TestCase):
         self.assertIn("failed to purchase app", str(caught.exception))
         self.assertNotIn("INF progress", str(caught.exception))
 
-    @patch("apprestore_core.tools.resolve_tool", return_value="ipatool")
+    @patch("apprevive_core.tools.resolve_tool", return_value="ipatool")
     def test_download_failure_without_output_names_the_exit(self, _resolve: object) -> None:
         self.runner.returncode = 1
         self.runner.stderr = ""
@@ -223,7 +223,7 @@ class ToolArgumentTests(unittest.TestCase):
         self.assertIn("printed nothing", str(caught.exception))
         self.assertNotIn("ipatool failed", str(caught.exception))
 
-    @patch("apprestore_core.tools.resolve_tool", return_value="ipatool")
+    @patch("apprevive_core.tools.resolve_tool", return_value="ipatool")
     def test_login_marks_session_authenticated(self, _resolve: object) -> None:
         self.assertTrue(self.tools.ipatool_authenticated())
         self.assertEqual(
@@ -240,7 +240,7 @@ class ToolArgumentTests(unittest.TestCase):
         self.assertTrue(self.tools.ipatool_authenticated())
         self.assertEqual(len(self.runner.calls), before)
 
-    @patch("apprestore_core.tools.resolve_tool", return_value="ipatool")
+    @patch("apprevive_core.tools.resolve_tool", return_value="ipatool")
     def test_auth_info_captures_and_parses_json(self, _resolve: object) -> None:
         self.runner.stdout = '{"email":"owner@example.com","success":true}'
 
@@ -258,7 +258,7 @@ class ToolArgumentTests(unittest.TestCase):
         self.assertEqual(self.runner.calls[-1][1].get("timeout"), 60)
         self.assertTrue(self.tools._ipatool_session_authenticated)
 
-    @patch("apprestore_core.tools.resolve_tool", return_value="ipatool")
+    @patch("apprevive_core.tools.resolve_tool", return_value="ipatool")
     def test_auth_info_rejects_malformed_or_unsuccessful_json(
         self,
         _resolve: object,
@@ -292,7 +292,7 @@ class ToolArgumentTests(unittest.TestCase):
         ok, _detail = self.tools._ipatool_check("ipatool")
         self.assertTrue(ok)
 
-    @patch("apprestore_core.tools.resolve_windows_system_tool", return_value=None)
+    @patch("apprevive_core.tools.resolve_windows_system_tool", return_value=None)
     def test_apple_service_never_falls_back_to_path_sc(self, _resolve: object) -> None:
         ok, detail = self.tools._apple_mobile_device_service()
 
@@ -301,7 +301,7 @@ class ToolArgumentTests(unittest.TestCase):
         self.assertEqual(self.runner.calls, [])
 
     @patch(
-        "apprestore_core.tools.resolve_windows_system_tool",
+        "apprevive_core.tools.resolve_windows_system_tool",
         return_value=r"C:\Windows\System32\sc.exe",
     )
     def test_apple_service_uses_numeric_state_not_localized_word(
@@ -318,14 +318,14 @@ class ToolArgumentTests(unittest.TestCase):
 
     @patch.dict(
         os.environ,
-        {"APPRESTORE_IPATOOL_KEYCHAIN_PASSPHRASE": "must-not-leak"},
+        {"APPREVIVE_IPATOOL_KEYCHAIN_PASSPHRASE": "must-not-leak"},
     )
-    @patch("apprestore_core.tools.resolve_tool", return_value="ipatool")
+    @patch("apprevive_core.tools.resolve_tool", return_value="ipatool")
     def test_legacy_environment_passphrase_is_ignored(
         self,
         _resolve: object,
     ) -> None:
-        tools = AppRestoreTools(self.runner)  # type: ignore[arg-type]
+        tools = AppReviveTools(self.runner)  # type: ignore[arg-type]
 
         tools.download_ipa(Path("out.ipa"), store_id="1")
 
@@ -334,7 +334,7 @@ class ToolArgumentTests(unittest.TestCase):
         self.assertNotIn("must-not-leak", args)
 
     @patch(
-        "apprestore_core.tools.resolve_windows_system_tool",
+        "apprevive_core.tools.resolve_windows_system_tool",
         return_value=r"C:\Users\owner\AppData\Local\Microsoft\WindowsApps\winget.exe",
     )
     def test_winget_is_never_retried_through_elevated_powershell(
@@ -354,8 +354,8 @@ class ToolArgumentTests(unittest.TestCase):
         self.assertNotIn("Start-Process", " ".join(args))
         self.assertNotIn("RunAs", " ".join(args))
 
-    @patch("apprestore_core.tools.importlib.util.find_spec", return_value=object())
-    @patch("apprestore_core.tools.platform.system", return_value="Windows")
+    @patch("apprevive_core.tools.importlib.util.find_spec", return_value=object())
+    @patch("apprevive_core.tools.platform.system", return_value="Windows")
     def test_windows_uses_isolated_relocatable_pymobiledevice_command(
         self,
         _platform_system: object,
@@ -380,8 +380,8 @@ class ToolArgumentTests(unittest.TestCase):
         )
         self.assertEqual(self.runner.calls[-1][1].get("timeout"), 60)
 
-    @patch("apprestore_core.tools.importlib.util.find_spec", return_value=object())
-    @patch("apprestore_core.tools.platform.system", return_value="Darwin")
+    @patch("apprevive_core.tools.importlib.util.find_spec", return_value=object())
+    @patch("apprevive_core.tools.platform.system", return_value="Darwin")
     def test_macos_uses_isolated_relocatable_pymobiledevice_command(
         self,
         _platform_system: object,
@@ -417,19 +417,19 @@ class ToolArgumentTests(unittest.TestCase):
             str(Path(user_site) / "pymobiledevice3" / "__init__.py"),
         )
         with (
-            patch("apprestore_core.tools.importlib.util.find_spec", return_value=spec),
+            patch("apprevive_core.tools.importlib.util.find_spec", return_value=spec),
             patch(
-                "apprestore_core.tools.site.getusersitepackages",
+                "apprevive_core.tools.site.getusersitepackages",
                 return_value=user_site,
             ),
-            patch("apprestore_core.tools.platform.system", return_value="Windows"),
+            patch("apprevive_core.tools.platform.system", return_value="Windows"),
             patch.object(
-                AppRestoreTools,
+                AppReviveTools,
                 "_list_udids_in_process",
                 return_value=["00008020-test"],
             ) as listed,
             patch.object(
-                AppRestoreTools,
+                AppReviveTools,
                 "_lockdown_values_in_process",
                 return_value={"DeviceName": "iPhone", "ProductVersion": "18.2"},
             ) as info,
@@ -696,7 +696,7 @@ class ToolArgumentTests(unittest.TestCase):
         services = types.ModuleType("pymobiledevice3.services")
         services.__path__ = []  # type: ignore[attr-defined]
 
-        tools = AppRestoreTools(self.runner, json_output=True)  # type: ignore[arg-type]
+        tools = AppReviveTools(self.runner, json_output=True)  # type: ignore[arg-type]
         with patch.dict(
             sys.modules,
             {
@@ -793,7 +793,7 @@ class ToolArgumentTests(unittest.TestCase):
         distribution.version = "0.1.4"
         distribution.read_text.return_value = None
         with patch(
-            "apprestore_core.tools.package_metadata.distribution",
+            "apprevive_core.tools.package_metadata.distribution",
             return_value=distribution,
         ):
             check = self.tools._runtime_provenance_check()
@@ -809,7 +809,7 @@ class ToolArgumentTests(unittest.TestCase):
             '{"url":"file:///source","dir_info":{"editable":true}}'
         )
         with patch(
-            "apprestore_core.tools.package_metadata.distribution",
+            "apprevive_core.tools.package_metadata.distribution",
             return_value=distribution,
         ):
             check = self.tools._runtime_provenance_check()
@@ -832,9 +832,9 @@ def _without_proxy_environment() -> Any:
 class IpatoolProxyEnvironmentTests(unittest.TestCase):
     def setUp(self) -> None:
         self.runner = RecordingRunner()
-        self.tools = AppRestoreTools(self.runner)  # type: ignore[arg-type]
+        self.tools = AppReviveTools(self.runner)  # type: ignore[arg-type]
 
-    @patch("apprestore_core.tools.windows_system_proxy")
+    @patch("apprevive_core.tools.windows_system_proxy")
     def test_explicit_environment_proxy_is_never_overridden(
         self,
         system_proxy: Mock,
@@ -848,8 +848,8 @@ class IpatoolProxyEnvironmentTests(unittest.TestCase):
             self.assertEqual(self.tools._resolve_ipatool_proxy_env(), {})
         system_proxy.assert_not_called()
 
-    @patch("apprestore_core.tools.proxy_is_reachable", return_value=False)
-    @patch("apprestore_core.tools.windows_system_proxy")
+    @patch("apprevive_core.tools.proxy_is_reachable", return_value=False)
+    @patch("apprevive_core.tools.windows_system_proxy")
     def test_unreachable_system_proxy_is_not_injected(
         self,
         system_proxy: Mock,
@@ -860,8 +860,8 @@ class IpatoolProxyEnvironmentTests(unittest.TestCase):
         with _without_proxy_environment():
             self.assertEqual(self.tools._resolve_ipatool_proxy_env(), {})
 
-    @patch("apprestore_core.tools.proxy_is_reachable", return_value=True)
-    @patch("apprestore_core.tools.windows_system_proxy")
+    @patch("apprevive_core.tools.proxy_is_reachable", return_value=True)
+    @patch("apprevive_core.tools.windows_system_proxy")
     def test_reachable_system_proxy_reaches_ipatool(
         self,
         system_proxy: Mock,
@@ -880,9 +880,9 @@ class IpatoolProxyEnvironmentTests(unittest.TestCase):
             },
         )
 
-    @patch("apprestore_core.tools.proxy_is_reachable", return_value=False)
-    @patch("apprestore_core.tools.windows_system_proxy", return_value=None)
-    @patch("apprestore_core.tools.macos_system_proxy")
+    @patch("apprevive_core.tools.proxy_is_reachable", return_value=False)
+    @patch("apprevive_core.tools.windows_system_proxy", return_value=None)
+    @patch("apprevive_core.tools.macos_system_proxy")
     def test_unreachable_macos_system_proxy_is_not_injected(
         self,
         system_proxy: Mock,
@@ -895,9 +895,9 @@ class IpatoolProxyEnvironmentTests(unittest.TestCase):
         with _without_proxy_environment():
             self.assertEqual(self.tools._resolve_ipatool_proxy_env(), {})
 
-    @patch("apprestore_core.tools.proxy_is_reachable", return_value=True)
-    @patch("apprestore_core.tools.windows_system_proxy", return_value=None)
-    @patch("apprestore_core.tools.macos_system_proxy")
+    @patch("apprevive_core.tools.proxy_is_reachable", return_value=True)
+    @patch("apprevive_core.tools.windows_system_proxy", return_value=None)
+    @patch("apprevive_core.tools.macos_system_proxy")
     def test_reachable_macos_system_proxy_reaches_ipatool(
         self,
         system_proxy: Mock,
@@ -917,7 +917,7 @@ class IpatoolProxyEnvironmentTests(unittest.TestCase):
             },
         )
 
-    @patch("apprestore_core.tools.resolve_tool", return_value="ipatool")
+    @patch("apprevive_core.tools.resolve_tool", return_value="ipatool")
     def test_every_networked_ipatool_call_carries_the_proxy(
         self,
         _resolve: Mock,

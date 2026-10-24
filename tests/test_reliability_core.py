@@ -11,15 +11,15 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
-from apprestore_core.ipa import read_ipa_metadata
-from apprestore_core.models import (
+from apprevive_core.ipa import read_ipa_metadata
+from apprevive_core.models import (
     DeviceAppState,
     MissingApp,
     OffloadedApp,
     RedownloadRequestState,
 )
-from apprestore_core.service import AppRestoreError, AppRestoreService
-from apprestore_core.tools import InstallRequestState
+from apprevive_core.service import AppReviveError, AppReviveService
+from apprevive_core.tools import InstallRequestState
 
 from tests.helpers import make_ipa
 
@@ -98,7 +98,7 @@ class ReliabilityCoreTests(unittest.TestCase):
         self.library = self.root / "library"
         self.cache = self.root / "cache"
         self.remember_patch = mock.patch(
-            "apprestore_core.service.remember_known_app"
+            "apprevive_core.service.remember_known_app"
         )
         self.remember = self.remember_patch.start()
 
@@ -106,8 +106,8 @@ class ReliabilityCoreTests(unittest.TestCase):
         self.remember_patch.stop()
         self.temporary.cleanup()
 
-    def service(self, tools: object) -> AppRestoreService:
-        return AppRestoreService(
+    def service(self, tools: object) -> AppReviveService:
+        return AppReviveService(
             tools=tools,  # type: ignore[arg-type]
             library=self.library,
             cache=self.cache,
@@ -144,7 +144,7 @@ class ReliabilityCoreTests(unittest.TestCase):
         self.assertNotEqual(source.read_bytes(), replacement.read_bytes())
         tools = MutatingStagedTools(replacement)
 
-        with self.assertRaisesRegex(AppRestoreError, "staged IPA changed"):
+        with self.assertRaisesRegex(AppReviveError, "staged IPA changed"):
             self.service(tools).install(
                 "UDID",
                 source,
@@ -159,7 +159,7 @@ class ReliabilityCoreTests(unittest.TestCase):
         service = self.service(tools)
         service.INSTALL_VERIFY_TIMEOUT = 0
 
-        with self.assertRaisesRegex(AppRestoreError, "did not confirm"):
+        with self.assertRaisesRegex(AppReviveError, "did not confirm"):
             service.install("UDID", source)
 
         self.assertEqual(len(tools.install_paths), 1)
@@ -187,7 +187,7 @@ class ReliabilityCoreTests(unittest.TestCase):
             install_result=InstallRequestState.FAILED_BEFORE_REQUEST,
         )
 
-        with self.assertRaisesRegex(AppRestoreError, "before it could submit"):
+        with self.assertRaisesRegex(AppReviveError, "before it could submit"):
             self.service(tools).install("UDID", source)
 
         self.assertEqual(len(tools.install_paths), 1)
@@ -204,7 +204,7 @@ class ReliabilityCoreTests(unittest.TestCase):
         service = self.service(tools)
         service.INSTALL_VERIFY_TIMEOUT = 0
 
-        with self.assertRaisesRegex(AppRestoreError, "already present"):
+        with self.assertRaisesRegex(AppReviveError, "already present"):
             service.install("UDID", source)
 
     def test_completed_install_rejects_a_known_wrong_device_version(self) -> None:
@@ -216,7 +216,7 @@ class ReliabilityCoreTests(unittest.TestCase):
         service = self.service(tools)
         service.INSTALL_VERIFY_TIMEOUT = 0
 
-        with self.assertRaisesRegex(AppRestoreError, "version 1.0"):
+        with self.assertRaisesRegex(AppReviveError, "version 1.0"):
             service.install("UDID", source)
 
     def test_absent_after_native_redownload_is_never_reported_as_success(self) -> None:
@@ -229,7 +229,7 @@ class ReliabilityCoreTests(unittest.TestCase):
         service.REDOWNLOAD_START_TIMEOUT = 0
         app = OffloadedApp("com.example.app", "App", "1.0")
 
-        with self.assertRaisesRegex(AppRestoreError, "refusing a competing"):
+        with self.assertRaisesRegex(AppReviveError, "refusing a competing"):
             service.restore_offloaded("UDID", app)
 
         tools.ipatool_authenticated.assert_not_called()
@@ -244,7 +244,7 @@ class ReliabilityCoreTests(unittest.TestCase):
         service = self.service(tools)
         app = OffloadedApp("com.example.app", "App", "1.0")
 
-        with mock.patch("apprestore_core.service.time.sleep"):
+        with mock.patch("apprevive_core.service.time.sleep"):
             status = service.restore_offloaded("UDID", app)
 
         self.assertIn("confirmed", status)
@@ -272,9 +272,9 @@ class ReliabilityCoreTests(unittest.TestCase):
         app = OffloadedApp("com.example.app", "App", "1.0")
 
         with (
-            mock.patch("apprestore_core.service.time.monotonic", side_effect=[0, 0, 1]),
-            mock.patch("apprestore_core.service.time.sleep"),
-            self.assertRaisesRegex(AppRestoreError, "did not finish"),
+            mock.patch("apprevive_core.service.time.monotonic", side_effect=[0, 0, 1]),
+            mock.patch("apprevive_core.service.time.sleep"),
+            self.assertRaisesRegex(AppReviveError, "did not finish"),
         ):
             service.restore_offloaded("UDID", app)
 
@@ -289,14 +289,14 @@ class ReliabilityCoreTests(unittest.TestCase):
 
         with (
             mock.patch(
-                "apprestore_core.service.scan_ipas",
+                "apprevive_core.service.scan_ipas",
                 return_value=([metadata], []),
             ) as scan,
             mock.patch(
-                "apprestore_core.service.load_imazing_app_records",
+                "apprevive_core.service.load_imazing_app_records",
                 return_value={},
             ),
-            mock.patch("apprestore_core.service.load_known_apps", return_value=[]),
+            mock.patch("apprevive_core.service.load_known_apps", return_value=[]),
         ):
             service.missing("UDID")
             found = service.find_local(metadata.bundle_id)
@@ -321,7 +321,7 @@ class ReliabilityCoreTests(unittest.TestCase):
             },
         ]
         with mock.patch(
-            "apprestore_core.service.load_known_apps",
+            "apprevive_core.service.load_known_apps",
             return_value=records,
         ):
             apps = service._merge_known_missing([], set(), [])
@@ -343,7 +343,7 @@ class ReliabilityCoreTests(unittest.TestCase):
             }
         ]
         with mock.patch(
-            "apprestore_core.service.load_known_apps",
+            "apprevive_core.service.load_known_apps",
             return_value=records,
         ):
             apps = service._merge_known_missing([], set(), [])

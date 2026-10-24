@@ -19,7 +19,7 @@ from PySide6.QtCore import QSettings, QTimer  # noqa: E402
 from PySide6.QtGui import QGuiApplication  # noqa: E402
 from PySide6.QtQuickControls2 import QQuickStyle  # noqa: E402
 
-from apprestore_gui.ui4b.window import ONBOARDED_KEY, build  # noqa: E402
+from apprevive_gui.ui4b.window import ONBOARDED_KEY, build  # noqa: E402
 
 
 def main() -> int:

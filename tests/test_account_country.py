@@ -9,8 +9,8 @@ from pathlib import Path
 
 import pytest
 
-from apprestore_core import storefronts, tools as tools_module
-from apprestore_core.tools import AppRestoreTools
+from apprevive_core import storefronts, tools as tools_module
+from apprevive_core.tools import AppReviveTools
 
 # `auth info --format json` from Макс's patch (auth-info-country.md), no email.
 SIGNED_IN = {
@@ -23,7 +23,7 @@ SIGNED_IN = {
 }
 
 # A locally built ipatool with patch 0001; the live check is skipped without it.
-MAKS_BINARY = Path(os.environ.get("APPRESTORE_TEST_IPATOOL_COUNTRY") or "bin/ipatool-with-0001")
+MAKS_BINARY = Path(os.environ.get("APPREVIVE_TEST_IPATOOL_COUNTRY") or "bin/ipatool-with-0001")
 
 
 def test_signed_in_fixture_is_us() -> None:
@@ -64,7 +64,7 @@ class _Runner:
         self.stdout, self.returncode = stdout, returncode
 
     def run(self, args, **kwargs):  # noqa: ANN001
-        from apprestore_core.command import CommandResult
+        from apprevive_core.command import CommandResult
 
         return CommandResult(tuple(args), self.returncode, self.stdout, "")
 
@@ -73,7 +73,7 @@ def test_tools_account_country_from_patched_auth_info(monkeypatch: pytest.Monkey
     import json
 
     monkeypatch.setattr(tools_module, "resolve_tool", lambda name: "/fake/ipatool")
-    tools = AppRestoreTools(_Runner(json.dumps(SIGNED_IN)))  # type: ignore[arg-type]
+    tools = AppReviveTools(_Runner(json.dumps(SIGNED_IN)))  # type: ignore[arg-type]
     monkeypatch.setattr(tools, "_ipatool_env", lambda: {})
     assert tools.account_country() == "us"
 
@@ -81,7 +81,7 @@ def test_tools_account_country_from_patched_auth_info(monkeypatch: pytest.Monkey
 def test_tools_account_country_not_signed_in(monkeypatch: pytest.MonkeyPatch) -> None:
     out = '{"level":"error","error":"failed to get account: ... not be found in the keyring","success":false}'
     monkeypatch.setattr(tools_module, "resolve_tool", lambda name: "/fake/ipatool")
-    tools = AppRestoreTools(_Runner(out, returncode=1))  # type: ignore[arg-type]
+    tools = AppReviveTools(_Runner(out, returncode=1))  # type: ignore[arg-type]
     monkeypatch.setattr(tools, "_ipatool_env", lambda: {})
     assert tools.account_country() == ""
 
@@ -98,7 +98,7 @@ def test_real_patched_binary_without_session_is_not_signed_in(
     for name in ("IPATOOL_KEYCHAIN_PASSPHRASE", "XDG_CONFIG_HOME", "XDG_DATA_HOME"):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setattr(tools_module, "resolve_tool", lambda name: str(MAKS_BINARY))
-    tools = AppRestoreTools()
+    tools = AppReviveTools()
     monkeypatch.setattr(tools, "_ipatool_env", lambda: {})
 
     raw = tools.runner.run([str(MAKS_BINARY), "--format", "json", "auth", "info", "--non-interactive"],

@@ -9,9 +9,9 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 
-$AppRestoreVersion = "0.4.0"
-$ManagedInstallMarkerName = ".apprestore-managed"
-$ManagedInstallMarkerValue = "AppRestore managed installation v1"
+$AppReviveVersion = "0.5.0"
+$ManagedInstallMarkerName = ".apprevive-managed"
+$ManagedInstallMarkerValue = "AppRevive managed installation v1"
 $IpaToolVersion = "2.6.0"
 $IpaToolSha256 = "639d9cd7f22cea2975fd8263b0a8cbd7a36e7ee742e4c3e3a910b85f05b4df14"
 $IpaToolUrl = "https://github.com/J3ckJ/AppRestore/releases/download/ipatool-2.6.0-redirect/ipatool-$IpaToolVersion-windows-amd64.tar.gz"
@@ -27,7 +27,7 @@ if ([string]::IsNullOrWhiteSpace($KnownLocalAppData)) {
 }
 $KnownLocalAppData = [System.IO.Path]::GetFullPath($KnownLocalAppData)
 $InstallRoot = [System.IO.Path]::GetFullPath(
-    (Join-Path $KnownLocalAppData "Programs\AppRestore")
+    (Join-Path $KnownLocalAppData "Programs\AppRevive")
 )
 $ProgramsRoot = [System.IO.Path]::GetDirectoryName($InstallRoot)
 
@@ -48,8 +48,8 @@ $RequiredSourceFiles = @(
     "LICENSE",
     "README.md",
     "THIRD_PARTY_NOTICES.md",
-    "apprestore.py",
-    "apprestore.ps1",
+    "apprevive.py",
+    "apprevive.ps1",
     "uninstall-windows.ps1"
 )
 foreach ($RelativeFile in $RequiredSourceFiles) {
@@ -58,9 +58,9 @@ foreach ($RelativeFile in $RequiredSourceFiles) {
         throw "Неполный комплект установки: отсутствует $RelativeFile."
     }
 }
-$SourceCore = Join-Path $PSScriptRoot "apprestore_core"
+$SourceCore = Join-Path $PSScriptRoot "apprevive_core"
 if (-not (Test-Path -LiteralPath $SourceCore -PathType Container)) {
-    throw "Неполный комплект установки: отсутствует apprestore_core."
+    throw "Неполный комплект установки: отсутствует apprevive_core."
 }
 
 function Assert-PlainDirectory {
@@ -96,7 +96,7 @@ function Ensure-PlainDirectory {
     Assert-PlainDirectory -Path $Path -Label $Label
 }
 
-function Assert-AppRestorePlainTree {
+function Assert-AppRevivePlainTree {
     param(
         [Parameter(Mandatory = $true)]
         [string]$Path,
@@ -131,7 +131,7 @@ function Assert-AppRestorePlainTree {
     }
 }
 
-function Assert-AppRestoreManagedInstall {
+function Assert-AppReviveManagedInstall {
     param(
         [Parameter(Mandatory = $true)]
         [string]$Path,
@@ -141,7 +141,7 @@ function Assert-AppRestoreManagedInstall {
         [string]$ManagedMarkerValue
     )
 
-    Assert-AppRestorePlainTree -Path $Path -Label "Установка AppRestore"
+    Assert-AppRevivePlainTree -Path $Path -Label "Установка AppRevive"
     $MarkerPath = Join-Path $Path $ManagedMarkerName
     $HasExactMarker = (
         (Test-Path -LiteralPath $MarkerPath -PathType Leaf) -and
@@ -173,16 +173,16 @@ function Assert-AppRestoreManagedInstall {
         }
     }
     $LegacyV013Hashes = [ordered]@{
-        "apprestore.ps1" = "9ee7beff4201448cc44f10cd6a135c4c74bbbc34b5f63e55534e9c562d498d80"
+        "apprevive.ps1" = "9ee7beff4201448cc44f10cd6a135c4c74bbbc34b5f63e55534e9c562d498d80"
         "uninstall-windows.ps1" = "a0236a380ce568e15603b311b593ba37e7d3674d2750d16b14c2ae1a39d1c5b4"
-        "src\apprestore.py" = "2ba4e1da347b33a5a698473f1d961b3dfc4074435eb52dbb41ccf772bf60f33c"
-        "src\apprestore_core\__init__.py" = "b04720f00147032b00bc8fb0c1200eccbd5f7c316757d9bba72bc0e10fa2098e"
+        "src\apprevive.py" = "2ba4e1da347b33a5a698473f1d961b3dfc4074435eb52dbb41ccf772bf60f33c"
+        "src\apprevive_core\__init__.py" = "b04720f00147032b00bc8fb0c1200eccbd5f7c316757d9bba72bc0e10fa2098e"
         "src\pyproject.toml" = "e4df42479fbe74a45a2fcf669828486fd6acf438709971542650ab6346e48936"
     }
     foreach ($LegacyRelativePath in $LegacyV013Hashes.Keys) {
         $LegacyFile = Join-Path $Path $LegacyRelativePath
         if (-not (Test-Path -LiteralPath $LegacyFile -PathType Leaf)) {
-            throw "Отказ: $Path не является известной установкой AppRestore v0.1.3."
+            throw "Отказ: $Path не является известной установкой AppRevive v0.1.3."
         }
         $LegacyHash = & $GetSha256 -FilePath $LegacyFile
         if (-not [string]::Equals(
@@ -190,7 +190,7 @@ function Assert-AppRestoreManagedInstall {
             $LegacyV013Hashes[$LegacyRelativePath],
             [System.StringComparison]::Ordinal
         )) {
-            throw "Отказ: fingerprint AppRestore v0.1.3 не совпал: $LegacyRelativePath"
+            throw "Отказ: fingerprint AppRevive v0.1.3 не совпал: $LegacyRelativePath"
         }
     }
 
@@ -200,10 +200,10 @@ setlocal
 set "PATH=%~dp0;%PATH%"
 set "PYTHONUTF8=1"
 set "PYTHONIOENCODING=utf-8"
-"%~dp0..\.venv\Scripts\apprestore.exe" %*
+"%~dp0..\.venv\Scripts\apprevive.exe" %*
 exit /b %ERRORLEVEL%
 '@
-    $LegacyCommand = Join-Path $Path "bin\apprestore.cmd"
+    $LegacyCommand = Join-Path $Path "bin\apprevive.cmd"
     if (
         -not (Test-Path -LiteralPath $LegacyCommand -PathType Leaf) -or
         -not [string]::Equals(
@@ -212,20 +212,20 @@ exit /b %ERRORLEVEL%
             [System.StringComparison]::Ordinal
         )
     ) {
-        throw "Отказ: launcher AppRestore v0.1.3 не совпал."
+        throw "Отказ: launcher AppRevive v0.1.3 не совпал."
     }
     foreach ($LegacyRuntimeFile in @(
         (Join-Path $Path ".venv\Scripts\python.exe"),
-        (Join-Path $Path ".venv\Scripts\apprestore.exe"),
+        (Join-Path $Path ".venv\Scripts\apprevive.exe"),
         (Join-Path $Path "bin\ipatool.exe")
     )) {
         if (-not (Test-Path -LiteralPath $LegacyRuntimeFile -PathType Leaf)) {
-            throw "Отказ: runtime fingerprint AppRestore v0.1.3 неполон."
+            throw "Отказ: runtime fingerprint AppRevive v0.1.3 неполон."
         }
     }
 }
 
-function Assert-AppRestoreRecoverableInstall {
+function Assert-AppReviveRecoverableInstall {
     param(
         [Parameter(Mandatory = $true)]
         [string]$Path,
@@ -237,12 +237,12 @@ function Assert-AppRestoreRecoverableInstall {
         [string]$ManagedMarkerValue
     )
 
-    Assert-AppRestoreManagedInstall `
+    Assert-AppReviveManagedInstall `
         -Path $Path `
         -ManagedMarkerName $ManagedMarkerName `
         -ManagedMarkerValue $ManagedMarkerValue
     foreach ($RequiredFile in @(
-        (Join-Path $Path "bin\apprestore.cmd"),
+        (Join-Path $Path "bin\apprevive.cmd"),
         (Join-Path $Path ".venv\Scripts\python.exe")
     )) {
         if (-not (Test-Path -LiteralPath $RequiredFile -PathType Leaf)) {
@@ -258,7 +258,7 @@ function Assert-AppRestoreRecoverableInstall {
     }
 }
 
-function Invoke-AppRestoreBackupRecovery {
+function Invoke-AppReviveBackupRecovery {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
@@ -274,10 +274,10 @@ function Invoke-AppRestoreBackupRecovery {
     $InstallLeaf = [System.IO.Path]::GetFileName($ResolvedInstall)
     if (-not [string]::Equals(
         $InstallLeaf,
-        "AppRestore",
+        "AppRevive",
         [System.StringComparison]::OrdinalIgnoreCase
     )) {
-        throw "Некорректное имя live-каталога AppRestore."
+        throw "Некорректное имя live-каталога AppRevive."
     }
     $ProgramsItem = Get-Item -LiteralPath $ResolvedPrograms -Force
     if (
@@ -285,7 +285,7 @@ function Invoke-AppRestoreBackupRecovery {
         ($ProgramsItem.Attributes -band
             [System.IO.FileAttributes]::ReparsePoint) -ne 0
     ) {
-        throw "Каталог программ AppRestore небезопасен: $ResolvedPrograms"
+        throw "Каталог программ AppRevive небезопасен: $ResolvedPrograms"
     }
 
     $ExistingBackups = @(
@@ -295,14 +295,14 @@ function Invoke-AppRestoreBackupRecovery {
             -ErrorAction Stop |
             Where-Object {
                 $_.Name.StartsWith(
-                    "AppRestore.backup-",
+                    "AppRevive.backup-",
                     [System.StringComparison]::Ordinal
                 )
             }
     )
     $LiveExists = Test-Path -LiteralPath $ResolvedInstall
     if ($LiveExists) {
-        Assert-AppRestoreRecoverableInstall `
+        Assert-AppReviveRecoverableInstall `
             -Path $ResolvedInstall `
             -Label "Текущая установка" `
             -ManagedMarkerName $ManagedMarkerName `
@@ -332,9 +332,9 @@ function Invoke-AppRestoreBackupRecovery {
         $ExistingBackups[0].FullName
     )
     try {
-        Assert-AppRestoreRecoverableInstall `
+        Assert-AppReviveRecoverableInstall `
             -Path $RecoveryCandidate `
-            -Label "Backup AppRestore" `
+            -Label "Backup AppRevive" `
             -ManagedMarkerName $ManagedMarkerName `
             -ManagedMarkerValue $ManagedMarkerValue
     }
@@ -348,18 +348,18 @@ function Invoke-AppRestoreBackupRecovery {
     Move-Item `
         -LiteralPath $RecoveryCandidate `
         -Destination $ResolvedInstall
-    Assert-AppRestoreRecoverableInstall `
+    Assert-AppReviveRecoverableInstall `
         -Path $ResolvedInstall `
         -Label "Восстановленная установка" `
         -ManagedMarkerName $ManagedMarkerName `
         -ManagedMarkerValue $ManagedMarkerValue
-    Write-Host "Восстановлена прерванная установка AppRestore: $ResolvedInstall"
+    Write-Host "Восстановлена прерванная установка AppRevive: $ResolvedInstall"
 }
 
 function Find-TrustedWinget {
     # winget is security-sensitive here because it downloads and launches
     # installers.  Never resolve it through PATH: the current directory or an
-    # AppRestore bin directory could otherwise shadow the genuine executable.
+    # AppRevive bin directory could otherwise shadow the genuine executable.
     $RegistryBase = $null
     $CurrentVersionKey = $null
     try {
@@ -645,7 +645,7 @@ function Install-CompatiblePython {
 
     $PythonTempRoot = Join-Path (
         [System.IO.Path]::GetTempPath()
-    ) ("AppRestore-python-" + [guid]::NewGuid().ToString("N"))
+    ) ("AppRevive-python-" + [guid]::NewGuid().ToString("N"))
     $PythonInstaller = Join-Path $PythonTempRoot (
         "python-$PythonInstallerVersion-amd64.exe"
     )
@@ -720,7 +720,7 @@ function Install-CompatiblePython {
                     [System.StringComparison]::OrdinalIgnoreCase
                 ) -and
                 $PythonTempLeaf.StartsWith(
-                    "AppRestore-python-",
+                    "AppRevive-python-",
                     [System.StringComparison]::Ordinal
                 )
             ) {
@@ -735,7 +735,7 @@ $InstallerUserSid = $InstallerIdentity.User
 if ($null -eq $InstallerUserSid) {
     throw "Не удалось определить SID текущего пользователя."
 }
-$InstallerMutexName = "Local\AppRestore.Install." + $InstallerUserSid.Value
+$InstallerMutexName = "Local\AppRevive.Install." + $InstallerUserSid.Value
 $InstallerMutex = [System.Threading.Mutex]::new($false, $InstallerMutexName)
 $InstallerMutexAcquired = $false
 try {
@@ -750,7 +750,7 @@ try {
         $InstallerMutexAcquired = $true
     }
     if (-not $InstallerMutexAcquired) {
-        throw "Другая установка AppRestore не завершилась за 15 минут."
+        throw "Другая установка AppRevive не завершилась за 15 минут."
     }
 
 Assert-PlainDirectory `
@@ -762,10 +762,10 @@ Ensure-PlainDirectory `
 if (Test-Path -LiteralPath $InstallRoot) {
     Assert-PlainDirectory `
         -Path $InstallRoot `
-        -Label "Каталог установки AppRestore"
+        -Label "Каталог установки AppRevive"
 }
 
-Invoke-AppRestoreBackupRecovery `
+Invoke-AppReviveBackupRecovery `
     -InstallRoot $InstallRoot `
     -ManagedMarkerName $ManagedInstallMarkerName `
     -ManagedMarkerValue $ManagedInstallMarkerValue
@@ -882,7 +882,7 @@ function Ensure-AppleBridge {
         Write-Warning (
             "Подписанный winget из Microsoft Desktop App Installer не найден. " +
             "Установите Apple Devices/iTunes или Apple Mobile Device Support, " +
-            "затем выполните: apprestore setup"
+            "затем выполните: apprevive setup"
         )
         return
     }
@@ -899,8 +899,8 @@ function Ensure-AppleBridge {
     if ($WingetCode -notin @(0, -1978335189, -1978334964)) {
         Write-Warning (
             "Не удалось поставить Apple.AppleMobileDeviceSupport автоматически " +
-            "без повышения прав (код $WingetCode). AppRestore уже установлен; " +
-            "после установки Apple Devices/iTunes выполните: apprestore setup"
+            "без повышения прав (код $WingetCode). AppRevive уже установлен; " +
+            "после установки Apple Devices/iTunes выполните: apprevive setup"
         )
         return
     }
@@ -910,11 +910,11 @@ function Ensure-AppleBridge {
     }
     Write-Warning (
         "Apple Mobile Device Support установлен, но порт 27015 пока не отвечает. " +
-        "Подключите iPhone, разблокируйте и подтвердите «Доверять», затем: apprestore setup"
+        "Подключите iPhone, разблокируйте и подтвердите «Доверять», затем: apprevive setup"
     )
 }
 
-function Invoke-AppRestoreInstallTransaction {
+function Invoke-AppReviveInstallTransaction {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
@@ -949,10 +949,10 @@ function Invoke-AppRestoreInstallTransaction {
 
     if (-not [string]::Equals(
         $InstallLeaf,
-        "AppRestore",
+        "AppRevive",
         [System.StringComparison]::OrdinalIgnoreCase
     )) {
-        throw "Некорректное имя live-каталога AppRestore."
+        throw "Некорректное имя live-каталога AppRevive."
     }
     foreach ($Candidate in @($ResolvedStaging, $ResolvedBackup)) {
         if (-not [string]::Equals(
@@ -965,20 +965,20 @@ function Invoke-AppRestoreInstallTransaction {
     }
     if (
         -not $StagingLeaf.StartsWith(
-            "AppRestore.staging-",
+            "AppRevive.staging-",
             [System.StringComparison]::Ordinal
         ) -or
         -not $BackupLeaf.StartsWith(
-            "AppRestore.backup-",
+            "AppRevive.backup-",
             [System.StringComparison]::Ordinal
         )
     ) {
-        throw "Некорректные имена staging/backup AppRestore."
+        throw "Некорректные имена staging/backup AppRevive."
     }
     if ($BackupRecoveryAlreadyPerformed -and -not $InstallMutexAlreadyHeld) {
         throw (
             "Пропустить backup recovery можно только при уже захваченном " +
-            "mutex установки AppRestore."
+            "mutex установки AppRevive."
         )
     }
 
@@ -991,7 +991,7 @@ function Invoke-AppRestoreInstallTransaction {
             throw "Не удалось определить SID текущего пользователя."
         }
         $TransactionMutexName = (
-            "Local\AppRestore.Install." + $CurrentUserSid.Value
+            "Local\AppRevive.Install." + $CurrentUserSid.Value
         )
         $TransactionMutex = [System.Threading.Mutex]::new(
             $false,
@@ -1010,7 +1010,7 @@ function Invoke-AppRestoreInstallTransaction {
             }
             if (-not $TransactionMutexAcquired) {
                 throw (
-                    "Другая установка AppRestore не завершилась за " +
+                    "Другая установка AppRevive не завершилась за " +
                     "$MutexTimeoutSeconds секунд."
                 )
             }
@@ -1024,7 +1024,7 @@ function Invoke-AppRestoreInstallTransaction {
 
     try {
     if (-not (Test-Path -LiteralPath $ResolvedStaging -PathType Container)) {
-        throw "Не найден подготовленный staging-каталог AppRestore."
+        throw "Не найден подготовленный staging-каталог AppRevive."
     }
 
     $RemovePlainTree = {
@@ -1035,7 +1035,7 @@ function Invoke-AppRestoreInstallTransaction {
             [string]$Label
         )
         if (Test-Path -LiteralPath $Path) {
-            Assert-AppRestorePlainTree -Path $Path -Label $Label
+            Assert-AppRevivePlainTree -Path $Path -Label $Label
             Remove-Item -LiteralPath $Path -Recurse -Force
         }
     }
@@ -1045,28 +1045,28 @@ function Invoke-AppRestoreInstallTransaction {
     $Success = $false
     try {
         if (-not $BackupRecoveryAlreadyPerformed) {
-            Invoke-AppRestoreBackupRecovery `
+            Invoke-AppReviveBackupRecovery `
                 -InstallRoot $ResolvedInstall `
                 -ManagedMarkerName $ManagedMarkerName `
                 -ManagedMarkerValue $ManagedMarkerValue
         }
-        Assert-AppRestorePlainTree `
+        Assert-AppRevivePlainTree `
             -Path $ResolvedStaging `
-            -Label "Staging AppRestore"
+            -Label "Staging AppRevive"
         & $PrepareStaging $ResolvedStaging
-        Assert-AppRestorePlainTree `
+        Assert-AppRevivePlainTree `
             -Path $ResolvedStaging `
-            -Label "Staging AppRestore"
+            -Label "Staging AppRevive"
         & $VerifyStaging $ResolvedStaging
 
         if (Test-Path -LiteralPath $ResolvedInstall) {
-            Assert-AppRestoreRecoverableInstall `
+            Assert-AppReviveRecoverableInstall `
                 -Path $ResolvedInstall `
                 -Label "Текущая установка" `
                 -ManagedMarkerName $ManagedMarkerName `
                 -ManagedMarkerValue $ManagedMarkerValue
             if (Test-Path -LiteralPath $ResolvedBackup) {
-                throw "Backup-каталог AppRestore уже существует: $ResolvedBackup"
+                throw "Backup-каталог AppRevive уже существует: $ResolvedBackup"
             }
             Move-Item -LiteralPath $ResolvedInstall -Destination $ResolvedBackup
             $BackupCreated = $true
@@ -1101,7 +1101,7 @@ function Invoke-AppRestoreInstallTransaction {
     }
     finally {
         if (Test-Path -LiteralPath $ResolvedStaging) {
-            & $RemovePlainTree -Path $ResolvedStaging -Label "Staging AppRestore"
+            & $RemovePlainTree -Path $ResolvedStaging -Label "Staging AppRevive"
         }
         if (
             $Success -and
@@ -1109,12 +1109,12 @@ function Invoke-AppRestoreInstallTransaction {
             (Test-Path -LiteralPath $ResolvedBackup)
         ) {
             try {
-                & $RemovePlainTree -Path $ResolvedBackup -Label "Backup AppRestore"
+                & $RemovePlainTree -Path $ResolvedBackup -Label "Backup AppRevive"
                 $BackupCreated = $false
             }
             catch {
                 Write-Warning (
-                    "Новая версия AppRestore установлена и проверена, но " +
+                    "Новая версия AppRevive установлена и проверена, но " +
                     "предыдущий backup не удалось удалить: $ResolvedBackup. " +
                     $_.Exception.Message
                 )
@@ -1135,12 +1135,12 @@ function Invoke-AppRestoreInstallTransaction {
 
 $TempRoot = Join-Path (
     [System.IO.Path]::GetTempPath()
-) ("AppRestore-install-" + [guid]::NewGuid().ToString("N"))
+) ("AppRevive-install-" + [guid]::NewGuid().ToString("N"))
 $ArchivePath = Join-Path $TempRoot "ipatool.tar.gz"
 $ExtractPath = Join-Path $TempRoot "ipatool"
 $TransactionId = [guid]::NewGuid().ToString("N")
-$StagingRoot = Join-Path $ProgramsRoot "AppRestore.staging-$TransactionId"
-$BackupRoot = Join-Path $ProgramsRoot "AppRestore.backup-$TransactionId"
+$StagingRoot = Join-Path $ProgramsRoot "AppRevive.staging-$TransactionId"
+$BackupRoot = Join-Path $ProgramsRoot "AppRevive.backup-$TransactionId"
 
 try {
     New-Item -ItemType Directory -Path $ExtractPath -Force | Out-Null
@@ -1219,7 +1219,7 @@ with tarfile.open(archive_path, mode='r:gz') as archive:
         -Label "Каталог программ пользователя"
     New-Item -ItemType Directory -Path $StagingRoot | Out-Null
     $SourceTarget = Join-Path $StagingRoot "src"
-    $CoreTarget = Join-Path $SourceTarget "apprestore_core"
+    $CoreTarget = Join-Path $SourceTarget "apprevive_core"
     $RequirementsTarget = Join-Path $SourceTarget "requirements"
     $WheelsTarget = Join-Path $RequirementsTarget "wheels"
     $BinTarget = Join-Path $StagingRoot "bin"
@@ -1232,7 +1232,7 @@ with tarfile.open(archive_path, mode='r:gz') as archive:
         "LICENSE",
         "README.md",
         "THIRD_PARTY_NOTICES.md",
-        "apprestore.py"
+        "apprevive.py"
     )) {
         Copy-Item `
             -LiteralPath (Join-Path $PSScriptRoot $RelativeFile) `
@@ -1269,8 +1269,8 @@ with tarfile.open(archive_path, mode='r:gz') as archive:
         -Force
 
     Copy-Item `
-        -LiteralPath (Join-Path $PSScriptRoot "apprestore.ps1") `
-        -Destination (Join-Path $StagingRoot "apprestore.ps1") `
+        -LiteralPath (Join-Path $PSScriptRoot "apprevive.ps1") `
+        -Destination (Join-Path $StagingRoot "apprevive.ps1") `
         -Force
     Copy-Item `
         -LiteralPath (Join-Path $PSScriptRoot "uninstall-windows.ps1") `
@@ -1328,7 +1328,7 @@ with tarfile.open(archive_path, mode='r:gz') as archive:
             --force-reinstall `
             $PreparedSource
         if ($LASTEXITCODE -ne 0) {
-            throw "Не удалось установить локальный AppRestore."
+            throw "Не удалось установить локальный AppRevive."
         }
 
         $CommandWrapper = @'
@@ -1340,12 +1340,12 @@ set "PYTHONHOME="
 set "PYTHONSTARTUP="
 set "PYTHONUTF8=1"
 set "PYTHONIOENCODING=utf-8"
-"%~dp0..\.venv\Scripts\python.exe" -X utf8 -I -m apprestore_core.cli %*
+"%~dp0..\.venv\Scripts\python.exe" -X utf8 -I -m apprevive_core.cli %*
 exit /b %ERRORLEVEL%
 '@
         $Utf8WithoutBom = New-Object System.Text.UTF8Encoding($false)
         [System.IO.File]::WriteAllText(
-            (Join-Path $PreparedBin "apprestore.cmd"),
+            (Join-Path $PreparedBin "apprevive.cmd"),
             $CommandWrapper,
             $Utf8WithoutBom
         )
@@ -1363,11 +1363,11 @@ exit /b %ERRORLEVEL%
         $PreparedBin = Join-Path $PreparedRoot "bin"
         $RequiredPreparedFiles = @(
             (Join-Path $PreparedRoot $ManagedInstallMarkerName),
-            (Join-Path $PreparedRoot "apprestore.ps1"),
+            (Join-Path $PreparedRoot "apprevive.ps1"),
             (Join-Path $PreparedRoot "uninstall-windows.ps1"),
             (Join-Path $PreparedSource "pyproject.toml"),
-            (Join-Path $PreparedSource "apprestore.py"),
-            (Join-Path $PreparedSource "apprestore_core\__init__.py"),
+            (Join-Path $PreparedSource "apprevive.py"),
+            (Join-Path $PreparedSource "apprevive_core\__init__.py"),
             (Join-Path $PreparedSource "requirements\build.lock"),
             (Join-Path $PreparedSource "requirements\runtime.lock"),
             (
@@ -1375,7 +1375,7 @@ exit /b %ERRORLEVEL%
                     "requirements\wheels\hexdump-3.3-py3-none-any.whl"
             ),
             (Join-Path $PreparedBin "ipatool.exe"),
-            (Join-Path $PreparedBin "apprestore.cmd"),
+            (Join-Path $PreparedBin "apprevive.cmd"),
             (Join-Path $PreparedRoot ".venv\Scripts\python.exe")
         )
         foreach ($RequiredPreparedFile in $RequiredPreparedFiles) {
@@ -1391,7 +1391,7 @@ exit /b %ERRORLEVEL%
             $ManagedInstallMarkerValue,
             [System.StringComparison]::Ordinal
         )) {
-            throw "Проверка staging: marker AppRestore повреждён."
+            throw "Проверка staging: marker AppRevive повреждён."
         }
 
         $PreparedIpaToolSha256 = (
@@ -1407,7 +1407,7 @@ exit /b %ERRORLEVEL%
             throw "Проверка staging: копия ipatool изменила байты."
         }
 
-        $PreparedCommand = Join-Path $PreparedBin "apprestore.cmd"
+        $PreparedCommand = Join-Path $PreparedBin "apprevive.cmd"
         $PreparedVersionOutput = @(& $PreparedCommand --version 2>&1)
         $PreparedVersionCode = $LASTEXITCODE
         $PreparedVersion = ($PreparedVersionOutput -join "`n").Trim()
@@ -1415,12 +1415,12 @@ exit /b %ERRORLEVEL%
             $PreparedVersionCode -ne 0 -or
             -not [string]::Equals(
                 $PreparedVersion,
-                $AppRestoreVersion,
+                $AppReviveVersion,
                 [System.StringComparison]::Ordinal
             )
         ) {
             throw (
-                "Проверка staging: ожидалась версия $AppRestoreVersion, " +
+                "Проверка staging: ожидалась версия $AppReviveVersion, " +
                 "получено '$PreparedVersion' (код $PreparedVersionCode)."
             )
         }
@@ -1430,7 +1430,7 @@ exit /b %ERRORLEVEL%
         param([string]$LiveRoot)
 
         $LiveMarker = Join-Path $LiveRoot $ManagedInstallMarkerName
-        $LiveCommand = Join-Path $LiveRoot "bin\apprestore.cmd"
+        $LiveCommand = Join-Path $LiveRoot "bin\apprevive.cmd"
         $LivePython = Join-Path $LiveRoot ".venv\Scripts\python.exe"
         foreach ($RequiredLiveFile in @($LiveMarker, $LiveCommand, $LivePython)) {
             if (-not (Test-Path -LiteralPath $RequiredLiveFile -PathType Leaf)) {
@@ -1442,7 +1442,7 @@ exit /b %ERRORLEVEL%
             $ManagedInstallMarkerValue,
             [System.StringComparison]::Ordinal
         )) {
-            throw "Проверка live-установки: marker AppRestore повреждён."
+            throw "Проверка live-установки: marker AppRevive повреждён."
         }
 
         $LiveVersionOutput = @(& $LiveCommand --version 2>&1)
@@ -1452,18 +1452,18 @@ exit /b %ERRORLEVEL%
             $LiveVersionCode -ne 0 -or
             -not [string]::Equals(
                 $LiveVersion,
-                $AppRestoreVersion,
+                $AppReviveVersion,
                 [System.StringComparison]::Ordinal
             )
         ) {
             throw (
-                "Проверка live-установки: ожидалась версия $AppRestoreVersion, " +
+                "Проверка live-установки: ожидалась версия $AppReviveVersion, " +
                 "получено '$LiveVersion' (код $LiveVersionCode)."
             )
         }
     }
 
-    Invoke-AppRestoreInstallTransaction `
+    Invoke-AppReviveInstallTransaction `
         -StagingRoot $StagingRoot `
         -InstallRoot $InstallRoot `
         -BackupRoot $BackupRoot `
@@ -1527,22 +1527,22 @@ exit /b %ERRORLEVEL%
         }
         catch {
             Write-Warning (
-                "AppRestore установлен, но Apple USB-мост не удалось настроить: " +
-                "$($_.Exception.Message) Выполните позже: apprestore setup"
+                "AppRevive установлен, но Apple USB-мост не удалось настроить: " +
+                "$($_.Exception.Message) Выполните позже: apprevive setup"
             )
         }
     }
 
     Write-Host ""
-    Write-Host "AppRestore $AppRestoreVersion установлен в:"
+    Write-Host "AppRevive $AppReviveVersion установлен в:"
     Write-Host "  $InstallRoot"
     if ($NoPathUpdate) {
         Write-Host "Запуск меню:"
-        Write-Host "  & `"$InstallRoot\apprestore.ps1`""
+        Write-Host "  & `"$InstallRoot\apprevive.ps1`""
     }
     else {
         Write-Host "Запуск:"
-        Write-Host "  apprestore"
+        Write-Host "  apprevive"
         Write-Host "Команда уже доступна в этом терминале."
     }
 }
@@ -1583,7 +1583,7 @@ finally {
                 [System.StringComparison]::OrdinalIgnoreCase
             ) -and
             $StagingLeaf.StartsWith(
-                "AppRestore.staging-",
+                "AppRevive.staging-",
                 [System.StringComparison]::Ordinal
             )
         ) {
@@ -1600,7 +1600,7 @@ finally {
         ).TrimEnd("\")
         $TempParent = [System.IO.Path]::GetDirectoryName($ResolvedTempRoot)
         $TempLeaf = [System.IO.Path]::GetFileName($ResolvedTempRoot)
-        $ExpectedTempPrefix = "AppRestore-install-"
+        $ExpectedTempPrefix = "AppRevive-install-"
         $TempSuffix = ""
         if ($TempLeaf.StartsWith(
             $ExpectedTempPrefix,
@@ -1650,7 +1650,7 @@ finally {
         }
         catch {
             Write-Warning (
-                "Temp-каталог AppRestore не удалён после ошибки безопасной " +
+                "Temp-каталог AppRevive не удалён после ошибки безопасной " +
                 "проверки: $ResolvedTempRoot. $($_.Exception.Message)"
             )
         }

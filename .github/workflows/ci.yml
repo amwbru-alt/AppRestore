@@ -45,6 +45,8 @@ jobs:
 
       - name: Install project and test runner
         run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
           python -m pip install --require-hashes --only-binary=:all: --no-deps -r requirements/build.lock
           python -m pip install --require-hashes --only-binary=:all: --no-deps --find-links requirements/wheels -r requirements/runtime.lock
           python -m pip install --no-deps --no-build-isolation --editable .
@@ -56,14 +58,14 @@ jobs:
       - name: Validate relocatable module entrypoint
         shell: pwsh
         run: |
-          $Expected = (& python apprestore.py --version).Trim()
-          $Actual = (& python -m apprestore_core.cli --version).Trim()
+          $Expected = (& python apprevive.py --version).Trim()
+          $Actual = (& python -m apprevive_core.cli --version).Trim()
           if ($LASTEXITCODE -ne 0 -or $Actual -ne $Expected) {
-            throw "python -m apprestore_core.cli version contract failed"
+            throw "python -m apprevive_core.cli version contract failed"
           }
 
       - name: Compile Python sources
-        run: python -m compileall -q apprestore.py apprestore_core scripts tests
+        run: python -m compileall -q apprevive.py apprevive_core scripts tests
 
       - name: Build and validate release assets
         if: matrix.python-version == '3.12'
@@ -74,8 +76,8 @@ jobs:
             throw "release build failed"
           }
 
-          $Version = (& python apprestore.py --version).Trim()
-          $ArchiveName = "AppRestore-$Version-source.zip"
+          $Version = (& python apprevive.py --version).Trim()
+          $ArchiveName = "AppRevive-$Version-source.zip"
           $ArchivePath = Join-Path "dist" $ArchiveName
           $BootstrapPath = Join-Path "dist" "install.ps1"
           $MacBootstrapPath = Join-Path "dist" "install.sh"
@@ -92,7 +94,7 @@ jobs:
           }
 
           $ExpectedUrl = (
-            "https://github.com/J3ckJ/AppRestore/releases/download/" +
+            "https://github.com/amwbru-alt/AppRestore/releases/download/" +
             "v$Version/$ArchiveName"
           )
           $Bootstrap = Get-Content -LiteralPath $BootstrapPath -Raw
@@ -159,7 +161,7 @@ jobs:
 
       - name: Validate shell syntax
         run: |
-          /bin/bash -n apprestore.sh
+          /bin/bash -n apprevive.sh
           /bin/bash -n install-macos.sh
           /bin/bash -n scripts/install.sh.in
 
@@ -171,30 +173,30 @@ jobs:
 
       - name: Validate relocatable module entrypoint
         run: |
-          expected="$(python apprestore.py --version)"
-          actual="$(python -m apprestore_core.cli --version)"
+          expected="$(python apprevive.py --version)"
+          actual="$(python -m apprevive_core.cli --version)"
           test "$actual" = "$expected"
 
       - name: Compile Python sources
-        run: python -m compileall -q apprestore.py apprestore_core scripts tests
+        run: python -m compileall -q apprevive.py apprevive_core scripts tests
 
       - name: Build release assets
         run: python scripts/build-release.py
 
       - name: Validate macOS release asset
         run: |
-          version="$(python apprestore.py --version)"
-          archive="dist/AppRestore-${version}-source.zip"
+          version="$(python apprevive.py --version)"
+          archive="dist/AppRevive-${version}-source.zip"
           test -f "$archive"
           test -f dist/install.ps1
           test -f dist/install.sh
           test -f dist/SHA256SUMS.txt
           /bin/bash -n dist/install.sh
           grep -F \
-            "https://github.com/J3ckJ/AppRestore/releases/download/v${version}/AppRestore-${version}-source.zip" \
+            "https://github.com/amwbru-alt/AppRestore/releases/download/v${version}/AppRevive-${version}-source.zip" \
             dist/install.sh
           archive_hash="$(shasum -a 256 "$archive" | awk '{print $1}')"
-          grep -F "${archive_hash}  AppRestore-${version}-source.zip" \
+          grep -F "${archive_hash}  AppRevive-${version}-source.zip" \
             dist/SHA256SUMS.txt
           mac_hash="$(shasum -a 256 dist/install.sh | awk '{print $1}')"
           grep -F "${mac_hash}  install.sh" dist/SHA256SUMS.txt

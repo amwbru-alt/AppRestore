@@ -8,37 +8,37 @@ import zipfile
 from pathlib import Path
 from urllib.parse import urlsplit
 
-VERSION = "0.4.0"
+VERSION = "0.5.0"
 ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
-ARCHIVE = DIST / f"AppRestore-{VERSION}-source.zip"
+ARCHIVE = DIST / f"AppRevive-{VERSION}-source.zip"
 WINDOWS_BOOTSTRAP = DIST / "install.ps1"
 MACOS_BOOTSTRAP = DIST / "install.sh"
 CHECKSUMS = DIST / "SHA256SUMS.txt"
-ARCHIVE_ROOT = f"AppRestore-{VERSION}"
+ARCHIVE_ROOT = f"AppRevive-{VERSION}"
 FIXED_TIME = (2026, 8, 5, 0, 0, 0)
 WINDOWS_BOOTSTRAP_TEMPLATE = ROOT / "scripts" / "install.ps1.in"
 MACOS_BOOTSTRAP_TEMPLATE = ROOT / "scripts" / "install.sh.in"
 ARCHIVE_URL_TEMPLATE = (
-    "https://github.com/J3ckJ/AppRestore/releases/download/"
+    "https://github.com/amwbru-alt/AppRestore/releases/download/"
     "v{version}/{archive_name}"
 )
 
-WINDOWS_BOOTSTRAP_VERSION_TOKEN = "@@APPRESTORE_VERSION@@"
-WINDOWS_BOOTSTRAP_ARCHIVE_URL_TOKEN = "@@APPRESTORE_ARCHIVE_URL@@"
-WINDOWS_BOOTSTRAP_ARCHIVE_SHA256_TOKEN = "@@APPRESTORE_ARCHIVE_SHA256@@"
-MACOS_BOOTSTRAP_VERSION_TOKEN = "@@APPRESTORE_VERSION_SH@@"
-MACOS_BOOTSTRAP_ARCHIVE_URL_TOKEN = "@@APPRESTORE_ARCHIVE_URL_SH@@"
-MACOS_BOOTSTRAP_ARCHIVE_SHA256_TOKEN = "@@APPRESTORE_ARCHIVE_SHA256_SH@@"
+WINDOWS_BOOTSTRAP_VERSION_TOKEN = "@@APPREVIVE_VERSION@@"
+WINDOWS_BOOTSTRAP_ARCHIVE_URL_TOKEN = "@@APPREVIVE_ARCHIVE_URL@@"
+WINDOWS_BOOTSTRAP_ARCHIVE_SHA256_TOKEN = "@@APPREVIVE_ARCHIVE_SHA256@@"
+MACOS_BOOTSTRAP_VERSION_TOKEN = "@@APPREVIVE_VERSION_SH@@"
+MACOS_BOOTSTRAP_ARCHIVE_URL_TOKEN = "@@APPREVIVE_ARCHIVE_URL_SH@@"
+MACOS_BOOTSTRAP_ARCHIVE_SHA256_TOKEN = "@@APPREVIVE_ARCHIVE_SHA256_SH@@"
 
 ROOT_FILES = [
     ".gitattributes",
     ".github/workflows/ci.yml",
     ".github/workflows/release.yml",
     ".gitignore",
-    "apprestore.py",
-    "apprestore.ps1",
-    "apprestore.sh",
+    "apprevive.py",
+    "apprevive.ps1",
+    "apprevive.sh",
     "CHANGELOG.md",
     "CONTRIBUTING.md",
     "docs/RELEASING.md",
@@ -74,7 +74,7 @@ REQUIREMENT_FILES = [
 
 def release_files() -> list[Path]:
     files = [ROOT / name for name in ROOT_FILES]
-    files.extend(sorted((ROOT / "apprestore_core").glob("*.py")))
+    files.extend(sorted((ROOT / "apprevive_core").glob("*.py")))
     files.extend(sorted((ROOT / "tests").glob("*.py")))
     files.extend(ROOT / name for name in SCRIPT_FILES)
     files.extend(ROOT / name for name in REQUIREMENT_FILES)
@@ -122,19 +122,19 @@ def validate_release_versions() -> None:
             r'(?m)^\s*version\s*=\s*"([^"]+)"\s*$',
             "project",
         ),
-        "apprestore_core": _version_literal(
-            ROOT / "apprestore_core" / "__init__.py",
+        "apprevive_core": _version_literal(
+            ROOT / "apprevive_core" / "__init__.py",
             r'(?m)^\s*__version__\s*=\s*"([^"]+)"\s*$',
             "package",
         ),
         "Windows installer": _version_literal(
             ROOT / "install-windows.ps1",
-            r'(?m)^\s*\$AppRestoreVersion\s*=\s*"([^"]+)"\s*$',
+            r'(?m)^\s*\$AppReviveVersion\s*=\s*"([^"]+)"\s*$',
             "Windows installer",
         ),
         "macOS installer": _version_literal(
             ROOT / "install-macos.sh",
-            r'(?m)^\s*APPRESTORE_VERSION="([^"]+)"\s*$',
+            r'(?m)^\s*APPREVIVE_VERSION="([^"]+)"\s*$',
             "macOS installer",
         ),
     }
@@ -225,7 +225,7 @@ def add_file(archive: zipfile.ZipFile, path: Path) -> None:
     info = zipfile.ZipInfo(f"{ARCHIVE_ROOT}/{relative}", FIXED_TIME)
     info.create_system = 3
     executable = relative in {
-        "apprestore.sh",
+        "apprevive.sh",
         "install-macos.sh",
         "scripts/build-release.py",
     }

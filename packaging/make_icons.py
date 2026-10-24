@@ -1,4 +1,4 @@
-"""Render the AppRestore app icon (macOS .icns, Windows .ico, PNG previews).
+"""Render the AppRevive app icon (macOS .icns, Windows .ico, PNG previews).
 
 The mark follows the v5 sidebar logo: a terracotta tile with a white phone
 outline and an arrow returning into the phone.  Everything is drawn from
@@ -18,7 +18,7 @@ from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
 ROOT = Path(__file__).resolve().parent
 OUT = ROOT / "icons"
-GUI_RES = ROOT.parent / "apprestore_gui" / "resources" / "icons"
+GUI_RES = ROOT.parent / "apprevive_gui" / "resources" / "icons"
 
 TOP = (0xD7, 0x6E, 0x3D)     # lit top of the terracotta
 BOTTOM = (0xB3, 0x4F, 0x20)  # deeper bottom (theme ACCENT #C45C2A in between)
@@ -184,10 +184,10 @@ def write_ico(path: Path) -> None:
 
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
-    render(1024, "mac").save(OUT / "AppRestore-1024.png")
-    render(512, "win").save(OUT / "AppRestore-windows-512.png")
-    write_icns(OUT / "AppRestore.icns")
-    write_ico(OUT / "AppRestore.ico")
+    render(1024, "mac").save(OUT / "AppRevive-1024.png")
+    render(512, "win").save(OUT / "AppRevive-windows-512.png")
+    write_icns(OUT / "AppRevive.icns")
+    write_ico(OUT / "AppRevive.ico")
     # Window icon used by Qt at runtime (title bar, Dock/taskbar when unbundled).
     render(256, "mac").save(GUI_RES / "app-icon-256.png")
     render(64, "win").save(GUI_RES / "app-icon-64.png")
@@ -199,7 +199,7 @@ def main() -> None:
         img = render(px, "win-small" if px <= 32 else "win")
         sheet.alpha_composite(img, (x, 160 - px // 2))
         x += px + 30
-    sheet.save(OUT / "AppRestore-sizes-preview.png")
+    sheet.save(OUT / "AppRevive-sizes-preview.png")
     for p in sorted(OUT.iterdir()):
         print(p, p.stat().st_size)
 

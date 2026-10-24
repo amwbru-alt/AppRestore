@@ -492,7 +492,7 @@ loguru==0.7.3 ; sys_platform == 'darwin' \
     --hash=sha256:19480589e77d47b8d85b2c827ad95d49bf31b0dcde16593892eb51dd18706eb6 \
     --hash=sha256:31a33c10c8e1e10422bfd431aeb5d351c7cf7fa671e3c4df004162264b28220c
     # via apple-compress
-lzfse==0.4.2 ; sys_platform != 'darwin' \
+lzfse==0.4.2 ; python_full_version < '3.13' and sys_platform != 'darwin' \
     --hash=sha256:058d404e4ddb5565095ef36ea70b64c48f11df8b7d7442e8779bef63fce8e2d8 \
     --hash=sha256:0d28bd418228f3ff8a33c62995341a94081c1659179f53598ca5fe021520ad79 \
     --hash=sha256:0ec2bf1ef035dc438d2b2aa801823f00b1d645b0a66d33acbeb8340a7f21e541 \
@@ -1077,7 +1077,7 @@ pylzss==0.3.4 \
 pymobiledevice3==10.1.0 \
     --hash=sha256:010e31193043243cf9f92f69bf33f9146c9c9baf1b53f66202164115780565b1 \
     --hash=sha256:abc5c3edd063b6d3c8e8fba05c9202ec8b267b3e3918b7e22fd9a42fda054b35
-    # via apprestore (pyproject.toml)
+    # via apprevive (pyproject.toml)
 pyreadline3==3.5.6 ; sys_platform == 'win32' \
     --hash=sha256:61e53218b99656091ddb077df9e71f25850e72e030b6183b39c9b7e6e4f4a9bf \
     --hash=sha256:8449b734232e42a5dcd74048e39b60db2839a4c38cf3ae2bf7707d58b5389c0d
@@ -1425,4 +1425,16 @@ xonsh==0.24.1 ; python_full_version >= '3.11' \
     --hash=sha256:5370da5d460f638b551b8c81dc76a0c7c10698421d7ee0567051bf0b694d3bdd \
     --hash=sha256:c6aa18ba5e4f7d7ae17d52ca558b124790c67ff5fe4286d58c3fcf6ac4b5787f \
     --hash=sha256:fd7aec7c56692154232adb678649df53f98de6015c6cd6e55b324e27323c4efd
+    # via pymobiledevice3
+
+# Python 3.13 wheels are provided by the upstream post release.
+lzfse==0.4.2.post1 ; python_full_version >= '3.13' and sys_platform != 'darwin' \
+    --hash=sha256:d7fe741ec1d14aca507b8ed41dcefc55c0b007c8a305540a8b2e9ba331f4266f \
+    --hash=sha256:3c6e32fcececd540b9e4732924b25337914f6771df97cccb74f587766af465d5 \
+    --hash=sha256:993586a0e091ff1f741adb4b372280236e1a145e344a91649f0aa1920d23aeab \
+    --hash=sha256:f0dfb527b801d18ab32d6ecccc5737c88d91879c0e41789f9328d882f502e4bf \
+    --hash=sha256:74eb8c39d588a3ba79ae106b5320f0b457860ec9193b147ae18ca496f774ff04 \
+    --hash=sha256:c561658588fe7ba19536ce481c226883dfdf79100c3dfe4b5f4eba880a332f13 \
+    --hash=sha256:e4cc70e35789869501d51d98ec2de2de641ed959c10039429da6b633db184981 \
+    --hash=sha256:8f9fa58261e1fcd22d38fc521ea63c71ff220dca03034ee3ccccb035eb3b8f3e
     # via pymobiledevice3

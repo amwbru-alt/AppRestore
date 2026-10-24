@@ -1,25 +1,25 @@
-# Generated AppRestore bootstrap for Windows. Do not edit dist/install.ps1.
+# Generated AppRevive bootstrap for Windows. Do not edit dist/install.ps1.
 & {
     Set-StrictMode -Version Latest
     $ErrorActionPreference = "Stop"
     $ProgressPreference = "SilentlyContinue"
 
-    $AppRestoreVersion = @@APPRESTORE_VERSION@@
-    $DefaultArchiveUrl = @@APPRESTORE_ARCHIVE_URL@@
-    $ExpectedArchiveSha256 = @@APPRESTORE_ARCHIVE_SHA256@@
-    $ArchiveRootName = "AppRestore-$AppRestoreVersion"
+    $AppReviveVersion = @@APPREVIVE_VERSION@@
+    $DefaultArchiveUrl = @@APPREVIVE_ARCHIVE_URL@@
+    $ExpectedArchiveSha256 = @@APPREVIVE_ARCHIVE_SHA256@@
+    $ArchiveRootName = "AppRevive-$AppReviveVersion"
     $ArchiveFileName = "$ArchiveRootName-source.zip"
-    $UrlOverrideVariable = "APPRESTORE_BOOTSTRAP_ARCHIVE_URL"
+    $UrlOverrideVariable = "APPREVIVE_BOOTSTRAP_ARCHIVE_URL"
 
     if ($PSVersionTable.PSVersion -lt [version]"5.1") {
-        throw "AppRestore requires PowerShell 5.1 or newer."
+        throw "AppRevive requires PowerShell 5.1 or newer."
     }
     if (-not [string]::Equals(
         $env:OS,
         "Windows_NT",
         [System.StringComparison]::OrdinalIgnoreCase
     )) {
-        throw "This bootstrap installs the Windows version of AppRestore."
+        throw "This bootstrap installs the Windows version of AppRevive."
     }
     $KnownLocalAppData = [Environment]::GetFolderPath(
         [Environment+SpecialFolder]::LocalApplicationData
@@ -45,10 +45,10 @@
         $ArchiveUri = [uri]$ArchiveUrlText
     }
     catch {
-        throw "The AppRestore archive URL is invalid."
+        throw "The AppRevive archive URL is invalid."
     }
     if (-not $ArchiveUri.IsAbsoluteUri) {
-        throw "The AppRestore archive URL must be absolute."
+        throw "The AppRevive archive URL must be absolute."
     }
     $UsesHttps = [string]::Equals(
         $ArchiveUri.Scheme,
@@ -195,7 +195,7 @@
         }
     }
 
-    function Add-AppRestoreToProcessPath {
+    function Add-AppReviveToProcessPath {
         param(
             [Parameter(Mandatory = $true)]
             [string]$BinPath
@@ -219,14 +219,14 @@
 
     $TempRoot = Join-Path (
         [System.IO.Path]::GetTempPath()
-    ) ("AppRestore-bootstrap-" + [guid]::NewGuid().ToString("N"))
+    ) ("AppRevive-bootstrap-" + [guid]::NewGuid().ToString("N"))
     $ArchivePath = Join-Path $TempRoot $ArchiveFileName
     $ExtractRoot = Join-Path $TempRoot "payload"
 
     try {
         New-Item -ItemType Directory -Path $ExtractRoot -Force | Out-Null
 
-        Write-Host "Downloading AppRestore $AppRestoreVersion..."
+        Write-Host "Downloading AppRevive $AppReviveVersion..."
         $PreviousSecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol
         try {
             [System.Net.ServicePointManager]::SecurityProtocol = (
@@ -269,7 +269,7 @@
             [System.StringComparison]::Ordinal
         )) {
             throw (
-                "AppRestore archive SHA-256 mismatch. " +
+                "AppRevive archive SHA-256 mismatch. " +
                 "Expected $ExpectedArchiveSha256, got $ActualArchiveSha256."
             )
         }
@@ -323,22 +323,22 @@
             -File $PayloadInstaller
         $InstallerExitCode = $LASTEXITCODE
         if ($InstallerExitCode -ne 0) {
-            throw "The AppRestore installer failed with code $InstallerExitCode."
+            throw "The AppRevive installer failed with code $InstallerExitCode."
         }
 
         $InstallRoot = [System.IO.Path]::GetFullPath(
-            (Join-Path $KnownLocalAppData "Programs\AppRestore")
+            (Join-Path $KnownLocalAppData "Programs\AppRevive")
         )
         $BinTarget = Join-Path $InstallRoot "bin"
-        $ExpectedCommandPath = Join-Path $BinTarget "apprestore.cmd"
+        $ExpectedCommandPath = Join-Path $BinTarget "apprevive.cmd"
         if (-not (Test-Path -LiteralPath $ExpectedCommandPath -PathType Leaf)) {
-            throw "The installer finished but apprestore.cmd was not created."
+            throw "The installer finished but apprevive.cmd was not created."
         }
 
         # The payload runs in a child PowerShell process. Update this original
-        # terminal explicitly so the very next command can be `apprestore`.
-        Add-AppRestoreToProcessPath -BinPath $BinTarget
-        $ResolvedCommand = Get-Command "apprestore" -ErrorAction Stop
+        # terminal explicitly so the very next command can be `apprevive`.
+        Add-AppReviveToProcessPath -BinPath $BinTarget
+        $ResolvedCommand = Get-Command "apprevive" -ErrorAction Stop
         if (
             $ResolvedCommand.CommandType -ne
                 [System.Management.Automation.CommandTypes]::Application -or
@@ -349,7 +349,7 @@
             )
         ) {
             throw (
-                "Another command named apprestore shadows " +
+                "Another command named apprevive shadows " +
                 "$ExpectedCommandPath in this PowerShell session."
             )
         }
@@ -363,20 +363,20 @@
             $VersionExitCode -ne 0 -or
             -not [string]::Equals(
                 $InstalledVersion,
-                $AppRestoreVersion,
+                $AppReviveVersion,
                 [System.StringComparison]::Ordinal
             )
         ) {
             throw (
-                "Installed AppRestore version check failed. " +
-                "Expected $AppRestoreVersion, got '$InstalledVersion' " +
+                "Installed AppRevive version check failed. " +
+                "Expected $AppReviveVersion, got '$InstalledVersion' " +
                 "(code $VersionExitCode)."
             )
         }
 
         Write-Host ""
-        Write-Host "AppRestore $AppRestoreVersion is ready."
-        Write-Host "Run: apprestore"
+        Write-Host "AppRevive $AppReviveVersion is ready."
+        Write-Host "Run: apprevive"
     }
     finally {
         if (Test-Path -LiteralPath $TempRoot) {
@@ -384,7 +384,7 @@
             $SystemTempRoot = [System.IO.Path]::GetFullPath(
                 [System.IO.Path]::GetTempPath()
             ).TrimEnd("\")
-            $ExpectedLeafPrefix = "AppRestore-bootstrap-"
+            $ExpectedLeafPrefix = "AppRevive-bootstrap-"
             $TempLeaf = [System.IO.Path]::GetFileName($ResolvedTempRoot)
             $TempParent = [System.IO.Path]::GetDirectoryName($ResolvedTempRoot)
             $TempSuffix = ""

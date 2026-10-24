@@ -16,7 +16,7 @@ import sys
 
 import pytest
 
-from apprestore_core.command import SECRET_ENV_NAMES
+from apprevive_core.command import SECRET_ENV_NAMES
 
 PASSWORD = "Apple-Pass-31415"
 PASSPHRASE = "keychain-secret-27182"
@@ -37,7 +37,7 @@ def _check(argv: list[str], env: dict[str, str]) -> None:
 @pytest.mark.parametrize("which", ["login", "unlock"])
 def test_4b_signin_never_puts_secrets_into_argv_or_env(monkeypatch, which) -> None:
     pytest.importorskip("PySide6")
-    from apprestore_gui import auth_pty
+    from apprevive_gui import auth_pty
 
     for name in SECRET_ENV_NAMES:
         monkeypatch.setenv(name, PASSPHRASE)  # even a stray one in the parent
@@ -67,7 +67,7 @@ def test_4b_signin_never_puts_secrets_into_argv_or_env(monkeypatch, which) -> No
 
 def test_4b_ipatool_api_client_has_no_passphrase_and_uses_gui_runner(monkeypatch) -> None:
     pytest.importorskip("PySide6")
-    from apprestore_gui import quick_session
+    from apprevive_gui import quick_session
 
     src = inspect.getsource(quick_session.QuickSession._ipatool_client)
     assert 'keychain_passphrase=""' in src and "gui_runner(" in src
@@ -88,9 +88,9 @@ def test_old_ipatool_passphrase_goes_to_hidden_terminal_not_argv(tmp_path, monke
     pytest.importorskip("PySide6")
     import stat
 
-    from apprestore_core import ipatool_api as api
-    from apprestore_core import ipatool_caps
-    from apprestore_gui import purchases as pm
+    from apprevive_core import ipatool_api as api
+    from apprevive_core import ipatool_caps
+    from apprevive_gui import purchases as pm
 
     ipatool_caps.reset_cache()
     record = tmp_path / "seen.jsonl"

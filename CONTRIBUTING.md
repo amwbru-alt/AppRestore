@@ -1,8 +1,8 @@
-# Как внести вклад в AppRestore
+# Как внести вклад в AppRevive
 
 Спасибо за интерес к проекту. Изменения должны сохранять главный контракт:
-пользователь устанавливает AppRestore одной командой, а следующей командой
-`apprestore` открывает рабочее меню в том же PowerShell.
+пользователь устанавливает AppRevive одной командой, а следующей командой
+`apprevive` открывает рабочее меню в том же PowerShell.
 
 ## Перед началом
 
@@ -48,7 +48,7 @@ Apple USB-мост. Большинство unit-тестов не требует
 
 ```powershell
 python -m pytest -q
-python -m compileall -q apprestore.py apprestore_core scripts tests
+python -m compileall -q apprevive.py apprevive_core scripts tests
 ```
 
 На Windows тесты должны проходить и в Windows PowerShell 5.1, и в PowerShell
@@ -100,4 +100,4 @@ python scripts\rebuild-vendored-wheel.py --check
 ## Лицензия вкладов
 
 Отправляя изменение, вы соглашаетесь распространять свой вклад на условиях
-`GPL-3.0-or-later`, как и остальную часть AppRestore.
+`GPL-3.0-or-later`, как и остальную часть AppRevive.

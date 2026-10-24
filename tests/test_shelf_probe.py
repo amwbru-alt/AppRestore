@@ -4,10 +4,10 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from apprestore_core.models import CommandResult
-from apprestore_core.tools import AppRestoreTools
-from apprestore_gui import shelf_probe
-from apprestore_gui.shelf_probe import classify_offer, probe_store
+from apprevive_core.models import CommandResult
+from apprevive_core.tools import AppReviveTools
+from apprevive_gui import shelf_probe
+from apprevive_gui.shelf_probe import classify_offer, probe_store
 
 
 class ClassifyOfferTests(unittest.TestCase):
@@ -45,9 +45,9 @@ class _Runner:
 class ProbeNeverPurchasesTests(unittest.TestCase):
     def _probe(self, stderr: str) -> tuple[str, _Runner]:
         runner = _Runner(stderr)
-        tools = AppRestoreTools(runner)  # type: ignore[arg-type]
-        with patch.object(AppRestoreTools, "_tool", return_value="ipatool"), patch.object(
-            AppRestoreTools, "_ipatool_env", return_value={}
+        tools = AppReviveTools(runner)  # type: ignore[arg-type]
+        with patch.object(AppReviveTools, "_tool", return_value="ipatool"), patch.object(
+            AppReviveTools, "_ipatool_env", return_value={}
         ):
             kind = probe_store(tools, "1234567890")
         return kind, runner
@@ -74,8 +74,8 @@ class ProbeNeverPurchasesTests(unittest.TestCase):
             self.assertTrue(all("--purchase" not in call for call in runner.calls), stderr)
 
     def test_probe_args_reject_purchase(self) -> None:
-        tools = AppRestoreTools(_Runner(""))  # type: ignore[arg-type]
-        with patch.object(AppRestoreTools, "_tool", return_value="ipatool"):
+        tools = AppReviveTools(_Runner(""))  # type: ignore[arg-type]
+        with patch.object(AppReviveTools, "_tool", return_value="ipatool"):
             args = shelf_probe.probe_args(tools, "1", Path("x.ipa"))
         self.assertNotIn("--purchase", args)
 

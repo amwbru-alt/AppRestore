@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from apprestore_core.command import (
+from apprevive_core.command import (
     _CAPTURE_LIMIT_BYTES,
     CommandError,
     Runner,
@@ -67,8 +67,8 @@ def test_capture_is_bounded_while_both_streams_are_drained() -> None:
     assert len(result.stderr.encode("utf-8")) <= _CAPTURE_LIMIT_BYTES
     assert result.stdout.startswith("A")
     assert result.stderr.startswith("B")
-    assert "output truncated by AppRestore" in result.stdout
-    assert "output truncated by AppRestore" in result.stderr
+    assert "output truncated by AppRevive" in result.stdout
+    assert "output truncated by AppRevive" in result.stderr
 
 
 def test_timeout_kills_the_descendant_process_tree(tmp_path: Path) -> None:
@@ -77,7 +77,7 @@ def test_timeout_kills_the_descendant_process_tree(tmp_path: Path) -> None:
     parent_script = (
         "import os, pathlib, subprocess, sys, time; "
         f"child=subprocess.Popen([sys.executable, '-c', {child_script!r}]); "
-        "pathlib.Path(os.environ['APPRESTORE_TEST_CHILD_PID']).write_text("
+        "pathlib.Path(os.environ['APPREVIVE_TEST_CHILD_PID']).write_text("
         "str(child.pid), encoding='utf-8'); "
         "print('parent-ready', flush=True); "
         "print('parent-error', file=sys.stderr, flush=True); "
@@ -88,7 +88,7 @@ def test_timeout_kills_the_descendant_process_tree(tmp_path: Path) -> None:
         Runner().run(
             [sys.executable, "-c", parent_script],
             timeout=1.5,
-            env={"APPRESTORE_TEST_CHILD_PID": str(child_pid_path)},
+            env={"APPREVIVE_TEST_CHILD_PID": str(child_pid_path)},
         )
 
     assert caught.value.result.returncode == 124
@@ -139,7 +139,7 @@ def test_posix_runner_starts_a_new_session() -> None:
 
 @pytest.mark.skipif(os.name != "nt", reason="Windows process-group contract")
 def test_windows_timeout_cleanup_uses_trusted_system_taskkill() -> None:
-    source = Path(__file__).parents[1] / "apprestore_core" / "command.py"
+    source = Path(__file__).parents[1] / "apprevive_core" / "command.py"
     command_runner = source.read_text(encoding="utf-8")
 
     assert "GetSystemWindowsDirectoryW" in command_runner

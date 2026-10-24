@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 try:
-    from apprestore_core import license_guard as lg
+    from apprevive_core import license_guard as lg
 except ImportError:
     import license_guard as lg
 
@@ -182,7 +182,7 @@ def test_default_journal_path_from_env(tmp_path, monkeypatch):
 
 def test_default_journal_path_without_env(monkeypatch):
     monkeypatch.delenv(lg.JOURNAL_ENV, raising=False)
-    assert lg.default_journal_path() == Path.home() / ".apprestore" / "licenses_acquired.jsonl"
+    assert lg.default_journal_path() == Path.home() / ".apprevive" / "licenses_acquired.jsonl"
 
 
 def test_purchase_uncertain_counts_toward_limit(tmp_path):

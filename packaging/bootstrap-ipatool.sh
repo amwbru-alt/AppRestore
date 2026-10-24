@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build AppRestore's patched ipatool for running from source (macOS / Linux).
+# Build AppRevive's patched ipatool for running from source (macOS / Linux).
 #
 # The published ipatool archives were built before patches 0001-0003, so a
 # checkout run from source needs a local build. This script:
@@ -66,7 +66,7 @@ die() { echo "bootstrap-ipatool: $*" >&2; exit 1; }
 say() { echo "==> $*"; }
 
 build_script="$root/packaging/build-ipatool.sh"
-[[ -f "$build_script" ]] || die "no packaging/build-ipatool.sh under $root (run from the AppRestore checkout or pass --repo)"
+[[ -f "$build_script" ]] || die "no packaging/build-ipatool.sh under $root (run from the AppRevive checkout or pass --repo)"
 
 sha256_of() {
   if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | cut -d' ' -f1

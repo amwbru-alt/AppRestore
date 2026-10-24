@@ -21,10 +21,10 @@ pytest.importorskip("PySide6")
 
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
-from apprestore_gui.ui4b import find as F  # noqa: E402
-from apprestore_gui.ui4b import network  # noqa: E402
-from apprestore_gui.ui4b.fake_data import FakeIconBook, FakeSource  # noqa: E402
-from apprestore_gui.ui4b.qt_bridge import Restore4b  # noqa: E402
+from apprevive_gui.ui4b import find as F  # noqa: E402
+from apprevive_gui.ui4b import network  # noqa: E402
+from apprevive_gui.ui4b.fake_data import FakeIconBook, FakeSource  # noqa: E402
+from apprevive_gui.ui4b.qt_bridge import Restore4b  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -99,7 +99,7 @@ def test_any_host_answers_tries_each_host_and_respects_proxy() -> None:
 
 
 def _source(qapp, state: str, hosts: bool, signed: bool = False):
-    from apprestore_gui.ui4b.qt_bridge import SessionSource
+    from apprevive_gui.ui4b.qt_bridge import SessionSource
 
     from tests.test_ui4b_qml import FakeSession
 
@@ -193,7 +193,7 @@ def test_qml_scroll_and_query_survive_signin(qapp) -> None:
     from PySide6.QtCore import QObject
     from PySide6.QtQml import QQmlApplicationEngine
 
-    from apprestore_gui.ui4b.window import load
+    from apprevive_gui.ui4b.window import load
 
     src = _signed_out_source(40)
     c = _controller(src)

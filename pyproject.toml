@@ -3,8 +3,8 @@ requires = ["setuptools>=77.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "apprestore"
-version = "0.4.0"
+name = "apprevive"
+version = "0.5.0"
 description = "Restore offloaded iOS applications from verified IPA files on macOS and Windows."
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
@@ -12,15 +12,16 @@ license = "GPL-3.0-or-later"
 license-files = ["LICENSE"]
 dependencies = [
     "pymobiledevice3==10.1.0",
+    "certifi==2026.7.22",
 ]
 
 [project.scripts]
-apprestore = "apprestore_core.cli:main"
-apprestore-gui = "apprestore_gui.app:main"
+apprevive = "apprevive_core.cli:main"
+apprevive-gui = "apprevive_gui.app:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["apprestore_core*", "apprestore_gui*"]
+include = ["apprevive_core*", "apprevive_gui*"]
 exclude = ["tests*"]
 
 [project.optional-dependencies]
@@ -30,11 +31,12 @@ gui = [
 ]
 
 [tool.setuptools.package-data]
-apprestore_gui = ["resources/**/*", "ui4b/data/*.json", "qml/**/*.qml", "qml4b/**/*"]
+apprevive_core = ["api_settings.json"]
+apprevive_gui = ["resources/**/*", "ui4b/data/*.json", "qml/**/*.qml", "qml4b/**/*"]
 
 [tool.pytest.ini_options]
 # pymobiledevice3 currently brings in xonsh, whose third-party pytest plugin
-# tries to create an interactive Windows console during collection.  AppRestore
+# tries to create an interactive Windows console during collection.  AppRevive
 # does not use that plugin; disabling it keeps `python -m pytest` reliable in
 # GUI terminals and CI while leaving the project's own plugins available.
 addopts = "-p no:xonsh"

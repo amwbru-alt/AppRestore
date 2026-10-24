@@ -7,13 +7,13 @@ import zipfile
 from pathlib import Path
 from unittest.mock import patch
 
-from apprestore_core.ipa import (
+from apprevive_core.ipa import (
     IpaError,
     read_ipa_metadata,
     scan_ipas,
     validate_bundle_id,
 )
-from apprestore_core.ipa_index import IpaIndex
+from apprevive_core.ipa_index import IpaIndex
 
 from tests.helpers import make_ipa
 
@@ -137,7 +137,7 @@ class IpaMetadataTests(unittest.TestCase):
 
         first, first_errors = scan_ipas([self.root], index=index)
         with patch(
-            "apprestore_core.ipa.read_ipa_metadata",
+            "apprevive_core.ipa.read_ipa_metadata",
             side_effect=AssertionError("cached IPA was reopened"),
         ):
             second, second_errors = scan_ipas([self.root], index=index)

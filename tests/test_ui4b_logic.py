@@ -10,9 +10,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from apprestore_core.models import MissingApp, OffloadedApp
-from apprestore_gui.ui4b import catalog, formatting, home, journal, onboarding, scan, selection, space
-from apprestore_gui.ui4b.catalog import (
+from apprevive_core.models import MissingApp, OffloadedApp
+from apprevive_gui.ui4b import catalog, formatting, home, journal, onboarding, scan, selection, space
+from apprevive_gui.ui4b.catalog import (
     ACTION_IPA,
     ACTION_NONE,
     ACTION_OFFLOADED,
@@ -22,8 +22,8 @@ from apprestore_gui.ui4b.catalog import (
     GROUP_REMOVED,
     RestoreItem,
 )
-from apprestore_gui.ui4b.flow import RestoreFlow
-from apprestore_gui.ui4b.queue import CURRENT, DONE, FAILED, WAIT, RestoreQueue
+from apprevive_gui.ui4b.flow import RestoreFlow
+from apprevive_gui.ui4b.queue import CURRENT, DONE, FAILED, WAIT, RestoreQueue
 
 MB = 1000 * 1000
 GB = 1000 * MB
@@ -220,7 +220,7 @@ def test_parse_disk_usage_lockdown_and_afc() -> None:
 
 
 def test_query_device_space_uses_lockdown_get(monkeypatch: pytest.MonkeyPatch) -> None:
-    import apprestore_core.frozen as frozen
+    import apprevive_core.frozen as frozen
 
     monkeypatch.setattr(frozen, "is_frozen", lambda: False)
     calls: list[list[str]] = []
@@ -240,7 +240,7 @@ def test_query_device_space_uses_lockdown_get(monkeypatch: pytest.MonkeyPatch) -
 
 
 def test_query_device_space_failure_is_unknown(monkeypatch: pytest.MonkeyPatch) -> None:
-    import apprestore_core.frozen as frozen
+    import apprevive_core.frozen as frozen
 
     monkeypatch.setattr(frozen, "is_frozen", lambda: False)
 
@@ -348,21 +348,21 @@ def test_queue_rows_and_stop() -> None:
     queue.progress(40, "Скачиваем")
     rows = queue.rows()
     assert rows[0]["detail"] == "Скачиваем 40 %"
-    assert rows[0]["stages"] == ["Скачивание 40 %", "Установка", "Готово"]
+    assert rows[0]["stages"] == ["Проверка", "Загрузка 40 %", "Подготовка", "Установка", "Результат"]
     assert rows[0]["percent"] == 40
     queue.progress(100, "Ставим на iPhone")
     rows = queue.rows()
     # спека: у установки нет числа
     assert rows[0]["state"] == CURRENT and rows[0]["detail"] == "Ставится на iPhone"
-    assert rows[0]["stage"] == 1 and rows[0]["percent"] == -1
-    assert rows[0]["stages"] == ["Скачано", "Установка", "Готово"]
+    assert rows[0]["stage"] == 3 and rows[0]["percent"] == -1
+    assert rows[0]["stages"] == ["Проверка", "Загрузка", "Подготовка", "Установка", "Результат"]
     assert rows[1]["state"] == WAIT and rows[1]["right"] == "В очереди"
     stuck = RestoreQueue()
     stuck.start([item("gis", GROUP_REMOVED, 10, name="2ГИС")])
     stuck.progress(99, "Скачиваем 99%")
     stuck.progress(-1, "Ставим на iPhone")
     phone = stuck.rows()[0]
-    assert phone["stage"] == 1 and phone["detail"] == "Ставится на iPhone" and phone["percent"] == -1
+    assert phone["stage"] == 3 and phone["detail"] == "Ставится на iPhone" and phone["percent"] == -1
     queue.stop()
     assert not queue.active and queue.finished
     queue.settle("a", True)
@@ -467,13 +467,13 @@ class RecordingBackend:
 
 def _store_items(count: int = 3):
     pytest.importorskip("PySide6")
-    from apprestore_gui.ui4b.fake_data import removed_items
+    from apprevive_gui.ui4b.fake_data import removed_items
 
     return removed_items()[:count]
 
 
 def test_needs_signin_recognises_session_failures() -> None:
-    from apprestore_gui.ui4b.flow import needs_signin
+    from apprevive_gui.ui4b.flow import needs_signin
 
     # -128 is STORE_MISMATCH now: its own screen, not «Войдите заново»
     assert not needs_signin("Отказ -128")
@@ -488,9 +488,9 @@ def test_needs_signin_recognises_session_failures() -> None:
 
 
 def test_session_failure_drops_the_run_and_signin_does_not_resume() -> None:
-    from apprestore_gui.ui4b.flow import RestoreFlow
-    from apprestore_gui.ui4b.home import STATE_MISSING, STATE_SIGNIN, HomeInput, home_view
-    from apprestore_gui.ui4b.space import DeviceSpace
+    from apprevive_gui.ui4b.flow import RestoreFlow
+    from apprevive_gui.ui4b.home import STATE_MISSING, STATE_SIGNIN, HomeInput, home_view
+    from apprevive_gui.ui4b.space import DeviceSpace
 
     backend = RecordingBackend()
     flow = RestoreFlow(backend)
@@ -531,8 +531,8 @@ def test_session_failure_drops_the_run_and_signin_does_not_resume() -> None:
 
 
 def test_expired_session_during_run_drops_it_and_first_signin_does_not_start() -> None:
-    from apprestore_gui.ui4b.flow import RestoreFlow
-    from apprestore_gui.ui4b.space import DeviceSpace
+    from apprevive_gui.ui4b.flow import RestoreFlow
+    from apprevive_gui.ui4b.space import DeviceSpace
 
     backend = RecordingBackend()
     flow = RestoreFlow(backend)
@@ -557,9 +557,9 @@ def test_expired_session_during_run_drops_it_and_first_signin_does_not_start() -
 
 def test_restore_settled_with_session_error_drops_offloaded_batch() -> None:
     pytest.importorskip("PySide6")
-    from apprestore_gui.ui4b.fake_data import offloaded_items
-    from apprestore_gui.ui4b.flow import RestoreFlow
-    from apprestore_gui.ui4b.space import DeviceSpace
+    from apprevive_gui.ui4b.fake_data import offloaded_items
+    from apprevive_gui.ui4b.flow import RestoreFlow
+    from apprevive_gui.ui4b.space import DeviceSpace
 
     backend = RecordingBackend()
     flow = RestoreFlow(backend)
@@ -575,7 +575,7 @@ import math as _math
 import re as _re
 from pathlib import Path as _Path
 
-_QML = _Path(__file__).resolve().parents[1] / "apprestore_gui" / "qml4b"
+_QML = _Path(__file__).resolve().parents[1] / "apprevive_gui" / "qml4b"
 
 
 def _sized(n: int, size_mb: int = 100) -> list[RestoreItem]:
@@ -613,7 +613,7 @@ def test_lead_one_and_many_names() -> None:
 
 
 def test_caption_goes_through_one_function(monkeypatch) -> None:
-    from apprestore_gui.ui4b import formatting
+    from apprevive_gui.ui4b import formatting
 
     assert formatting.missing_caption(1) == ("приложение", "пропало с iPhone")
     assert formatting.missing_caption(21) == ("приложение", "пропало с iPhone")
@@ -675,7 +675,7 @@ def test_voided_license_is_not_a_journal_line(tmp_path: Path) -> None:
 
 
 def test_short_names() -> None:
-    from apprestore_gui.ui4b.catalog import short_name_of
+    from apprevive_gui.ui4b.catalog import short_name_of
 
     assert short_name_of("Сбер: банк и кошелёк") == "Сбер"
     assert short_name_of("Альфа — банк") == "Альфа"
@@ -733,8 +733,8 @@ MISMATCH = "failed to purchase item with param 'STDQ': Account Not In This Store
 
 
 def _mismatch_flow():
-    from apprestore_gui.ui4b.flow import RestoreFlow
-    from apprestore_gui.ui4b.space import DeviceSpace
+    from apprevive_gui.ui4b.flow import RestoreFlow
+    from apprevive_gui.ui4b.space import DeviceSpace
 
     backend = RecordingBackend()
     flow = RestoreFlow(backend)
@@ -743,7 +743,7 @@ def _mismatch_flow():
 
 
 def _view(flow, items):
-    from apprestore_gui.ui4b.home import HomeInput, home_view
+    from apprevive_gui.ui4b.home import HomeInput, home_view
 
     return home_view(HomeInput(connected=True, signed_in=True, items=items,
                                queue=flow.queue if flow.queue.entries else None,
@@ -839,7 +839,7 @@ def test_svg_icons_use_theme_colours() -> None:
 
 
 def test_plan_licenses_counts_only_free_and_not_owned() -> None:
-    from apprestore_gui.ui4b import licenses
+    from apprevive_gui.ui4b import licenses
 
     items = removed4() + [item("o1", GROUP_OFFLOADED, 10)]
     owned = {items[2].store_id}  # ВТБ is on the Apple ID
@@ -858,7 +858,7 @@ def test_plan_licenses_counts_only_free_and_not_owned() -> None:
 
 
 def test_consent_view_texts_from_counts() -> None:
-    from apprestore_gui.ui4b import licenses
+    from apprevive_gui.ui4b import licenses
 
     plan = licenses.plan_licenses(removed4(), set(), {i.store_id: 0 for i in removed4()})
     v = licenses.consent_view(plan, (2, 9))
@@ -880,11 +880,11 @@ def test_consent_view_texts_from_counts() -> None:
 
 
 def test_limit_refusal_goes_to_not_enough_limit_and_others_continue() -> None:
-    from apprestore_core.license_gate import refusal_text
-    from apprestore_core.license_guard import Verdict
-    from apprestore_gui.ui4b.flow import RestoreFlow
-    from apprestore_gui.ui4b.home import HomeInput, home_view
-    from apprestore_gui.ui4b.space import DeviceSpace
+    from apprevive_core.license_gate import refusal_text
+    from apprevive_core.license_guard import Verdict
+    from apprevive_gui.ui4b.flow import RestoreFlow
+    from apprevive_gui.ui4b.home import HomeInput, home_view
+    from apprevive_gui.ui4b.space import DeviceSpace
 
     backend = RecordingBackend()
     flow = RestoreFlow(backend)
@@ -906,8 +906,8 @@ def test_limit_refusal_goes_to_not_enough_limit_and_others_continue() -> None:
 def test_limit_slot_text_all_cases(tmp_path) -> None:
     import datetime as dt
 
-    from apprestore_core import license_guard as lg
-    from apprestore_gui.ui4b.licenses import next_slot, slot_text
+    from apprevive_core import license_guard as lg
+    from apprevive_gui.ui4b.licenses import next_slot, slot_text
 
     now = dt.datetime.now().astimezone()
     soon = (now + dt.timedelta(minutes=30)).astimezone(dt.timezone.utc)
@@ -922,7 +922,7 @@ def test_limit_slot_text_all_cases(tmp_path) -> None:
     # real journal: 5 today → a moment 24 h after the oldest, in UTC
     journal = tmp_path / "j.jsonl"
     assert next_slot(journal) is None
-    from apprestore_gui.ui4b.home import HomeInput, home_view  # noqa: F401
+    from apprevive_gui.ui4b.home import HomeInput, home_view  # noqa: F401
     for i in range(5):
         lg.record_acquire(f"1{i}", None, "us", journal_path=journal, price=0)
     when = next_slot(journal)
@@ -938,8 +938,8 @@ def test_no_vpn_in_user_texts() -> None:
 
     root = P(__file__).resolve().parents[1]
     bad = []
-    for path in list((root / "apprestore_gui").rglob("*.py")) + list((root / "apprestore_core").rglob("*.py")) + list(
-        (root / "apprestore_gui" / "qml4b").rglob("*.qml")
+    for path in list((root / "apprevive_gui").rglob("*.py")) + list((root / "apprevive_core").rglob("*.py")) + list(
+        (root / "apprevive_gui" / "qml4b").rglob("*.qml")
     ):
         text = path.read_text(encoding="utf-8")
         if path.suffix == ".py":
@@ -964,7 +964,7 @@ def test_no_vpn_in_user_texts() -> None:
 
 def test_wrong_2fa_code_goes_back_to_password_form() -> None:
     pytest.importorskip("PySide6")
-    from apprestore_gui.auth_pty import WRONG_CODE_TEXT, _explain_login_failure, is_wrong_code
+    from apprevive_gui.auth_pty import WRONG_CODE_TEXT, _explain_login_failure, is_wrong_code
 
     assert _explain_login_failure(1, "ERR invalid verification code") == WRONG_CODE_TEXT
     assert _explain_login_failure(1, "ERR something failed", code_sent=True) == WRONG_CODE_TEXT
@@ -974,9 +974,9 @@ def test_wrong_2fa_code_goes_back_to_password_form() -> None:
 
 
 def test_limit_total_summary_has_no_time_and_explains() -> None:
-    from apprestore_gui.ui4b.flow import RestoreFlow
-    from apprestore_gui.ui4b.home import HomeInput, home_view
-    from apprestore_gui.ui4b.space import DeviceSpace
+    from apprevive_gui.ui4b.flow import RestoreFlow
+    from apprevive_gui.ui4b.home import HomeInput, home_view
+    from apprevive_gui.ui4b.space import DeviceSpace
 
     flow = RestoreFlow(RecordingBackend())
     items = removed4()
@@ -992,7 +992,7 @@ def test_limit_total_summary_has_no_time_and_explains() -> None:
 
 
 def test_region_adapter_accepts_only_known_statuses() -> None:
-    from apprestore_gui.ui4b import region
+    from apprevive_gui.ui4b import region
 
     items = removed4()
     statuses = {
@@ -1017,7 +1017,7 @@ def test_region_adapter_accepts_only_known_statuses() -> None:
 
 
 def test_links_only_lead_to_existing_things() -> None:
-    from apprestore_gui.ui4b.home import link_action
+    from apprevive_gui.ui4b.home import link_action
 
     for name in ("Почему это безопасно", "Как это работает", "Исходный код",
                  "Войти с другим Apple ID", "Не получается подключить"):
@@ -1050,7 +1050,7 @@ def test_user_texts_have_no_urls_or_where_to_get_ipa() -> None:
 
 
 def test_region_probe_called_only_online_with_country() -> None:
-    from apprestore_gui.ui4b import region
+    from apprevive_gui.ui4b import region
 
     calls = []
 
@@ -1067,8 +1067,8 @@ def test_region_probe_called_only_online_with_country() -> None:
 
 
 def test_region_group_no_region_links_home_count_unchanged() -> None:
-    from apprestore_gui.ui4b import region
-    from apprestore_gui.ui4b.catalog import ACTION_NONE
+    from apprevive_gui.ui4b import region
+    from apprevive_gui.ui4b.catalog import ACTION_NONE
 
     items = region.apply_statuses(removed4(), {removed4()[3].store_id: "NOT_IN_REGION"})
     rows = selection.Selection(items).rows()
@@ -1084,7 +1084,7 @@ def test_region_group_no_region_links_home_count_unchanged() -> None:
 
 
 def test_4b_search_is_app_store_and_purchases_only() -> None:
-    from apprestore_gui.ui4b.search import search_store
+    from apprevive_gui.ui4b.search import search_store
 
     calls = []
     rows = search_store(
@@ -1124,8 +1124,8 @@ def test_quick_ui_runs_on_real_sources_fakes_only_behind_flags() -> None:
     import inspect
 
     pytest.importorskip("PySide6")
-    from apprestore_gui import app
-    from apprestore_gui.ui4b import window
+    from apprevive_gui import app
+    from apprevive_gui.ui4b import window
 
     src = inspect.getsource(app.main)
     assert "ui4b.window import main as quick_4b_main" in src and 'args.ui == "quick"' in src
@@ -1138,7 +1138,7 @@ def test_quick_ui_runs_on_real_sources_fakes_only_behind_flags() -> None:
     }
     assert not any("fake" in (m or "") for m in names)
     # the real source reads phone/space/purchases/licenses/region from the real services
-    from apprestore_gui.ui4b import qt_bridge
+    from apprevive_gui.ui4b import qt_bridge
 
     ss = inspect.getsource(qt_bridge.SessionSource)
     for call in ("service.missing(", "query_device_space(", "session.purchases", "account_country()",
@@ -1149,10 +1149,10 @@ def test_quick_ui_runs_on_real_sources_fakes_only_behind_flags() -> None:
 
 
 def test_shortfall_rounds_up_to_a_tenth_of_a_gb() -> None:
-    from apprestore_gui.ui4b.catalog import RestoreItem
-    from apprestore_gui.ui4b.space import DeviceSpace
+    from apprevive_gui.ui4b.catalog import RestoreItem
+    from apprevive_gui.ui4b.space import DeviceSpace
 
-    from apprestore_gui.ui4b.formatting import format_size
+    from apprevive_gui.ui4b.formatting import format_size
 
     gb = 1_000_000_000
     assert format_size(int(3.21 * gb), ceil=True) == "3,3 ГБ"
@@ -1165,7 +1165,7 @@ def test_shortfall_rounds_up_to_a_tenth_of_a_gb() -> None:
 
 
 def test_search_hint_has_the_vk_number_example() -> None:
-    from apprestore_gui.ui4b.search import SEARCH_HINT, parse_query
+    from apprevive_gui.ui4b.search import SEARCH_HINT, parse_query
 
     assert "ВКонтакте" in SEARCH_HINT and "564177498" in SEARCH_HINT
     assert "архив" not in SEARCH_HINT
@@ -1173,7 +1173,7 @@ def test_search_hint_has_the_vk_number_example() -> None:
 
 
 def test_onboarding_step1_illustration_and_step4_gradual() -> None:
-    from apprestore_gui.ui4b.onboarding import illustration_tiles, scanning_count, scanning_tiles
+    from apprevive_gui.ui4b.onboarding import illustration_tiles, scanning_count, scanning_tiles
 
     tiles = illustration_tiles()
     assert len(tiles) == 16 and {t["kind"] for t in tiles} == {"slot"} and not any(t["storeId"] for t in tiles)

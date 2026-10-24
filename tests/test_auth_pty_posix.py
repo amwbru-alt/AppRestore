@@ -46,14 +46,14 @@ def fake_ipatool(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     tool.chmod(0o755)
     monkeypatch.setenv("PATH", f"{tmp_path}{os.pathsep}{os.environ.get('PATH', '')}")
     # A real bin/ipatool in the checkout (RUN-FROM-SOURCE) must not win over the fake.
-    from apprestore_gui import auth_pty
+    from apprevive_gui import auth_pty
 
     monkeypatch.setattr(auth_pty, "_which_ipatool", lambda: str(tool))
     return tool
 
 
 def test_posix_uses_builtin_pty() -> None:
-    from apprestore_gui.auth_pty import PosixPtyProcess, _load_pty_process
+    from apprevive_gui.auth_pty import PosixPtyProcess, _load_pty_process
 
     assert _load_pty_process() is PosixPtyProcess
 
@@ -66,7 +66,7 @@ def test_window_login_asks_for_code_on_posix(
     code: str,
     ok: bool,
 ) -> None:
-    from apprestore_gui import auth_pty
+    from apprevive_gui import auth_pty
 
     monkeypatch.setattr(auth_pty, "_apple_login_host_reachable", lambda env, timeout=8: True)
 

@@ -1,0 +1,287 @@
+"""Headless diagnostics for a built bundle: ``AppRevive --self-test``.
+
+Prints one JSON document (and optionally writes it to a file) describing
+whether the frozen bundle can actually talk to an iPhone: package metadata,
+pymobiledevice3 imports, a usbmux client, the subprocess dispatcher, ipatool.
+No window is created.  Exit code 0 means every required check passed.
+"""
+
+from __future__ import annotations
+
+import json
+import platform
+import sys
+import traceback
+from importlib import metadata as package_metadata
+from pathlib import Path
+from typing import Any, Callable
+
+
+def _check(name: str, fn: Callable[[], Any], *, required: bool = True) -> dict[str, Any]:
+    try:
+        detail = fn()
+        return {"name": name, "ok": True, "required": required, "detail": detail}
+    except Exception as exc:  # noqa: BLE001 - diagnostics must never crash
+        return {
+            "name": name,
+            "ok": False,
+            "required": required,
+            "error": f"{type(exc).__name__}: {exc}",
+            "trace": traceback.format_exc(limit=4)[-1500:],
+        }
+
+
+def _metadata_version() -> dict[str, str]:
+    from apprevive_core import __version__
+
+    installed = package_metadata.version("apprevive")
+    if installed != __version__:
+        raise RuntimeError(f"metadata {installed} != runtime {__version__}")
+    return {"apprevive": installed}
+
+
+def _api_settings() -> dict[str, str]:
+    # Validate the bundled file, not an optional per-user override. No network.
+    import urllib.parse
+    from apprevive_core import api_config
+
+    path = Path(api_config.__file__).with_name("api_settings.json")
+    data = json.loads(path.read_text(encoding="utf-8-sig"))
+    value = data.get("base_url", "") if isinstance(data, dict) else ""
+    if not isinstance(value, str):
+        raise ValueError("invalid bundled API settings")
+    parsed = urllib.parse.urlsplit(value)
+    if parsed.scheme not in ("http", "https") or not parsed.hostname or parsed.username or parsed.password or parsed.query or parsed.fragment:
+        raise ValueError("invalid bundled API URL")
+    parsed.port  # Reject an invalid port too.
+    return {"base_url": value}
+
+
+def _pmd3_imports() -> dict[str, str]:
+    import pymobiledevice3.lockdown  # noqa: F401
+    import pymobiledevice3.services.afc  # noqa: F401
+    import pymobiledevice3.services.installation_proxy  # noqa: F401
+    import pymobiledevice3.usbmux  # noqa: F401
+
+    return {"pymobiledevice3": package_metadata.version("pymobiledevice3")}
+
+
+def _usbmux_client() -> dict[str, Any]:
+    """List devices in-process.  No usbmuxd / no device is fine, ImportError is not."""
+
+    from apprevive_core.tools import AppReviveTools
+
+    try:
+        udids = AppReviveTools()._list_udids_in_process(timeout=15)
+    except ImportError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        name = type(exc).__name__
+        # Connection refused / no daemon / no devices: the client itself works.
+        return {"device_count": 0, "note": f"usbmux not reachable or no devices ({name})"}
+    # Packaging prints this report in CI/diagnostics. Never include a connected
+    # phone's UDID just to prove that the client imports and enumerates devices.
+    return {"device_count": len(udids)}
+
+
+def _dispatcher() -> dict[str, Any]:
+    """Run the bundle as a pymobiledevice3 subprocess, as the core does when frozen."""
+
+    from apprevive_core.command import Runner
+    from apprevive_core.frozen import RUN_MODULE_FLAG, is_frozen
+
+    if is_frozen():
+        command = [sys.executable, RUN_MODULE_FLAG, "pymobiledevice3", "version"]
+    else:
+        command = [sys.executable, "-I", "-m", "pymobiledevice3", "version"]
+    result = Runner().run(command, timeout=120)
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"exit {result.returncode}: {(result.stderr or result.stdout).strip()[:400]}"
+        )
+    # Import and run CLI in its actual execution context. Importing it into
+    # a Windows GUI-subsystem process can fail in console initialization with
+    # WinError 6 even though the dispatched child works with captured handles.
+    expected = package_metadata.version("pymobiledevice3")
+    actual = result.stdout.strip()
+    if actual != expected:
+        raise RuntimeError(f"pymobiledevice3 version probe returned {actual[:200]!r}; expected {expected!r}")
+    return {"command": command[1:], "stdout": actual, "cli_import": "verified in subprocess"}
+
+
+def _ipatool() -> dict[str, str]:
+    from apprevive_core.paths import resolve_tool
+    from apprevive_core.tools import AppReviveTools
+
+    path = resolve_tool("ipatool")
+    if not path:
+        raise FileNotFoundError("ipatool not found next to the app or on PATH")
+    tools = AppReviveTools()
+    ok, detail = tools._ipatool_check(path)
+    if not ok:
+        raise RuntimeError(detail)
+    capabilities = tools.ipatool_capabilities()
+    if capabilities is None or not capabilities.patched_build:
+        raise RuntimeError(
+            "bundled ipatool lacks AppRevive patches 0002/0003; "
+            f"capabilities={capabilities!r}"
+        )
+    # Patch 0001 cannot be proven from ``auth info`` before a user signs in.
+    # The Go symbol is deliberately kept as an offline binary marker by the
+    # reproducible builder; checking it here makes a wrong release impossible.
+    marker = b"appstore.CountryCodeFromStoreFront"
+    binary = Path(path).read_bytes()
+    if marker not in binary:
+        raise RuntimeError("bundled ipatool lacks AppRevive patch 0001 (account country)")
+    if b"catalog-independent redownload does not match the requested app" not in binary:
+        raise RuntimeError("bundled ipatool lacks AppRevive patch 0004 (delisted redownload)")
+    return {
+        "path": path,
+        "detail": detail,
+        "capabilities": "account-country,list-purchases-all,keychain-passphrase-stdin,delisted-redownload",
+    }
+
+
+def _gui_resources() -> dict[str, Any]:
+    from apprevive_gui.theme import resources_dir
+
+    root = resources_dir()
+    fonts = sorted(p.name for p in (root / "fonts").glob("*.ttf"))
+    icons = sorted(p.name for p in (root / "icons").glob("*.svg"))
+    if not fonts or not icons:
+        raise FileNotFoundError(f"resources missing under {root}")
+    return {"fonts": fonts, "icons": len(icons)}
+
+
+def _app_icon() -> dict[str, Any]:
+    from apprevive_gui.theme import resources_dir
+
+    root = resources_dir() / "icons"
+    found = sorted(p.name for p in root.glob("app-icon-*.png"))
+    if not found:
+        raise FileNotFoundError(f"app icon missing under {root}")
+    return {"files": found}
+
+
+def _winpty_import() -> str:
+    from apprevive_gui.auth_pty import _load_pty_process
+
+    pty = _load_pty_process()
+    if pty is None:
+        raise ImportError("winpty (pywinpty) is not bundled")
+    return f"{pty.__module__}.{pty.__name__}"
+
+
+def _windows_console_host() -> str:
+    """OpenConsole.exe must sit next to conpty.dll.
+
+    The hidden keychain terminal uses ConPTY. Without this host, Windows
+    starts conhost.exe, which crashes and ipatool never opens (0xc0000142).
+    """
+
+    import winpty
+
+    host = Path(winpty.__file__).resolve().parent / "OpenConsole.exe"
+    if not host.is_file():
+        raise FileNotFoundError(f"OpenConsole.exe is missing next to {host.parent}")
+    return str(host)
+
+
+def _posix_pty_import() -> str:
+    import fcntl  # noqa: F401
+    import pty  # noqa: F401
+    import termios  # noqa: F401
+
+    from apprevive_gui.auth_pty import _load_pty_process
+
+    pty_process = _load_pty_process()
+    if pty_process is None:
+        raise ImportError("no pty for the Apple ID login")
+    return f"{pty_process.__module__}.{pty_process.__name__}"
+
+
+def _qt_import() -> str:
+    from PySide6 import QtCore, QtSvg, QtWidgets  # noqa: F401
+
+    return QtCore.qVersion()
+
+
+def _ui4b_qml() -> str:
+    """The 4b window (default UI) loads from the bundle without QML warnings (offscreen, fake data)."""
+
+    import os
+
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    from PySide6.QtGui import QGuiApplication
+    from PySide6.QtQml import QQmlApplicationEngine
+    from PySide6.QtQuickControls2 import QQuickStyle
+
+    from apprevive_gui.ui4b.fake_data import FakeIconBook, FakeSource
+    from apprevive_gui.ui4b.qt_bridge import Restore4b
+    from apprevive_gui.ui4b.window import load, qml_path
+
+    app = QGuiApplication.instance() or QGuiApplication(["apprevive-selftest"])
+    QQuickStyle.setStyle("Basic")
+    warnings: list[str] = []
+    engine = QQmlApplicationEngine()
+    engine.warnings.connect(lambda ws: warnings.extend(w.toString() for w in ws))
+    source = FakeSource("missing")
+    controller = Restore4b(source)
+    icons = FakeIconBook()
+    if not load(engine, controller, icons):
+        raise RuntimeError("qml4b did not load: " + "; ".join(warnings[:3]))
+    app.processEvents()
+    if warnings:
+        raise RuntimeError("qml4b warnings: " + "; ".join(warnings[:3]))
+    root = engine.rootObjects()[0]
+    name = root.objectName()
+    del root, engine, controller, source, icons
+    return f"{qml_path().name} loaded ({name})"
+
+
+def _doctor() -> list[dict[str, Any]]:
+    from apprevive_core.tools import AppReviveTools
+
+    return [check.to_dict() for check in AppReviveTools().doctor()]
+
+
+def run_self_test(output: Path | None = None) -> int:
+    from apprevive_core.frozen import is_frozen
+
+    checks = [
+        _check("metadata", _metadata_version),
+        _check("bundled API settings", _api_settings),
+        _check("pymobiledevice3 import", _pmd3_imports),
+        _check("usbmux client", _usbmux_client),
+        _check("pymobiledevice3 subprocess dispatch", _dispatcher),
+        _check("ipatool", _ipatool),
+        _check("gui resources", _gui_resources),
+        _check("app icon", _app_icon),
+        _check("qt import", _qt_import),
+        _check("ui4b qml (default UI)", _ui4b_qml),
+        _check("doctor", _doctor, required=False),
+    ]
+    if sys.platform == "win32":
+        checks.insert(-1, _check("winpty (Apple ID login)", _winpty_import))
+        checks.insert(-1, _check("hidden terminal host", _windows_console_host))
+    else:
+        checks.insert(-1, _check("pty (Apple ID login)", _posix_pty_import))
+    report = {
+        "ok": all(c["ok"] or not c["required"] for c in checks),
+        "frozen": is_frozen(),
+        "executable": sys.executable,
+        "python": platform.python_version(),
+        "platform": platform.platform(),
+        "checks": checks,
+    }
+    text = json.dumps(report, ensure_ascii=False, indent=2, default=str)
+    if output is not None:
+        output.write_text(text, encoding="utf-8")
+    stream = sys.stdout
+    if stream is not None:
+        try:
+            stream.write(text + "\n")
+            stream.flush()
+        except (OSError, ValueError):
+            pass
+    return 0 if report["ok"] else 1

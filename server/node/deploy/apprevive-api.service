@@ -1,0 +1,18 @@
+[Unit]
+Description=AppRevive HTTP API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=apprevive
+WorkingDirectory=/opt/apprevive/server/node
+ExecStart=/usr/bin/node --env-file=.env src/index.mjs
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

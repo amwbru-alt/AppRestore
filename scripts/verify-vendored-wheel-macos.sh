@@ -11,7 +11,7 @@ PYTHON_MACOS_ARM64_SHA256="b00971ee829e39965e2bda5585666dfdcc74bd1bd97f4b75071b3
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 TEMP_ROOT="${RUNNER_TEMP:-${TMPDIR:-/tmp}}"
-WORK_DIR="$(mktemp -d "$TEMP_ROOT/AppRestore-wheel-check.XXXXXXXX")"
+WORK_DIR="$(mktemp -d "$TEMP_ROOT/AppRevive-wheel-check.XXXXXXXX")"
 PYTHON_ROOT="$WORK_DIR/runtime"
 ARCHIVE_PATH="$WORK_DIR/python.tar.gz"
 

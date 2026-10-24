@@ -18,10 +18,10 @@ from PySide6.QtGui import QColor, QImage  # noqa: E402
 from PySide6.QtQml import QQmlApplicationEngine  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
-from apprestore_core.models import InstalledApp, MissingApp, OffloadedApp  # noqa: E402
-from apprestore_gui.icons_cache import IconBook  # noqa: E402
-from apprestore_gui.ui4b import names  # noqa: E402
-from apprestore_gui.ui4b.qt_bridge import Restore4b, SessionSource  # noqa: E402
+from apprevive_core.models import InstalledApp, MissingApp, OffloadedApp  # noqa: E402
+from apprevive_gui.icons_cache import IconBook  # noqa: E402
+from apprevive_gui.ui4b import names  # noqa: E402
+from apprevive_gui.ui4b.qt_bridge import Restore4b, SessionSource  # noqa: E402
 
 BUNDLE = re.compile(r"\b[a-z0-9_-]+(\.[a-z0-9_-]+){2,}\b", re.I)
 
@@ -75,6 +75,8 @@ def _source(qapp):
                  {"trackId": "", "bundleId": "com.example.weather", "name": "Погода"},
                  {"trackId": "222", "bundleId": "com.example.phone.app", "name": "Телефон+"}]
     src = SessionSource(StubSession(off, missing, phone, purchases))
+    # This naming fixture explicitly represents verified absent account apps.
+    src.session.restorationPurchases = [{"trackId": str(a.store_id or ""), "bundleId": a.bundle_id} for a in missing]
     src._missing = missing
     src.connected = src.signed_in = True
     src.auth_phase = "in"
@@ -93,7 +95,7 @@ def test_name_chain_device_then_purchases_then_builtin_then_fallback() -> None:
 
 
 def test_builtin_list_names_by_bundle_from_delisted_search() -> None:
-    from apprestore_core import delisted_search
+    from apprevive_core import delisted_search
 
     book = names.builtin_names()
     for e in delisted_search.builtin_entries():
@@ -218,7 +220,7 @@ def test_one_failing_icon_does_not_stop_the_rest(qapp, tmp_path) -> None:
 
 
 def test_phone_tile_swaps_placeholder_for_artwork_without_letters(qapp, tmp_path) -> None:
-    comp = Path(__file__).resolve().parents[1] / "apprestore_gui" / "qml4b" / "components"
+    comp = Path(__file__).resolve().parents[1] / "apprevive_gui" / "qml4b" / "components"
     book = IconBook(cache=FakeArt(_png(tmp_path), fail_first=False))
     qml = tmp_path / "m.qml"
     qml.write_text(
@@ -245,7 +247,7 @@ def test_phone_tile_swaps_placeholder_for_artwork_without_letters(qapp, tmp_path
 
 
 def test_placeholder_is_theme_token_no_dash_no_letter() -> None:
-    root = Path(__file__).resolve().parents[1] / "apprestore_gui" / "qml4b"
+    root = Path(__file__).resolve().parents[1] / "apprevive_gui" / "qml4b"
     icon = (root / "components" / "AppIcon.qml").read_text(encoding="utf-8")
     assert "Theme.iconPlaceholder" in icon and "DashLine" not in icon and "#" not in icon.split("Item {", 1)[1]
     theme = (root / "theme" / "Theme.qml").read_text(encoding="utf-8")
@@ -259,7 +261,7 @@ def test_placeholder_is_theme_token_no_dash_no_letter() -> None:
 
 
 def _tile_window(tmp_path, tile_js: str):
-    comp = Path(__file__).resolve().parents[1] / "apprestore_gui" / "qml4b" / "components"
+    comp = Path(__file__).resolve().parents[1] / "apprevive_gui" / "qml4b" / "components"
     book = IconBook(cache=FakeArt(_png(tmp_path), fail_first=False))
     qml = tmp_path / "t.qml"
     qml.write_text(
@@ -302,15 +304,15 @@ def test_only_a_truly_empty_place_is_dashed(qapp, tmp_path) -> None:
 
 
 def test_dash_rule_lives_in_one_place() -> None:
-    qml = (Path(__file__).resolve().parents[1] / "apprestore_gui" / "qml4b" / "components" / "PhoneTile.qml").read_text(encoding="utf-8")
+    qml = (Path(__file__).resolve().parents[1] / "apprevive_gui" / "qml4b" / "components" / "PhoneTile.qml").read_text(encoding="utf-8")
     assert qml.count("DashLine") == 1
     assert "visible: root.emptySlot && !root.tile.pending" in qml and "visible: !root.emptySlot" in qml
     assert 'root.kind === "slot" && !root.tile.pending' not in qml
 
 
 def test_home_slots_for_missing_apps_carry_their_ids(qapp) -> None:
-    from apprestore_gui.ui4b.catalog import GROUP_REMOVED, RestoreItem
-    from apprestore_gui.ui4b.home import HomeInput, phone_tiles
+    from apprevive_gui.ui4b.catalog import GROUP_REMOVED, RestoreItem
+    from apprevive_gui.ui4b.home import HomeInput, phone_tiles
 
     items = [RestoreItem(key=f"store:{i}", name="Приложение", group=GROUP_REMOVED, action="store",
                          store_id=str(i), bundle_id=f"ru.example.app{i}") for i in range(4)]
@@ -322,9 +324,9 @@ def test_home_slots_for_missing_apps_carry_their_ids(qapp) -> None:
 def test_installation_proxy_asks_for_names_and_keeps_offloaded() -> None:
     import inspect
 
-    from apprestore_core.tools import AppRestoreTools
+    from apprevive_core.tools import AppReviveTools
 
-    src = inspect.getsource(AppRestoreTools._list_apps_with_metadata)
+    src = inspect.getsource(AppReviveTools._list_apps_with_metadata)
     for attr in ("CFBundleDisplayName", "CFBundleName", "CFBundleIdentifier", "ApplicationType"):
         assert f'"{attr}"' in src
     assert '"ReturnAttributes": return_attributes' in src
@@ -334,7 +336,7 @@ def test_installation_proxy_asks_for_names_and_keeps_offloaded() -> None:
 def test_offloaded_placeholder_name_from_itunes_metadata() -> None:
     import plistlib
 
-    from apprestore_core.catalog import parse_offloaded_apps
+    from apprevive_core.catalog import parse_offloaded_apps
 
     meta = plistlib.dumps({"itemName": "Погода Плюс", "itemId": 123})
     payload = {"ru.example.weather": {"CFBundleIdentifier": "ru.example.weather", "IsPlaceholder": True,
@@ -344,7 +346,7 @@ def test_offloaded_placeholder_name_from_itunes_metadata() -> None:
 
 
 def test_service_stand_in_name_is_not_a_title() -> None:
-    from apprestore_gui.ui4b.names import resolve, usable
+    from apprevive_gui.ui4b.names import resolve, usable
 
     assert usable("App Store 492224193", store_id="492224193") == ""
     assert resolve("App Store 492224193", store_id="492224193",
