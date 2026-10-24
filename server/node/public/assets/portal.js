@@ -7,6 +7,7 @@ window.AppRevivePortal = (() => {
     mail_not_configured:'Отправка писем пока не настроена на сервере. Администратор должен подключить почтовый сервис.',
     mail_unavailable:'Почтовый сервис не принял письмо. Повторите позже или обратитесь к администратору.',
     current_password_incorrect:'Текущий пароль неверен.',invalid_session:'Некорректная сессия.',invalid_page:'Некорректный номер страницы.',invalid_filter:'Некорректный фильтр.',
+    forbidden:'У вас нет доступа к этому заказу.',unknown_checkout:'Заказ не найден. Проверьте, в какой аккаунт вы вошли.',invalid_checkout:'Некорректный номер заказа или параметры покупки.',payment_provider_unavailable:'Платёжный провайдер временно не отвечает. Повторите проверку позже.',payment_needs_review:'Заказ требует проверки поддержки. Не оплачивайте его повторно.',
     payments_not_configured:'Приём оплаты пока не настроен.', verify_apple_email_required:'Подтвердите почту этого Apple ID.',
     unknown_referral:'Код приглашения не найден.', self_referral:'Нельзя пригласить себя.', referral_locked:'Пригласивший уже закреплён.', purchase_already_recorded:'Пригласившего нужно указать до первой покупки.',
     apple_already_linked:'Этот Apple ID уже привязан к другому аккаунту AppRevive.',

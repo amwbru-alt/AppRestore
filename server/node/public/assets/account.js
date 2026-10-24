@@ -19,7 +19,7 @@ const rub = value => (Number(value)/100).toLocaleString('ru-RU',{style:'currency
 function stats(target, items){$(target).replaceChildren(...items.map(([title,value])=>{const box=document.createElement('div');box.className='stat';const b=document.createElement('b'),s=document.createElement('span');b.textContent=value;s.textContent=title;box.append(b,s);return box;}));}
 let profile=null, checkoutRequest=null, viewEpoch=0, shopPage=1, shopVersion=0;
 function clearPrivateView(){
- viewEpoch++;profile=null;checkoutRequest=null;$('cabinet').hidden=true;$('auth').hidden=false;
+ viewEpoch++;paymentWatcher.stop();$('payment-watch').hidden=true;profile=null;checkoutRequest=null;$('cabinet').hidden=true;$('auth').hidden=false;
  for(const id of ['orders','code-stats','shop-pagination','partner','partner-stats','referrals','ledger','payouts','sessions'])$(id).replaceChildren();
  for(const id of ['password-form','buy-form','shop-filter'])$(id).reset();
  $('who').textContent='';shopPage=1;shopVersion++;$('code-copy-text').value='';$('code-copy-panel').hidden=true;paymentAvailable=null;updatePurchaseTotal();
@@ -56,7 +56,7 @@ table('orders',['Заказ','Куплено в заказе','Сумма','Со
  line.append(field,badge);
  if(code.activated_at){const time=document.createElement('small');time.textContent='Активирован '+new Date(code.activated_at).toLocaleString('ru-RU');line.append(time);}
  if(code.code){const copy=document.createElement('button');copy.className='button ghost';copy.textContent='Копировать';copy.onclick=run(async()=>{try{await navigator.clipboard.writeText(code.code);message('Промокод скопирован.');}catch{field.focus();field.select();message('Скопируйте выделенный промокод.');}});line.append(copy);}else{const note=document.createElement('small');note.textContent='Текст старого кода не сохранялся до обновления.';line.append(note);}
- cell.append(line);}if(order.state==='pending'){const b=document.createElement('button');b.className='button ghost';b.textContent='Проверить оплату';b.onclick=run(async()=>{const updated=await api('/v3/checkout/sync',{checkout_id:order.checkout_id});if(updated.confirmation_url){const a=document.createElement('a');a.href=updated.confirmation_url;a.textContent='Перейти к оплате ↗';a.className='button primary';cell.append(a);}else await refreshOrders();});cell.append(b);}const support=document.createElement('a');support.href='https://t.me/llifegoldll?text='+encodeURIComponent('Здравствуйте! Вопрос по заказу AppRevive '+order.checkout_id+'. Статус: '+status(order.state)+'.');support.target='_blank';support.rel='noopener noreferrer';support.className='order-support';support.textContent='Поддержка по заказу ↗';cell.append(support);return [order.checkout_id,order.quantity,rub(order.amount_kopecks),status(order.state),cell];}));}
+ cell.append(line);}if(order.state==='pending'){const b=document.createElement('button');b.className='button ghost';b.textContent='Проверить оплату';b.onclick=run(async()=>{trackPayment(order.checkout_id);$('payment-watch').scrollIntoView?.({block:'center'});});cell.append(b);}const support=document.createElement('a');support.href='https://t.me/llifegoldll?text='+encodeURIComponent('Здравствуйте! Вопрос по заказу AppRevive '+order.checkout_id+'. Статус: '+status(order.state)+'.');support.target='_blank';support.rel='noopener noreferrer';support.className='order-support';support.textContent='Поддержка по заказу ↗';cell.append(support);return [order.checkout_id,order.quantity,rub(order.amount_kopecks),status(order.state),cell];}));}
 function renderShopPagination(data){
  const box=$('shop-pagination'),label=document.createElement('span');label.textContent=`Страница ${data.page} из ${data.pages} · заказов по фильтру ${data.total}`;box.replaceChildren(label);
  for(const [text,target,disabled]of [['← Назад',data.page-1,data.page<=1],['Далее →',data.page+1,data.page>=data.pages]]){const button=document.createElement('button');button.type='button';button.className='button ghost';button.textContent=text;button.disabled=disabled;button.onclick=run(()=>refreshOrders(target));box.append(button);}
@@ -71,9 +71,10 @@ async function refresh(){
  if(epoch!==viewEpoch)return;
  $('sync-status').textContent='Обновлено '+new Date().toLocaleTimeString('ru-RU');
  const errors=results.filter(r=>r.status==='rejected');if(errors.length)message('Некоторые разделы не загрузились. Нажмите «Обновить». '+errors[0].reason.message,true);
+ resumePaymentFromUrl();
  return errors.length===0;
 }
-function enterCabinet(){if(new URLSearchParams(location.search).get('next')==='admin'&&profile?.user.role==='admin'){location.assign('/admin');return;}history.replaceState(null,'','/account#cabinet');$('cabinet').scrollIntoView?.({block:'start'});}
+function enterCabinet(){if(new URLSearchParams(location.search).get('next')==='admin'&&profile?.user.role==='admin'){location.assign('/admin');return;}const url=new URL(location.href);url.pathname='/account';url.searchParams.delete('next');url.hash='cabinet';history.replaceState(null,'',url.pathname+url.search+url.hash);$('cabinet').scrollIntoView?.({block:'start'});}
 $('login-form').onsubmit=run(async event=>{await api('/v3/auth/login',Object.fromEntries(new FormData(event.target)));event.target.reset();let complete;try{complete=await refresh();}catch(error){message('Вход выполнен, но кабинет не загрузился. Не нужно вводить пароль повторно. Нажмите «Проверить подключение». '+error.message,true);return;}enterCabinet();if(complete)message('Вход выполнен.');});
 $('register-form').onsubmit=run(async event=>{
  const details=Object.fromEntries(new FormData(event.target));await api('/v3/auth/register',details);
@@ -86,7 +87,7 @@ $('reset-form').onsubmit=run(async event=>{await api('/v3/auth/reset',Object.fro
 $('resend').onclick=run(async()=>{await api('/v3/auth/resend',{email:$('reset-form').elements.email.value});message('Если требуется подтверждение, письмо отправлено.');});
 $('refresh').onclick=run(refresh);
 $('logout').onclick=run(async()=>{await api('/v3/auth/logout',{});clearPrivateView();message('Вы вышли.');});
-$('buy-form').onsubmit=run(async event=>{const quantity=Number(event.target.elements.quantity.value);if(!checkoutRequest||checkoutRequest.quantity!==quantity)checkoutRequest={quantity,request_id:AppReviveTransport.requestId()};const data=await api('/v3/checkout',checkoutRequest);if(data.confirmation_url)location.assign(data.confirmation_url);else{checkoutRequest=null;message('Оплата подтверждена. Коды доступны в заказе.');await refreshOrders();}});
+$('buy-form').onsubmit=run(async event=>{const quantity=Number(event.target.elements.quantity.value),intent=checkoutIntent(quantity);const data=await api('/v3/checkout',{quantity:intent.quantity,request_id:intent.request_id});if(/^[a-f0-9]{32}$/.test(data.checkout_id||'')){intent.checkout_id=data.checkout_id;try{sessionStorage.setItem(intentKey,JSON.stringify(intent));}catch{}}const destination=safePaymentUrl(data.confirmation_url);if(destination&&data.state==='pending')location.assign(destination);else if(/^[a-f0-9]{32}$/.test(data.checkout_id||''))trackPayment(data.checkout_id);else throw Error('Не удалось получить состояние заказа. Повторите запрос — номер покупки сохранён.');});
 $('register-form').elements.referral_code.addEventListener('input',event=>{event.target.value=event.target.value.toUpperCase();});
 let storedReferral='';try{storedReferral=localStorage.getItem('apprevive_referral')||'';}catch{}
 const invited=(new URLSearchParams(location.search).get('ref')||storedReferral).trim().toUpperCase();
@@ -98,7 +99,7 @@ if(location.hash==='#register-form')$('register-form').elements.email.focus();
 const verification=new URLSearchParams(location.hash.slice(1));
 if(verification.has('token')){$('verify').hidden=false;const purpose=verification.get('purpose');$('new-password-label').hidden=purpose==='apple';$('new-password').required=purpose!=='apple';$('verify-note').textContent=purpose==='apple'?'Войдите в аккаунт AppRevive, из которого запрашивали привязку, и подтвердите её.':'Задайте пароль AppRevive. Это не пароль Apple ID.';$('verify-form').onsubmit=run(async()=>{await api('/v3/auth/consume',{token:verification.get('token'),...(purpose==='apple'?{}:{password:$('new-password').value})});history.replaceState(null,'','/account');$('verify').hidden=true;$('new-password').value='';message('Подтверждено. Теперь можно войти или обновить кабинет.');try{await refresh();}catch{}});}
 
-refresh().then(async()=>{const checkout=new URLSearchParams(location.search).get('payment');if(checkout&&/^[a-f0-9]{32}$/.test(checkout)){await api('/v3/checkout/sync',{checkout_id:checkout});await refreshOrders();history.replaceState(null,'','/account');}}).catch(error=>{if(error.status!==401)message(error.message,true);});
+refresh().catch(error=>{if(error.status!==401)message(error.message,true);});
 
 async function refreshSessions(){
  const epoch=viewEpoch,data=await api('/v3/security/sessions');if(epoch!==viewEpoch)return;
@@ -124,8 +125,8 @@ async function liveRefresh(){
 let liveTimer=setInterval(liveRefresh,30000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)liveRefresh();});
 window.addEventListener('online',liveRefresh);
-window.addEventListener('pagehide',()=>{clearInterval(liveTimer);liveTimer=null;$('code-copy-text').value='';$('code-copy-panel').hidden=true;});
-window.addEventListener('pageshow',()=>{if(!liveTimer)liveTimer=setInterval(liveRefresh,30000);liveRefresh();});
+window.addEventListener('pagehide',()=>{paymentWatcher.stop();clearInterval(liveTimer);liveTimer=null;$('code-copy-text').value='';$('code-copy-panel').hidden=true;});
+window.addEventListener('pageshow',()=>{resumePaymentFromUrl();if(!liveTimer)liveTimer=setInterval(liveRefresh,30000);liveRefresh();});
 
 const requestedQuantity=Number(new URLSearchParams(location.search).get('quantity'));
 if(Number.isInteger(requestedQuantity)&&requestedQuantity>=1&&requestedQuantity<=100)$('buy-form').elements.quantity.value=String(requestedQuantity);
@@ -163,3 +164,35 @@ $('download-unused').onclick=run(async()=>{
  const link=document.createElement('a');link.href=url;link.download='AppRevive-unused-codes-'+new Date().toISOString().slice(0,10)+'.txt';document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
  message('Сохранено кодов: '+codes.length+'. Файл содержит действующие промокоды — передавайте его только выбранному исполнителю.');
 });
+
+const intentKey='apprevive_checkout_intent';
+function checkoutIntent(quantity){
+ const user=profile?.user?.user_id;
+ let saved=checkoutRequest;try{if(!saved)saved=JSON.parse(sessionStorage.getItem(intentKey)||'null');}catch{}
+ if(!saved||!user||saved.user_id!==user||saved.quantity!==quantity||!/^[a-f0-9]{32}$/.test(saved.request_id||'')||!Number.isFinite(saved.created_at)||Date.now()-saved.created_at<0||Date.now()-saved.created_at>6*3600000)saved={user_id:user,quantity,request_id:AppReviveTransport.requestId(),created_at:Date.now()};
+ checkoutRequest=saved;if(user)try{sessionStorage.setItem(intentKey,JSON.stringify(saved));}catch{}
+ return saved;
+}
+function clearCheckoutIntent(id){let saved=checkoutRequest;try{saved=saved||JSON.parse(sessionStorage.getItem(intentKey)||'null');}catch{}if(saved?.checkout_id!==id)return;checkoutRequest=null;try{sessionStorage.removeItem(intentKey);}catch{}}
+function safePaymentUrl(value){try{const url=new URL(value);return url.protocol==='https:'&&!url.username&&!url.password&&(!url.port||url.port==='443')&&/(^|\.)(yoomoney\.ru|yookassa\.ru)$/.test(url.hostname)?url.href:'';}catch{return '';}}
+function trackPayment(id){if(!/^[a-f0-9]{32}$/.test(id))return;const url=new URL(location.href);url.searchParams.set('payment',id);history.replaceState(null,'',url.pathname+url.search+url.hash);paymentWatcher.start(id);}
+function cleanPaymentUrl(){const url=new URL(location.href);url.searchParams.delete('payment');history.replaceState(null,'',url.pathname+url.search+url.hash);}
+const paymentWatcher=AppRevivePaymentWatch({
+ request:api,canPoll:()=>!!profile&&!document.hidden&&navigator.onLine!==false,
+ onChange:data=>{
+  $('payment-watch').hidden=false;$('payment-watch').dataset.state=data.state;
+  $('payment-watch-order').textContent='Заказ '+data.checkout_id;
+  $('payment-watch-support').href='https://t.me/llifegoldll?text='+encodeURIComponent('Здравствуйте! Проверьте заказ AppRevive '+data.checkout_id+'.');
+  const notes={checking:'Проверяем платёж у провайдера…',pending:'Платёж пока не подтверждён. Не оплачивайте этот заказ повторно: проверка продолжится автоматически.',paid:'Оплата подтверждена. Промокоды доступны в заказе.',cancelled:'Провайдер сообщил об отмене платежа. По этому платежу коды не выдаются.',refunded:'По заказу оформлен возврат. Срок зачисления зависит от банка.',error:data.message};
+  $('payment-watch-note').textContent=(notes[data.state]||'Не удалось определить состояние заказа.')+(data.paused?' Автопроверка остановлена. Нажмите «Проверить сейчас» или обратитесь в поддержку.':'');
+  const destination=data.state==='pending'?safePaymentUrl(data.confirmation_url):'';const link=$('payment-watch-continue');link.hidden=!destination;if(destination)link.href=destination;else link.removeAttribute('href');
+  $('payment-watch-retry').disabled=data.state==='checking';
+ },
+ onSettled:async data=>{clearCheckoutIntent(data.checkout_id);cleanPaymentUrl();try{await refreshOrders();}catch(error){message('Состояние платежа получено, но список кодов не обновился. '+error.message,true);}}
+});
+function resumePaymentFromUrl(){const checkout=new URLSearchParams(location.search).get('payment');if(profile&&/^[a-f0-9]{32}$/.test(checkout||'')&&paymentWatcher.currentId!==checkout)paymentWatcher.start(checkout);}
+$('payment-watch-retry').onclick=()=>paymentWatcher.retry();
+$('payment-watch-hide').onclick=()=>{paymentWatcher.stop();$('payment-watch').hidden=true;cleanPaymentUrl();};
+$('payment-watch-show').onclick=run(async()=>{const id=paymentWatcher.currentId;if(!id)return;$('shop-filter').reset();$('shop-filter').elements.q.value=id;await refreshOrders(1);$('orders').scrollIntoView?.({block:'start'});});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)paymentWatcher.check();});
+window.addEventListener('online',()=>paymentWatcher.check());

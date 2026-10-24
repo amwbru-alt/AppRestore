@@ -8,6 +8,7 @@ import { join } from 'node:path';
 
 const root = fileURLToPath(new URL('../public/', import.meta.url));
 const assets = new Map([
+  ['/assets/payment-watch.js', ['assets/payment-watch.js', 'text/javascript; charset=utf-8']],
   ['/assets/legal.css', ['assets/legal.css', 'text/css; charset=utf-8']],
   ['/', ['index.html', 'text/html; charset=utf-8']],
   ['/account', ['account.html', 'text/html; charset=utf-8']],

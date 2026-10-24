@@ -5,13 +5,13 @@ import {JSDOM,VirtualConsole} from 'jsdom';
 const root=new URL('../public/',import.meta.url),origin='http://185.173.93.200:3000';
 const aid='a'.repeat(64);
 const settle=async()=>{for(let i=0;i<5;i++)await new Promise(r=>setImmediate(r));};
-async function page(t,name='account',{allowed=true,logged=false,role='user',hash='',override={}}={}){
+async function page(t,name='account',{allowed=true,logged=false,role='user',hash='',override={},storage={},visible=false}={}){
  const errors=[],calls=[];let authenticated=logged;
  const dom=new JSDOM(await readFile(new URL(name+'.html',root),'utf8'),{url:origin+'/'+name+hash,runScripts:'outside-only',virtualConsole:new VirtualConsole().on('jsdomError',e=>errors.push(e.message))});
- t.after(()=>dom.window.close());const w=dom.window;
+ t.after(()=>dom.window.close());const w=dom.window;if(visible)Object.defineProperty(w.document,'hidden',{value:false,configurable:true});for(const [key,value]of Object.entries(storage))w.sessionStorage.setItem(key,value);
  const endpoints={
   '/site-config':{transport:{http_auth_origin:allowed?origin:''}},
-  '/v3/me':logged?{user:{email:'unit@example.test',role},accounts:[{account_id:aid,email:'unit@example.test'}]}:{status:'service_login_required'},
+  '/v3/me':logged?{user:{user_id:'c'.repeat(32),email:'unit@example.test',role},accounts:[{account_id:aid,email:'unit@example.test'}]}:{status:'service_login_required'},
   ['/v3/account?account_id='+aid]:{credits:1,installations:0,history:[],partner:{referral_code:'RVP-ABCDEF123456',invited:0,paid_buyers:0,purchased_codes:0,revenue_kopecks:0},ledger:{available_kopecks:0,held_kopecks:0,paid_kopecks:0,pending_kopecks:0},payouts:[]},
   '/v3/partner':{partner:{account_id:aid,referral_code:'RVP-ABCDEF123456',invited:0,paid_buyers:0,paid_orders:0,purchased_codes:0,revenue_kopecks:0},ledger:{available_kopecks:0,held_kopecks:0,paid_kopecks:0,pending_kopecks:0},payouts:[]},
   '/v3/security/sessions':{sessions:[]},
@@ -29,11 +29,11 @@ async function page(t,name='account',{allowed=true,logged=false,role='user',hash
   if(path==='/v3/auth/login')authenticated=true;
   if(path.startsWith('/v3/admin/users?')||path.startsWith('/v3/admin/orders?'))return {ok:true,status:200,json:async()=>({rows:[],page:1,pages:1,total:0})};
   if(path==='/v3/admin/metrics')return {ok:true,status:200,json:async()=>({users:0,registered_referrals:0,paid_orders:0,revenue_kopecks:0,codes:0,pending_restorations:0,updated_at:new Date().toISOString()})};
-  const data=path==='/v3/me'&&authenticated?{user:{email:'unit@example.test',role},accounts:logged?[{account_id:aid,email:'unit@example.test'}]:[]}:endpoints[path]||{status:'ok',unused_codes:['RV-UNIT-ONLY']};
+  const data=path==='/v3/me'&&authenticated?{user:{user_id:'c'.repeat(32),email:'unit@example.test',role},accounts:logged?[{account_id:aid,email:'unit@example.test'}]:[]}:endpoints[path]||{status:'ok',unused_codes:['RV-UNIT-ONLY']};
   const status=path==='/v3/me'&&!authenticated?401:200;
   return {ok:status<400,status,json:async()=>data};
  };
- for(const file of ['transport','portal',name])w.eval(await readFile(new URL('assets/'+file+'.js',root),'utf8'));
+ for(const file of ['transport','portal',...(name==='account'?['payment-watch']:[]),name])w.eval(await readFile(new URL('assets/'+file+'.js',root),'utf8'));
  await settle();
  return {w,calls,errors,notice:()=>w.document.getElementById('message').querySelector('span')?.textContent||'',form:id=>w.document.getElementById(id)};
 }
@@ -285,4 +285,32 @@ test('TXT download contains one unused code per line with the expected filename'
  p.form('download-unused').click();await settle();assert.match(download,/^AppRevive-unused-codes-.*\.txt$/);
  const text=await new Promise((resolve,reject)=>{const reader=new p.w.FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsText(blob);});
  assert.equal(text,'RV-FIRST\r\nRV-SECOND\r\n');assert.match(p.notice(),/Сохранено кодов: 2/);
+});
+test('return from payment keeps a pending order visible and offers only provider payment links',async t=>{
+ const id='a'.repeat(32),p=await page(t,'account',{logged:true,visible:true,hash:'?payment='+id,override:{'/v3/checkout/sync':async()=>({ok:true,status:200,json:async()=>({checkout_id:id,state:'pending',confirmation_url:'https://yoomoney.ru/confirm/unit'})})}});
+ await settle();assert(!p.form('payment-watch').hidden);assert.match(p.form('payment-watch-note').textContent,/пока не подтверждён/);assert.equal(new URL(p.w.location.href).searchParams.get('payment'),id);assert(!p.form('payment-watch-continue').hidden);assert.match(p.form('payment-watch-continue').href,/^https:\/\/yoomoney.ru\//);
+ p.form('payment-watch-hide').click();assert(p.form('payment-watch').hidden);assert(!new URL(p.w.location.href).searchParams.has('payment'));
+});
+test('paid return clears tracking URL and refreshes orders, without claiming the code is activated',async t=>{
+ const id='a'.repeat(32),p=await page(t,'account',{logged:true,visible:true,hash:'?payment='+id,override:{'/v3/checkout/sync':async()=>({ok:true,status:200,json:async()=>({checkout_id:id,state:'paid'})})}});
+ await settle();assert.match(p.form('payment-watch-note').textContent,/Оплата подтверждена/);assert(!new URL(p.w.location.href).searchParams.has('payment'));assert(p.form('payment-watch-continue').hidden);
+});
+test('reloading a failed checkout reuses the same user-bound purchase request',async t=>{
+ const requests=[],p=await page(t,'account',{logged:true,override:{'/v3/status':async()=>({ok:true,status:200,json:async()=>({payments_enabled:true})}),'/v3/checkout':async options=>{requests.push(JSON.parse(options.body));return {ok:false,status:503,json:async()=>({status:'unavailable'})};}}});
+ fill(p.form('buy-form'),{quantity:'2'});await submit(p.form('buy-form'));const saved=p.w.sessionStorage.getItem('apprevive_checkout_intent');assert(saved);
+ const reloaded=await page(t,'account',{logged:true,storage:{apprevive_checkout_intent:saved},override:{'/v3/status':async()=>({ok:true,status:200,json:async()=>({payments_enabled:true})}),'/v3/checkout':async options=>{requests.push(JSON.parse(options.body));return {ok:false,status:503,json:async()=>({status:'unavailable'})};}}});fill(reloaded.form('buy-form'),{quantity:'2'});await submit(reloaded.form('buy-form'));assert.equal(requests[0].request_id,requests[1].request_id);assert.equal(JSON.parse(saved).quantity,2);assert(!saved.includes('password'));assert(!saved.includes('token'));
+});
+test('login after payment return preserves the pending order in the address',async t=>{
+ const id='a'.repeat(32),p=await page(t,'account',{visible:true,hash:'?payment='+id,override:{'/v3/checkout/sync':async()=>({ok:true,status:200,json:async()=>({checkout_id:id,state:'pending'})})}});
+ fill(p.form('login-form'),{email:'unit@example.test',password:'A unit service password'});await submit(p.form('login-form'));await settle();assert.equal(new URL(p.w.location.href).searchParams.get('payment'),id);assert.match(p.form('payment-watch-note').textContent,/пока не подтверждён/);
+});
+test('checkout without a payment URL is not automatically declared paid',async t=>{
+ const id='a'.repeat(32),p=await page(t,'account',{logged:true,visible:true,override:{'/v3/status':async()=>({ok:true,status:200,json:async()=>({payments_enabled:true})}),'/v3/checkout':async()=>({ok:true,status:200,json:async()=>({checkout_id:id,state:'pending'})}),'/v3/checkout/sync':async()=>({ok:true,status:200,json:async()=>({checkout_id:id,state:'pending'})})}});
+ await submit(p.form('buy-form'));await settle();assert.match(p.form('payment-watch-note').textContent,/пока не подтверждён/);assert(!p.notice().includes('Оплата подтверждена'));assert.equal(JSON.parse(p.w.sessionStorage.getItem('apprevive_checkout_intent')).checkout_id,id);
+});
+test('payment status cannot supply an off-provider continuation link',async t=>{
+ const id='a'.repeat(32),p=await page(t,'account',{logged:true,visible:true,hash:'?payment='+id,override:{'/v3/checkout/sync':async()=>({ok:true,status:200,json:async()=>({checkout_id:id,state:'pending',confirmation_url:'https://yoomoney.ru.evil.example/steal'})})}});await settle();assert(p.form('payment-watch-continue').hidden);assert(!p.form('payment-watch-continue').hasAttribute('href'));
+});
+test('a saved purchase request for another user is never reused',async t=>{
+ const previous='a'.repeat(32),saved=JSON.stringify({user_id:'d'.repeat(32),quantity:1,request_id:previous,created_at:Date.now()}),p=await page(t,'account',{logged:true,storage:{apprevive_checkout_intent:saved},override:{'/v3/status':async()=>({ok:true,status:200,json:async()=>({payments_enabled:true})})}});await submit(p.form('buy-form'));const call=p.calls.find(c=>c.path==='/v3/checkout');assert(call);assert.notEqual(call.body.request_id,previous);
 });
